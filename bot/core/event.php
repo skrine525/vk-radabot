@@ -217,6 +217,7 @@ function event_update($data){
 	// Fun
 	$event->addCommand("выбери", 'fun_choose');
 	$event->addCommand("сколько", 'fun_howmuch');
+	$event->addCommand("инфа", "fun_info");
 	$event->addCommand("!бузова", 'fun_buzova');
 	$event->addCommand("!карина", 'fun_karina_cmd');
 	$event->addCommand("!амина", 'fun_amina_cmd');

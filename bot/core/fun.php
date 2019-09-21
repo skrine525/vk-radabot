@@ -608,7 +608,7 @@ function fun_tts($finput){
 	$botModule = new BotModule($db);
 
 	if($message == ""){
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔используйте !tts <текст>.", $data->object->from_id);
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔используйте \"!tts <текст>\".", $data->object->from_id);
 		return 0;
 	}
 
@@ -666,6 +666,28 @@ function fun_unflip($finput){
 	
 	$botModule = new BotModule();
 	$botModule->sendSimpleMessage($data->object->peer_id, "┬─┬ ノ( ゜-゜ノ)");
+}
+
+function fun_info($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$words = $finput->words;
+	$db = &$finput->db;
+
+	$botModule = new BotModule($db);
+
+	mb_internal_encoding("UTF-8");
+
+	$expression = mb_substr($data->object->text, 5);
+
+	if($expression == ""){
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔используйте \"Инфа <выражение>\".", $data->object->from_id);
+		return 0;
+	}
+
+	$rnd = mt_rand(0, 100);
+
+	$botModule->sendSimpleMessage($data->object->peer_id, ", 📐Инфа, что {$expression} — {$rnd}%.", $data->object->from_id);
 }
 
 class SysMemes{
