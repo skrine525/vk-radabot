@@ -34,7 +34,7 @@ function stats_update($data, $words_tmp, &$db){
 
 	$swear_word_count = 0;
 	for($i = 0; $i < count(SWEAR_WORDS); $i++){
-		$swear_word_count = $swear_word_count + mb_substr_count($data->object->text, SWEAR_WORDS[$i]);
+		$swear_word_count = $swear_word_count + mb_substr_count(mb_strtolower($data->object->text), SWEAR_WORDS[$i]);
 	}
 	$stats["swear_word_count"] = $stats["swear_word_count"] + $swear_word_count;
 }
