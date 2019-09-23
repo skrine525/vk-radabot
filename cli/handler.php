@@ -27,6 +27,7 @@ function main(){
 			$longpoll = json_decode(vk_call("groups.getLongPollServer", array("group_id" => config_get("GROUP_ID"))))->response;
 			$ts = $longpoll->ts;
 		}
+		unset($data);
 	}
 }
 

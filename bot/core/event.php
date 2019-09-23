@@ -196,6 +196,8 @@ function event_update($data){
 	$event->addCommand("!ранги", 'manager_show_user_ranks');
 	$event->addCommand("!приветствие", 'manager_greeting');
 	$event->addCommand("!stats", 'stats_cmd_handler');
+	$event->addCommand("!modes", "manager_mode_list");
+	$event->addCommand("!mode", "manager_mode_cpanel");
 
 	// RP-команды
 	$event->addCommand("!me", 'rp_me');
@@ -225,6 +227,7 @@ function event_update($data){
 	$event->addCommand("!чулки", 'fun_stockings_cmd');
 	$event->addCommand("бутылочка", 'fun_bottle');
 	$event->addCommand("!tts", 'fun_tts');
+	$event->addCommand("!say", "fun_say");
 
 	// Прочее
 	$event->addCommand("лайк", 'bot_like_handler');

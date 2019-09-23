@@ -3,11 +3,12 @@
 function stats_update($data, $words_tmp, &$db){
 	$stats = &$db["stats"];
 
+	$chatModes = new ChatModes($db);
+	if(!$chatModes->getModeValue("stats_enabled"))
+		return 0;
+
 	if(is_null($stats))
 		$stats = array();
-
-	if(!array_key_exists("enabled", $stats))
-		return 0;
 
 	if($data->object->text == "") // Отключение ведения статистики, если текст сообщения пустой
 		return 0;
@@ -50,43 +51,6 @@ function stats_cmd_handler($finput){
 	$botModule = new BotModule($db);
 
 	switch ($command) {
-		case 'enable':
-			$ranksys = new RankSystem($db);
-			if(!$ranksys->checkRank($data->object->from_id, 1)){
-				$botModule->sendSystemMsg_NoRights($data);
-				return 0;
-			}
-
-			if(!array_key_exists("enabled", $db["stats"])){
-				$db["stats"]["enabled"] = 1;
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ✅статистика Включена.", $data->object->from_id);
-			}
-			else
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔статистика уже Активна.", $data->object->from_id);
-			break;
-
-		case 'disable':
-			$ranksys = new RankSystem($db);
-			if(!$ranksys->checkRank($data->object->from_id, 1)){
-				$botModule->sendSystemMsg_NoRights($data);
-				return 0;
-			}
-
-			if(array_key_exists("enabled", $db["stats"])){
-				unset($db["stats"]["enabled"]);
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ✅статистика Отключена.", $data->object->from_id);
-			}
-			else
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔статистика уже не Активна.", $data->object->from_id);
-			break;
-
-		case 'status':
-			if(array_key_exists("enabled", $db["stats"]))
-				$botModule->sendSimpleMessage($data->object->peer_id, ", статистика Включена.", $data->object->from_id);
-			else
-				$botModule->sendSimpleMessage($data->object->peer_id, ", статистика Отключена.", $data->object->from_id);
-			break;
-
 		case 'get':
 			if(array_key_exists("stats", $db)){
 				$word_stats_db = $db["stats"]["word_stats"];
@@ -210,9 +174,6 @@ function stats_cmd_handler($finput){
 		
 		default:
 			$botModule->sendCommandListFromArray($data, ", ⛔используйте:", array(
-				'!stats enable - Включает видение статистики',
-				'!stats disable - Отключает ведение статистики',
-				'!stats status - Выводит текущее состояние статистики (Включена/Выключение)',
 				'!stats get - Показывает статистику'
 			));
 			break;

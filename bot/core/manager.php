@@ -73,8 +73,177 @@ class RankSystem{ // Класс управления рангами
 	}
 }
 
+class ChatModes{
+	const MODES = array( // Константа всех Режимов
+		// Template - array('name' => name, 'default_state' => state)
+		array('name' => 'allow_memes', 'default_state' => false),
+		array('name' => 'stats_enabled', 'default_state' => false)
+	);
+
+	private $db;
+
+	function __construct(&$db){
+		$this->db = &$db["bot_manager"]["chat_modes"];
+		if(is_null($this->db))
+			$this->db = array();
+	}
+
+	public function getModeValue($name){
+		if(gettype($name) != "string")
+			return null;
+
+		$modeID = -1;
+		for($i = 0; $i < count(self::MODES); $i++){
+			if($name == self::MODES[$i]["name"]){
+				$modeID = $i;
+				break;
+			}
+		}
+
+		if($modeID != -1){
+			if(array_key_exists($name, $this->db))
+				return $this->db[$name];
+			else
+				return self::MODES[$modeID]["default_state"];
+		}
+		else
+			return null;
+	}
+
+	public function setModeValue($name, $value){
+		if(gettype($name) != "string" || gettype($value) != "boolean")
+			return false;
+
+		$modeID = -1;
+		for($i = 0; $i < count(self::MODES); $i++){
+			if($name == self::MODES[$i]["name"]){
+				$modeID = $i;
+				break;
+			}
+		}
+
+		if($modeID != -1){
+			$this->db[$name] = $value;
+			return true;
+		}
+		else
+			return false;
+	}
+
+	public function getModeList(){
+		$list = array();
+		for($i = 0; $i < count(self::MODES); $i++){
+			$list[] = array(
+				'name' => self::MODES[$i]["name"],
+				'value' => $this->getModeValue(self::MODES[$i]["name"])
+			);
+		}
+
+		return $list;
+	}
+}
+
 /////////////////////////////////////////////
 /// Handlers
+
+function manager_mode_list($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$words = $finput->words;
+	$db = &$finput->db;
+
+	$botModule = new BotModule($db);
+	$chatModes = new ChatModes($db);
+
+	if(!is_null($words[1]))
+		$list_number_from_word = intval($words[1]);
+	else
+		$list_number_from_word = 1;
+
+	/////////////////////////////////////////////////////
+	////////////////////////////////////////////////////
+	$list_in = $chatModes->getModeList(); // Входной список
+	$list_out = array(); // Выходной список
+
+	$list_number = $list_number_from_word; // Номер текущего списка
+	$list_size = 10; // Размер списка
+	////////////////////////////////////////////////////
+	if(count($list_in) % $list_size == 0)
+		$list_max_number = intdiv(count($list_in), $list_size);
+	else
+		$list_max_number = intdiv(count($list_in), $list_size)+1;
+	$list_min_index = ($list_size*$list_number)-$list_size;
+	if($list_size*$list_number >= count($list_in))	
+		$list_max_index = count($list_in)-1;
+	else
+		$list_max_index = $list_size*$list_number-1;
+	if($list_number <= $list_max_number && $list_number > 0){
+		// Обработчик списка
+		for($i = $list_min_index; $i <= $list_max_index; $i++){
+			$list_out[] = $list_in[$i];
+		}
+	}
+	else{
+		// Сообщение об ошибке
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
+		return 0;
+	}
+
+	$message = ", список режимов беседы:";
+	for($i = 0; $i < count($list_out); $i++){
+		$name = $list_out[$i]["name"];
+		$value = "true";
+		if(!$list_out[$i]["value"])
+			$value = "false";
+		$message = $message . "\n• {$name} — {$value}";
+	}
+
+	$botModule->sendSimpleMessage($data->object->peer_id, $message, $data->object->from_id);
+}
+
+function manager_mode_cpanel($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$words = $finput->words;
+	$db = &$finput->db;
+
+	$botModule = new BotModule($db);
+	$ranksys = new RankSystem($db);
+	$chatModes = new ChatModes($db);
+
+	mb_internal_encoding("UTF-8");
+
+	if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверика на права
+		$botModule->sendSystemMsg_NoRights($data);
+		return 0;
+	}
+
+	$modeName = mb_strtolower($words[1]);
+	$modeValue = mb_strtolower($words[2]);
+
+	if($modeName == ""){
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔используйте \"!mode <name> <value>\".", $data->object->from_id);
+		return 0;
+	}
+	elseif($modeValue == ""){
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔используйте \"!mode <name> <value>\".", $data->object->from_id);
+		return 0;
+	}
+	elseif($modeValue != "true" && $modeValue != "false"){
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Ошибка! Параметр <value> должен состоять из одного значения: true или false.", $data->object->from_id);
+		return 0;
+	}
+
+	$modeValueBoolean = true;
+	if($modeValue == "false")
+		$modeValueBoolean = false;
+
+	if($chatModes->setModeValue($modeName, $modeValueBoolean))
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Режим {$modeName} изменен на {$modeValue}.", $data->object->from_id);
+	else
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Ошибка! Возможно Режима {$modeName} не существует!", $data->object->from_id);
+
+}
 
 function manager_ban_user($finput){
 	// Инициализация базовых переменных
@@ -99,40 +268,40 @@ function manager_ban_user($finput){
 
 	$member_ids = array();
 	for($i = 0; $i < sizeof($data->object->fwd_messages); $i++){
-		$isContrinue = true;
+		$isContinue = true;
 		for($j = 0; $j < sizeof($member_ids); $j++){
 			if($member_ids[$j] == $data->object->fwd_messages[$i]->from_id){
-				$isContrinue = false;
+				$isContinue = false;
 				break;
 			}
 		}
-		if($isContrinue){
+		if($isContinue){
 			$member_ids[] = $data->object->fwd_messages[$i]->from_id;
 		}
 	}
 	for($i = 1; $i < sizeof($words); $i++){
 		if(bot_is_mention($words[$i])){
 			$member_id = bot_get_id_from_mention($words[$i]);
-			$isContrinue = true;
+			$isContinue = true;
 			for($j = 0; $j < sizeof($member_ids); $j++){
 				if($member_ids[$j] == $member_id){
-					$isContrinue = false;
+					$isContinue = false;
 					break;
 				}
 			}
-			if($isContrinue){
+			if($isContinue){
 				$member_ids[] = $member_id;
 			}
 		} elseif(is_numeric($words[$i])) {
 			$member_id = intval($words[$i]);
-			$isContrinue = true;
+			$isContinue = true;
 			for($j = 0; $j < sizeof($member_ids); $j++){
 				if($member_ids[$j] == $member_id){
-					$isContrinue = false;
+					$isContinue = false;
 					break;
 				}
 			}
-			if($isContrinue){
+			if($isContinue){
 				$member_ids[] = $member_id;
 			}
 		}
@@ -216,14 +385,14 @@ function manager_ban_user($finput){
 	if(sizeof($res->response) > 0){
 		$banned_users = bot_get_ban_array($db);
 		for($i = 0; $i < sizeof($res->response); $i++){
-			$isContrinue = true;
+			$isContinue = true;
 			for($j = 0; $j < sizeof($banned_users); $j++){
 				if($banned_users[$j] == $res->response[i]){
-					$isContrinue = false;
+					$isContinue = false;
 					break;
 				}
 			}
-			if($isContrinue){
+			if($isContinue){
 				$banned_users[] = $res->response[$i];
 			}
 		}
@@ -254,40 +423,40 @@ function manager_unban_user($finput){
 
 	$member_ids = array();
 	for($i = 0; $i < sizeof($data->object->fwd_messages); $i++){
-		$isContrinue = true;
+		$isContinue = true;
 		for($j = 0; $j < sizeof($member_ids); $j++){
 			if($member_ids[$j] == $data->object->fwd_messages[$i]->from_id){
-				$isContrinue = false;
+				$isContinue = false;
 				break;
 			}
 		}
-		if($isContrinue){
+		if($isContinue){
 			$member_ids[] = $data->object->fwd_messages[$i]->from_id;
 		}
 	}
 	for($i = 1; $i < sizeof($words); $i++){
 		if(bot_is_mention($words[$i])){
 			$member_id = bot_get_id_from_mention($words[$i]);
-			$isContrinue = true;
+			$isContinue = true;
 			for($j = 0; $j < sizeof($member_ids); $j++){
 				if($member_ids[$j] == $member_id){
-					$isContrinue = false;
+					$isContinue = false;
 					break;
 				}
 			}
-			if($isContrinue){
+			if($isContinue){
 				$member_ids[] = $member_id;
 			}
 		} elseif(is_numeric($words[$i])) {
 			$member_id = intval($words[$i]);
-			$isContrinue = true;
+			$isContinue = true;
 			for($j = 0; $j < sizeof($member_ids); $j++){
 				if($member_ids[$j] == $member_id){
-					$isContrinue = false;
+					$isContinue = false;
 					break;
 				}
 			}
-			if($isContrinue){
+			if($isContinue){
 				$member_ids[] = $member_id;
 			}
 		}
@@ -452,40 +621,40 @@ function manager_kick_user($finput){
 
 	$member_ids = array();
 	for($i = 0; $i < sizeof($data->object->fwd_messages); $i++){
-		$isContrinue = true;
+		$isContinue = true;
 		for($j = 0; $j < sizeof($member_ids); $j++){
 			if($member_ids[$j] == $data->object->fwd_messages[$i]->from_id){
-				$isContrinue = false;
+				$isContinue = false;
 				break;
 			}
 		}
-		if($isContrinue){
+		if($isContinue){
 			$member_ids[] = $data->object->fwd_messages[$i]->from_id;
 		}
 	}
 	for($i = 1; $i < sizeof($words); $i++){
 		if(bot_is_mention($words[$i])){
 			$member_id = bot_get_id_from_mention($words[$i]);
-			$isContrinue = true;
+			$isContinue = true;
 			for($j = 0; $j < sizeof($member_ids); $j++){
 				if($member_ids[$j] == $member_id){
-					$isContrinue = false;
+					$isContinue = false;
 					break;
 				}
 			}
-			if($isContrinue){
+			if($isContinue){
 				$member_ids[] = $member_id;
 			}
 		} elseif(is_numeric($words[$i])) {
 			$member_id = intval($words[$i]);
-			$isContrinue = true;
+			$isContinue = true;
 			for($j = 0; $j < sizeof($member_ids); $j++){
 				if($member_ids[$j] == $member_id){
-					$isContrinue = false;
+					$isContinue = false;
 					break;
 				}
 			}
-			if($isContrinue){
+			if($isContinue){
 				$member_ids[] = $member_id;
 			}
 		}

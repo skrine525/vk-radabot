@@ -48,6 +48,12 @@ function fun_memes_control_panel($finput){
 
 	$botModule = new BotModule($db);
 
+	$chatModes = new ChatModes($db);
+	if(!$chatModes->getModeValue("allow_memes")){ // Проверка режима
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Панель управления мемами недоступна, так как в беседе отключен Режим allow_memes.", $data->object->from_id);
+		return 0;
+	}
+
 	$fun = fun_db_get($db);
 	mb_internal_encoding("UTF-8");
 	$command = mb_strtolower($words[1]);
@@ -236,6 +242,10 @@ function fun_memes_control_panel($finput){
 }
 
 function fun_memes_handler($data, $db){
+	$chatModes = new ChatModes($db);
+	if(!$chatModes->getModeValue("allow_memes"))
+		return 0;
+
 	mb_internal_encoding("UTF-8");
 	$meme_name = mb_strtolower($data->object->text);
 	$fun = fun_db_get($db);
@@ -250,6 +260,8 @@ function fun_memes_handler($data, $db){
 }
 
 function fun_handler($data, &$db){
+	$chatModes = new chatModes($db);
+
 	mb_internal_encoding("UTF-8");
 	$text = mb_strtolower($data->object->text);
 	if(!is_null(fun_db_get($db))){
@@ -690,6 +702,32 @@ function fun_info($finput){
 	$botModule->sendSimpleMessage($data->object->peer_id, ", 📐Инфа, что {$expression} — {$rnd}%.", $data->object->from_id);
 }
 
+function fun_say($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$words = $finput->words;
+	$db = &$finput->db;
+
+	$botModule = new BotModule($db);
+
+	mb_internal_encoding("UTF-8");
+	$params = mb_substr($data->object->text, 4);
+
+	parse_str($params, $vars);
+
+	$appeal_id = null;
+
+	if(!array_key_exists("msg", $vars)){
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Param <msg> not found!", $data->object->from_id);
+		return 0;
+	}
+
+	if(array_key_exists("appeal_id", $vars))
+		$appeal_id = $vars["appeal_id"];
+
+	$botModule->sendSimpleMessage($data->object->peer_id, $vars["msg"], $appeal_id);
+}
+
 class SysMemes{
 	const MEMES = array('мемы', 'f', 'topa', 'mem1', 'mem2', 'андрей', 'олег', 'ябловод', 'люба 2', 'люба', 'керил', 'влад', 'юля', 'олды тут?', 'кб', 'некита', 'егор', 'данил', 'вова', 'ксюша', 'дрочить', 'саня', 'аля', 'дрочить на чулки', 'дрочить на карину', 'дрочить на амину', 'оффники', 'пашел нахуй', 'лохи беседы', 'дата регистрации');
 
@@ -803,7 +841,13 @@ class SysMemes{
 			return 'ok';
 
 			case 'юля':
-			vk_call('messages.send', array('peer_id' => $data->object->peer_id, 'message' => "@id477530202 (Доскаааааааааааааааааааааааа)"));
+			//vk_call('messages.send', array('peer_id' => $data->object->peer_id, 'message' => "@id477530202 (Доскаааааааааааааааааааааааа)"));
+			$keyboard = vk_keyboard(true, array(
+				array(
+					vk_text_button("❤", array('command'=>'fun','meme_id'=>10), "secondary")
+				)
+			));
+			vk_call('messages.send', array('peer_id' => $data->object->peer_id, 'message' => "❤", 'keyboard' => $keyboard));
 			return 'ok';
 
 			case 'олды тут?':
@@ -936,6 +980,7 @@ class SysMemes{
 			case 'дата регистрации':
 			$user_info = simplexml_load_file("https://vk.com/foaf.php?id={$data->object->from_id}");
 			$created_date_unformed = $user_info->xpath('//ya:created/@dc:date')[0];
+			unset($user_info);
 			$formating = explode("T", $created_date_unformed);
 			$date = $formating[0];
 			$time = $formating[1];
@@ -1146,6 +1191,10 @@ class SysMemes{
 					$i = mt_rand(0, 65500) % count($photos);
 					$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'attachment' => $photos[$i]), JSON_UNESCAPED_UNICODE);
 					vk_execute("API.messages.send({$json_request});");
+					break;
+
+					case 10:
+					$botModule->sendSimpleMessage($data->object->peer_id, "@id477530202 (Самая офигенная!)", null, array('attachment' => 'photo477530202_457244949,photo219011658_457244383'));
 					break;
 				}
 			}
