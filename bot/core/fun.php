@@ -1,7 +1,10 @@
 <?php
 
 function fun_db_get($db){
-	return $db["fun"];
+	if(array_key_exists('fun', $db))
+		return $db["fun"];
+	else
+		return array();
 }
 
 function fun_db_set(&$db, $array){
@@ -45,6 +48,7 @@ function fun_memes_control_panel($finput){
 	$data = $finput->data; 
 	$words = $finput->words;
 	$db = &$finput->db;
+	$event = &$finput->event;
 
 	$botModule = new BotModule($db);
 
@@ -56,7 +60,14 @@ function fun_memes_control_panel($finput){
 
 	$fun = fun_db_get($db);
 	mb_internal_encoding("UTF-8");
-	$command = mb_strtolower($words[1]);
+
+	if(!array_key_exists("memes", $fun))
+		$fun["memes"] = array();
+
+	if(array_key_exists(1, $words))
+		$command = mb_strtolower($words[1]);
+	else
+		$command = "";
 	if($command == "add"){
 		$forbidden_names = array("%__appeal__%", "%__ownername__%", "*all", "%appeal%"); // Массив запрещенных наименований мемов
 		$meme_name = mb_strtolower(mb_substr($data->object->text, 11));
@@ -74,7 +85,7 @@ function fun_memes_control_panel($finput){
 			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Имя не может быть больше 8 знаков!", $data->object->from_id);
 			return 0;
 		}
-		if(!is_null($fun["memes"][$meme_name])){
+		if(array_key_exists($meme_name, $fun["memes"])){
 			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Мем с таким именем уже существует!", $data->object->from_id);
 			return 0;
 		}
@@ -84,8 +95,9 @@ function fun_memes_control_panel($finput){
 			return 0;
 		}
 
-		for($i = 0; $i < count($GLOBALS["event_command_list"]); $i++){ // Запрет на использование названий из Командной системы
-			if($meme_name == $GLOBALS["event_command_list"][$i]){
+		$event_command_list = $event->getCommandList();
+		for($i = 0; $i < count($event_command_list); $i++){ // Запрет на использование названий из Командной системы
+			if($meme_name == $event_command_list[$i]){
 				$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Данное имя нельзя использовать!", $data->object->from_id);
 				return 0;
 			}
@@ -147,7 +159,7 @@ function fun_memes_control_panel($finput){
 			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Не найдено название!", $data->object->from_id);
 			return 0;
 		}
-		if(is_null($fun["memes"][$meme_name]) && $meme_name != "*all"){
+		if(!array_key_exists($meme_name, $fun["memes"]) && $meme_name != "*all"){
 			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔мема с именем \"{$meme_name}\" не существует.", $data->object->from_id);
 			return 0;
 		}
@@ -186,7 +198,6 @@ function fun_memes_control_panel($finput){
 		}
 	}
 	elseif($command == "list"){
-		$fun = fun_db_get($db);
 		$meme_names = array();
 		foreach ($fun["memes"] as $key => $val) {
     		$meme_names[] = $key;
@@ -206,7 +217,6 @@ function fun_memes_control_panel($finput){
 	}
 	elseif($command == "info"){
 		$meme_name = mb_strtolower(mb_substr($data->object->text, 12));
-		$fun = fun_db_get($db);
 
 		if($meme_name == ""){
 			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔введите имя мема.", $data->object->from_id);
@@ -249,7 +259,7 @@ function fun_memes_handler($data, $db){
 	mb_internal_encoding("UTF-8");
 	$meme_name = mb_strtolower($data->object->text);
 	$fun = fun_db_get($db);
-	if(array_key_exists($meme_name, $fun["memes"])){
+	if(array_key_exists('memes', $fun) && array_key_exists($meme_name, $fun["memes"])){
 		$botModule = new BotModule($db);
 		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%,", 'attachment' => $fun["memes"][$meme_name]["content"]), JSON_UNESCAPED_UNICODE);
 		$request = vk_parse_var($request, "appeal");
@@ -266,13 +276,25 @@ function fun_handler($data, &$db){
 	$text = mb_strtolower($data->object->text);
 	if(!is_null(fun_db_get($db))){
 		$fun = fun_db_get($db);
+
+		if(!array_key_exists("luba", $fun)){
+			$fun["luba"] = array(
+				"hungry" => 50,
+				"thirst" => 50,
+				"happiness" => 50,
+				"isSleeping" => false,
+				"cheerfulness" => 50,
+				"last_db_update_date" => $data->object->date
+			);
+		}
+
 		if($data->object->date - $fun["luba"]["last_db_update_date"] >= 600){
 			$difference = $data->object->date - $fun["luba"]["last_db_update_date"];
 			$count = ($difference - $difference % 600) / 600;
 			$fun["luba"]["hungry"] -= 4 * $count;
 			$fun["luba"]["thirst"] -= 4 * $count;
 			$fun["luba"]["happiness"] -= 2 * $count;
-			if($fun["luba"]["isSleeping"]){
+			if(array_key_exists("isSleeping", $fun["luba"])){
 				$fun["luba"]["cheerfulness"] += 8 * $count;
 			} else {
 				$fun["luba"]["cheerfulness"] -= 6 * $count;
@@ -301,6 +323,11 @@ function fun_handler($data, &$db){
 		fun_memes_handler($data, $db);
 
 	SysMemes::payloadHandler($data, $db);
+
+	if(mb_substr_count(mb_strtolower($data->object->text), "я спать") > 0){
+		$botModule = new BotModule($db);
+		$botModule->sendSimpleMessage($data->object->peer_id, ", спокойной ночи!❤", $data->object->from_id);
+	}
 }
 
 function fun_random_ban($data, $words){
@@ -491,7 +518,7 @@ function fun_choose($finput){
 	$new_str = "";
 	for($i = 1; $i <= sizeof($words); $i++){
 		$isContinue = true;
-		if(mb_strtolower($words[$i]) == "или" || $i == (sizeof($words))){
+		if($i == sizeof($words) || mb_strtolower($words[$i]) == "или"){
 			$options[] = $new_str;
 			$new_str = "";
 			$isContinue = false;
@@ -529,11 +556,14 @@ function fun_howmuch($finput){
 	$botModule = new BotModule($db);
 	$rnd = mt_rand(0, 100);
 
-	$unitname = $words[1];
+	if(array_key_exists(1, $words))
+		$unitname = $words[1];
+	else
+		$unitname = "";
 	$add = mb_substr($data->object->text, 9+mb_strlen($unitname));
 
 	if($unitname == "" || $add == ""){
-		$botModule->sendCommandListFromArray($data->object->peer_id, ", используйте:", array("Сколько <ед. измерения> <дополнение>"));
+		$botModule->sendCommandListFromArray($data, ", используйте:", array("Сколько <ед. измерения> <дополнение>"));
 		return 0;
 	}
 
@@ -569,7 +599,10 @@ function fun_bottle($finput){
 
 	mb_internal_encoding("UTF-8");
 	$botModule = new BotModule($db);
-	$command = mb_strtolower($words[1]);
+	if(array_key_exists(1, $words))
+		$command = mb_strtolower($words[1]);
+	else
+		$command = "";
 	if($command == "сесть"){
 		$random_number = mt_rand(0, 65500);
 		vk_execute("
@@ -729,7 +762,7 @@ function fun_say($finput){
 }
 
 class SysMemes{
-	const MEMES = array('мемы', 'f', 'topa', 'mem1', 'mem2', 'андрей', 'олег', 'ябловод', 'люба 2', 'люба', 'керил', 'влад', 'юля', 'олды тут?', 'кб', 'некита', 'егор', 'данил', 'вова', 'ксюша', 'дрочить', 'саня', 'аля', 'дрочить на чулки', 'дрочить на карину', 'дрочить на амину', 'оффники', 'пашел нахуй', 'лохи беседы', 'дата регистрации');
+	const MEMES = array('мемы', 'f', 'topa', 'mem1', 'mem2', 'андрей', 'олег', 'ябловод', 'люба 2', 'люба', 'керил', 'влад', 'юля', 'олды тут?', 'кб', 'некита', 'егор', 'данил', 'вова', 'ксюша', 'дрочить', 'саня', 'аля', 'дрочить на чулки', 'дрочить на карину', 'дрочить на амину', 'оффники', 'пашел нахуй', 'лохи беседы', 'дата регистрации', 'memory_get_usage', "memory_get_usage_real");
 
 	public static function isExists($meme_name){
 		$exists = false;
@@ -743,13 +776,14 @@ class SysMemes{
 		return $exists;
 	}
 
-	public static function handler($data, $meme_name, $db){
+	public static function handler($data, $meme_name, &$db){
 		if(!self::isExists($meme_name))
 			return false;
 		$botModule = new BotModule($db);
 
 		switch ($meme_name) {
 			case 'мемы';
+			$meme_str_list == "";
 			for($i = 0; $i < count(self::MEMES); $i++){
 				$name = self::MEMES[$i];
 				if($meme_str_list == "")
@@ -810,7 +844,7 @@ class SysMemes{
 			case 'люба':
 			$fun = fun_db_get($db);
 			$botModule = new BotModule($db);
-			if(is_null($fun["luba"])){
+			if(!array_key_exists("luba", $fun)){
 				$fun["luba"]["hungry"] = 50;
 				$fun["luba"]["thirst"] = 50;
 				$fun["luba"]["happiness"] = 50;
@@ -988,6 +1022,14 @@ class SysMemes{
 			$date = "{$formating[2]}.{$formating[1]}.{$formating[0]}";
 			$msg = ", Ваша страница была зарегистрирована {$date}.";
 			$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+			break;
+
+			case 'memory_get_usage':
+			$botModule->sendSimpleMessage($data->object->peer_id, ", Memory Used: ".memory_get_usage()." B.", $data->object->from_id);
+			break;
+
+			case 'memory_get_usage_real':
+			$botModule->sendSimpleMessage($data->object->peer_id, ", Memory Used: ".memory_get_usage(true)." B.", $data->object->from_id);
 			break;
 		}
 

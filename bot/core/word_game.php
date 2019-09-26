@@ -7,7 +7,7 @@ function wordgame_cmd($finput){
 function wordgame_main($data, $words, &$db){
 	mb_internal_encoding("UTF-8");
 	$session = wordgame_get_session($data->object->peer_id);
-	if(mb_strtolower($words[1]) == 'старт' && is_null($session["word_game"]["current_word"])){
+	if(array_key_exists(1, $words) && mb_strtolower($words[1]) == 'старт' && !array_key_exists('word_game', $session)){
 		wordgame_reset_word($session, $data->object->date);
 		wordgame_set_session($data->object->peer_id, $session);
 		$new_word = wordgame_get_encoded_word($session);
@@ -27,7 +27,7 @@ function wordgame_main($data, $words, &$db){
 		vk_execute("
 			return API.messages.send({$json_request});
 			");
-	} elseif (mb_strtolower($words[1]) == 'стоп' && !is_null($session["word_game"]["current_word"])) {
+	} elseif (mb_strtolower($words[1]) == 'стоп' && array_key_exists('word_game', $session)) {
 		$empty_keyboard = vk_keyboard(true, array());
 		wordgame_del_session($data->object->peer_id);
 		$msg = "";

@@ -3,12 +3,12 @@
 class BotModule{
 	private $db;
 
-	public function __construct(&$db){
+	public function __construct(&$db = null){
 		$this->db = &$db;
 	}
 
 	public function makeExeAppeal($user_id, $varname = "appeal"){ // Создание переменной appeal с обращением к пользователю, посредством VKScript и vk_execute()
-		if(array_key_exists("id{$user_id}", $this->db["bot_manager"]["user_nicknames"])){
+		if(!is_null($this->db["bot_manager"]["user_nicknames"]) && array_key_exists("id{$user_id}", $this->db["bot_manager"]["user_nicknames"])){
 			$user_nick = $this->db["bot_manager"]["user_nicknames"]["id{$user_id}"];
 
 			return "var user = API.users.get({'user_ids':[{$user_id}],'fields':'screen_name'})[0]; var {$varname} = '@'+user.screen_name+' ({$user_nick})'; user = null;";
@@ -77,8 +77,9 @@ function bot_register($finput){ // Регистрация чата
 			'flag' => "nil",
 			'capital' => 'г. Мда');
 			$db["goverment"] = $gov_data;
-			$db["bot_manager"]["user_ranks"] = array(
-				"id{$data->object->from_id}" => 0
+			$db["bot_manager"] = array(
+				'user_ranks' => array("id{$data->object->from_id}" => 0),
+				'user_nicknames' => array()
 			);
 		}	
 	} else {
@@ -108,7 +109,7 @@ function bot_get_id_from_mention($msg){ // Получение ID из упоми
 }
 
 function bot_leave_autokick($data){ // Автокик после выхода из беседы
-	if(!is_null($data->object->action)){
+	if(property_exists($data->object, 'action')){
 		if ($data->object->action->type == "chat_kick_user" && $data->object->action->member_id == $data->object->from_id){
 			$chat_id = $data->object->peer_id - 2000000000;
 			vk_execute("
@@ -136,7 +137,7 @@ function bot_execute_api($data){ // API for !exe and !exe_debug commands
 function bot_banned_kick($data, &$db){ // Кик забаненных пользователей после приглашения
 	$banned_users = bot_get_ban_array($db);
 
-	if(!is_null($data->object->action)){
+	if(property_exists($data->object, 'action')){
 		if ($data->object->action->type == "chat_invite_user"){
 			$botModule = new BotModule($db);
 			$GLOBALS['CAN_SEND_INVITED_GREETING_MESSAGE'] = true;
@@ -235,7 +236,7 @@ function bot_set_ban_array(&$db, $array){
 }
 
 function bot_get_ban_array($db){
-	if (is_null($db["bot_manager"]["banned_users"])){
+	if (!array_key_exists("banned_users", $db["bot_manager"])){
 		return array();
 	} else {
 		return $db["bot_manager"]["banned_users"];
@@ -273,7 +274,10 @@ function bot_like_handler($finput){
 	$db = &$finput->db;
 
 	mb_internal_encoding("UTF-8");
-	$command = mb_strtolower($words[1]);
+	if(array_key_exists(1, $words))
+		$command = mb_strtolower($words[1]);
+	else
+		$command = "";
 	if($command == "аву")
 		fun_like_avatar($data, $db);
 	elseif($command == "пост")
@@ -296,7 +300,10 @@ function bot_remove_handler($finput){
 	$db = &$finput->db;
 
 	mb_internal_encoding("UTF-8");
-	$command = mb_strtolower($words[1]);
+	if(array_key_exists(1, $words))
+		$command = mb_strtolower($words[1]);
+	else
+		$command = "";
 	if($command == "клавиатуру")
 		bot_keyboard_remove($data);
 	elseif($command == "ник")
@@ -322,9 +329,9 @@ function bot_getid($finput){
 
 	$botModule = new BotModule($db);
 
-	if(!is_null($data->object->fwd_messages[0]->from_id)){
+	if(array_key_exists(0, $data->object->fwd_messages)){
 		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(bot_is_mention($words[1])){
+	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
 		$member_id = bot_get_id_from_mention($words[1]);
 	} else {
 		$botModule->sendSimpleMessage($data->object->peer_id, ", Ваш ID: {$data->object->from_id}.", $data->object->from_id);
@@ -375,16 +382,17 @@ function bot_cmdlist($finput){
 	$data = $finput->data; 
 	$words = $finput->words;
 	$db = &$finput->db;
+	$event = &$finput->event;
 
 	$botModule = new BotModule($db);
-	if(!is_null($words[1]))
+	if(array_key_exists(1, $words))
 		$list_number_from_word = intval($words[1]);
 	else
 		$list_number_from_word = 1;
 
 	/////////////////////////////////////////////////////
 	////////////////////////////////////////////////////
-	$list_in = $GLOBALS["event_command_list"]; // Входной список
+	$list_in = $event->getCommandList(); // Входной список
 	$list_out = array(); // Выходной список
 
 	$list_number = $list_number_from_word; // Номер текущего списка
@@ -423,7 +431,10 @@ function bot_help($finput){
 	$db = &$finput->db;
 
 	mb_internal_encoding("UTF-8");
-	$section = mb_strtolower($words[1]);
+	if(array_key_exists(1, $words))
+		$section = mb_strtolower($words[1]);
+	else
+		$section = "";
 	$botModule = new BotModule($db);
 	switch ($section) {
 		case 'base':

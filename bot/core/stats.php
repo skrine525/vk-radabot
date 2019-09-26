@@ -1,6 +1,18 @@
 <?php
 
+define('STATS_SWEAR_WORDS', array("педик","гандон","идиот","ебл","ёб","ублюд","шлюх","шалав","твар","дерьмо","хуе","урод","еба","ёба","сук","пидр","пидар","бля","пизд","хуи","хуй","манд")); // Константа корней матных слов
+
 function stats_update($data, $words_tmp, &$db){
+	if(!array_key_exists('stats', $db)){
+		$db["stats"] = array(
+			'word_stats' => array(),
+			'user_word_count' => array(),
+			'user_msg_count' => array(),
+			'total_word_count' => 0,
+			'swear_word_count' => 0
+		);
+	}
+
 	$stats = &$db["stats"];
 
 	$chatModes = new ChatModes($db);
@@ -12,8 +24,6 @@ function stats_update($data, $words_tmp, &$db){
 
 	if($data->object->text == "") // Отключение ведения статистики, если текст сообщения пустой
 		return 0;
-
-	define('SWEAR_WORDS', array("педик","гандон","идиот","ебл","ёб","ублюд","шлюх","шалав","твар","дерьмо","хуе","урод","еба","ёба","сук","пидр","пидар","бля","пизд","хуи","хуй","манд")); // Константа корней матных слов
 
 	$words = array();
 
@@ -27,15 +37,24 @@ function stats_update($data, $words_tmp, &$db){
 	unset($words_tmp);
 
 	for($i = 0; $i < count($words); $i++){ // Общая ститистика по каждому написанному слову в беседе
+		if(!array_key_exists($words[$i], $stats["word_stats"]))
+			$stats["word_stats"][$words[$i]] = 0;
 		$stats["word_stats"][$words[$i]] = $stats["word_stats"][$words[$i]] + 1;
 	}
+
+	if(!array_key_exists("id{$data->object->from_id}", $stats["user_word_count"]))
+		$stats["user_word_count"]["id{$data->object->from_id}"] = 0;
 	$stats["user_word_count"]["id{$data->object->from_id}"] = $stats["user_word_count"]["id{$data->object->from_id}"] + count($words); // Кол-ва написанных слов пользователем в беседе
+
+	if(!array_key_exists("id{$data->object->from_id}", $stats["user_msg_count"]))
+		$stats["user_msg_count"]["id{$data->object->from_id}"] = 0;
 	$stats["user_msg_count"]["id{$data->object->from_id}"] = $stats["user_msg_count"]["id{$data->object->from_id}"] + 1; // Кол-во написанных сообщений пользователем в беседе
+
 	$stats["total_word_count"] = $stats["total_word_count"] + count($words); // Кол-во всего слов в беседе
 
 	$swear_word_count = 0;
-	for($i = 0; $i < count(SWEAR_WORDS); $i++){
-		$swear_word_count = $swear_word_count + mb_substr_count(mb_strtolower($data->object->text), SWEAR_WORDS[$i]);
+	for($i = 0; $i < count(STATS_SWEAR_WORDS); $i++){
+		$swear_word_count = $swear_word_count + mb_substr_count(mb_strtolower($data->object->text), STATS_SWEAR_WORDS[$i]);
 	}
 	$stats["swear_word_count"] = $stats["swear_word_count"] + $swear_word_count;
 }
@@ -47,7 +66,11 @@ function stats_cmd_handler($finput){
 	$db = &$finput->db;
 
 	mb_internal_encoding("UTF-8");
-	$command = mb_strtolower($words[1]);
+	if(array_key_exists(1, $words))
+		$command = mb_strtolower($words[1]);
+	else
+		$command = "";
+
 	$botModule = new BotModule($db);
 
 	switch ($command) {

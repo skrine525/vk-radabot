@@ -76,7 +76,7 @@ class RankSystem{ // Класс управления рангами
 class ChatModes{
 	const MODES = array( // Константа всех Режимов
 		// Template - array('name' => name, 'default_state' => state)
-		array('name' => 'allow_memes', 'default_state' => false),
+		array('name' => 'allow_memes', 'default_state' => true),
 		array('name' => 'stats_enabled', 'default_state' => false)
 	);
 
@@ -155,7 +155,7 @@ function manager_mode_list($finput){
 	$botModule = new BotModule($db);
 	$chatModes = new ChatModes($db);
 
-	if(!is_null($words[1]))
+	if(array_key_exists(1, $words))
 		$list_number_from_word = intval($words[1]);
 	else
 		$list_number_from_word = 1;
@@ -218,8 +218,15 @@ function manager_mode_cpanel($finput){
 		return 0;
 	}
 
-	$modeName = mb_strtolower($words[1]);
-	$modeValue = mb_strtolower($words[2]);
+	if(array_key_exists(1, $words))
+		$modeName = mb_strtolower($words[1]);
+	else
+		$modeName = "";
+
+	if(array_key_exists(2, $words))
+		$modeValue = mb_strtolower($words[2]);
+	else
+		$modeValue = "";
 
 	if($modeName == ""){
 		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔используйте \"!mode <name> <value>\".", $data->object->from_id);
@@ -387,7 +394,7 @@ function manager_ban_user($finput){
 		for($i = 0; $i < sizeof($res->response); $i++){
 			$isContinue = true;
 			for($j = 0; $j < sizeof($banned_users); $j++){
-				if($banned_users[$j] == $res->response[i]){
+				if($banned_users[$j] == $res->response[$i]){
 					$isContinue = false;
 					break;
 				}
@@ -546,7 +553,7 @@ function manager_banlist_user($finput){
 		return 'error';
 	}
 
-	if(!is_null($words[1]))
+	if(array_key_exists(1, $words))
 		$list_number_from_word = intval($words[1]);
 	else
 		$list_number_from_word = 1;
@@ -729,7 +736,7 @@ function manager_online_list($finput){
 
 	$botModule = new BotModule($db);
 
-	if(is_null($words[1])){
+	if(!array_key_exists(1, $words)){
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'online'});
 			var msg = ', 🌐следующие пользователи в сети:\\n';
@@ -761,11 +768,11 @@ function manager_nick($finput){
 
 	$botModule = new BotModule($db);
 
-	if(!is_null($words[1])){
+	if(array_key_exists(1, $words)){
 		mb_internal_encoding("UTF-8");
 		$nick = mb_substr($data->object->text, 5);
 		$nick = str_ireplace("\n", "", $nick);
-		if(is_null($data->object->fwd_messages[0])){
+		if(!array_key_exists(0, $data->object->fwd_messages)){
 			if(mb_strlen($nick) <= 15){
 				$db["bot_manager"]["user_nicknames"]["id{$data->object->from_id}"] = $nick;
 				$msg = ", ✅ник установлен.";
@@ -806,7 +813,7 @@ function manager_nick($finput){
 function manager_remove_nick($data, &$db){
 	$botModule = new BotModule($db);
 
-	if(is_null($data->object->fwd_messages[0])){
+	if(!array_key_exists(0, $data->object->fwd_messages)){
 		unset($db["bot_manager"]["user_nicknames"]["id{$data->object->from_id}"]);
 		$msg = ", ✅ник убран.";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
@@ -839,7 +846,7 @@ function manager_show_nicknames($finput){
 
 	$botModule = new BotModule($db);
 
-	if(!is_null($words[1]))
+	if(array_key_exists(1, $words))
 		$list_number_from_word = intval($words[1]);
 	else
 		$list_number_from_word = 1;
@@ -916,7 +923,11 @@ function manager_greeting($finput){
 	}
 
 	mb_internal_encoding("UTF-8");
-	$command = mb_strtolower($words[1]);
+
+	if(array_key_exists(1, $words))
+		$command = mb_strtolower($words[1]);
+	else
+		$command = "";
 	if($command == 'установить'){
 		$msg = ", ✅приветствие установлено.";
 		$res = json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
@@ -967,7 +978,7 @@ function manager_greeting($finput){
 }
 
 function manager_show_invited_greetings($data, $db){
-	if($data->object->action->type == "chat_invite_user" && !is_null($db["bot_manager"]["invited_greeting"]) && $GLOBALS['CAN_SEND_INVITED_GREETING_MESSAGE'] && $data->object->action->member_id > 0){
+	if(property_exists($data->object, 'action') && $data->object->action->type == "chat_invite_user" && array_key_exists("invited_greeting", $db["bot_manager"]) && $GLOBALS['CAN_SEND_INVITED_GREETING_MESSAGE'] && $data->object->action->member_id > 0){
 		$greetings_text = $db["bot_manager"]["invited_greeting"];
 		$parsing_vars = array('USERID', 'USERNAME', 'USERNAME_GEN', 'USERNAME_DAT', 'USERNAME_ACC', 'USERNAME_INS', 'USERNAME_ABL');
 
@@ -1002,7 +1013,7 @@ function manager_rank($finput){
 	mb_internal_encoding("UTF-8");
 	$botModule = new BotModule($db);
 
-	if(!is_null($words[1])){
+	if(array_key_exists(1, $words)){
 		$command = mb_strtolower($words[1]);
 		if($command == "выдать"){
 			$ranksys = new RankSystem($db);
@@ -1012,14 +1023,17 @@ function manager_rank($finput){
 				return 0;
 			}
 
-			if(is_null($words[2]) && is_null($data->object->fwd_messages[0]->from_id)){
-			$msg = ", используйте \"!ранг <ранг> <id/упоминание/перес. сообщение>\".";
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
-			return 0;
+			if(!array_key_exists(2, $words) && !array_key_exists(0, $data->object->fwd_messages)){
+				$msg = ", используйте \"!ранг выдать <ранг> <id/упоминание/перес. сообщение>\".";
+				vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+					return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
+				return 0;
 			}
 
-			$rank = intval($words[2]);
+			if(array_key_exists(2, $words))
+				$rank = intval($words[2]);
+			else
+				$rank = 0;
 
 			$from_user_rank = $ranksys->getUserRank($data->object->from_id);
 
@@ -1033,14 +1047,15 @@ function manager_rank($finput){
 
 			$member_id = 0;
 
-			if(!is_null($data->object->fwd_messages[0]->from_id)){
+			if(array_key_exists(0, $data->object->fwd_messages)){
 				$member_id = $data->object->fwd_messages[0]->from_id;
-			} elseif(bot_is_mention($words[3])){
+			} elseif(array_key_exists(3, $words) && bot_is_mention($words[3])){
 				$member_id = bot_get_id_from_mention($words[3]);
-			} elseif(is_numeric($words[3])) {
+			} elseif(array_key_exists(3, $words) && is_numeric($words[3])) {
 				$member_id = intval($words[3]);
 			} else {
 				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите пользователя.", $data->object->from_id);
+				return 0;
 			}
 
 			$member_rank = $ranksys->getUserRank($member_id);
@@ -1064,16 +1079,24 @@ function manager_rank($finput){
 				return 0;
 			}
 
+			if(!array_key_exists(2, $words) && !array_key_exists(0, $data->object->fwd_messages)){
+				$msg = ", используйте \"!ранг забрать <id/упоминание/перес. сообщение>\".";
+				vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+					return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
+				return 0;
+			}
+
 			$member_id = 0;
 
-			if(!is_null($data->object->fwd_messages[0]->from_id)){
+			if(array_key_exists(0, $data->object->fwd_messages)){
 				$member_id = $data->object->fwd_messages[0]->from_id;
-			} elseif(bot_is_mention($words[2])){
+			} elseif(array_key_exists(2, $words) && bot_is_mention($words[2])){
 				$member_id = bot_get_id_from_mention($words[2]);
-			} elseif(is_numeric($words[2])) {
+			} elseif(array_key_exists(2, $words) && is_numeric($words[2])) {
 				$member_id = intval($words[2]);
 			} else {
 				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите пользователя.", $data->object->from_id);
+				return 0;
 			}
 
 			$from_user_rank = $ranksys->getUserRank($data->object->from_id);
@@ -1130,7 +1153,7 @@ function manager_show_user_ranks($finput){
 
 	$botModule = new BotModule($db);
 
-	if(!is_null($words[1]))
+	if(array_key_exists(1, $words))
 		$list_number_from_word = intval($words[1]);
 	else
 		$list_number_from_word = 1;

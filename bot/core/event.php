@@ -9,6 +9,8 @@ class Event{
 
 	function __construct($data) {
 		$this->data = $data;
+		$this->commands = array();
+		$this->dbIgnoreCommandList = array();
 	}
 
   	public function loadDB(){
@@ -90,7 +92,8 @@ class Event{
 				$finput = (object) array(
 					'data' => $this->data,
 					'words' => $words,
-					'db' => &$this->db
+					'db' => &$this->db,
+					'event' => &$this
 				);
 		
 				$method = $this->commands[$command]; // Получение значения Callback'а
@@ -116,7 +119,8 @@ class Event{
 					$finput = (object) array(
 						'data' => $this->data,
 						'words' => $words,
-						'db' => &$this->db
+						'db' => &$this->db,
+						'event' => &$this
 					);
 					$method = $this->defaultFunc; // Получение значения Callback'а
 					$method($finput); // Выполнение Callback'а
@@ -242,11 +246,9 @@ function event_update($data){
 	$event->addCommand("слова", 'wordgame_cmd');
 
 	$event->setDefaultFunction('event_update_without_commands'); // Определение стандартной функции обработки событий
-	$GLOBALS["event_command_list"] = $event->getCommandList();
 	$event->handle(); // Обработка
 	$event->saveDB(); // Сохранение базы данных
 	$event->exit(); // Очищение памяти
-	unset($GLOBALS["event_command_list"]);
 }
 
 ?>

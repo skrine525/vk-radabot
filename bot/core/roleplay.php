@@ -7,7 +7,7 @@ function rp_api_act_with($db, $data, $words, $msgMale, $msgFemale, $msgMyselfMal
 	$member_id = 0;
 
 	$botModule = new botModule($db);
-	if(is_null($words[1]) && is_null($data->object->fwd_messages[0]->from_id)){
+	if(array_key_exists(1, $words) && array_key_exists(0, $data->object->fwd_messages)){
 		$msg = ", используйте \"Обнять <имя/фамилия/id/упоминание/перес. сообщение>\".";
 		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%__appeal__%, используйте \"{$words[0]} <имя/фамилия/id/упоминание/перес. сообщение>\""), JSON_UNESCAPED_UNICODE);
 		$request = vk_parse_var($request, "__appeal__");
@@ -18,15 +18,15 @@ function rp_api_act_with($db, $data, $words, $msgMale, $msgFemale, $msgMyselfMal
 		return 0;
 	}
 
-	if(!is_null($data->object->fwd_messages[0]->from_id)){
+	if(array_key_exists(0, $data->object->fwd_messages)){
 		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(bot_is_mention($words[1])){
+	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
 		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(is_numeric($words[1])) {
+	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
 		$member_id = intval($words[1]);
 	}
 
-	$messagesJson = json_encode(array('male' => $msgMale, 'female' => $msgFemale, 'myselfMale' => $msgMyselfMale, 'myselfFemale' => $myselfFemale, 'sexErrorMsg' => $sexErrorMsg), JSON_UNESCAPED_UNICODE);
+	$messagesJson = json_encode(array('male' => $msgMale, 'female' => $msgFemale, 'myselfMale' => $msgMyselfMale, 'myselfFemale' => $msgMyselfFemale, 'sexErrorMsg' => $sexErrorMsg), JSON_UNESCAPED_UNICODE);
 
 	$messagesJson = vk_parse_vars($messagesJson, array("FROM_USERNAME", "MEMBER_USERNAME", "MEMBER_USERNAME_GEN", "MEMBER_USERNAME_DAT", "MEMBER_USERNAME_ACC", "MEMBER_USERNAME_INS", "MEMBER_USERNAME_ABL", "appeal"));
 
@@ -87,10 +87,19 @@ function rp_api_act_with($db, $data, $words, $msgMale, $msgFemale, $msgMyselfMal
 			");
 
 	} else {
-		$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
-		$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
-		$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
-		$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
+		if(array_key_exists(1, $words)){
+			$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
+			$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
+		}
+		else
+			$word1 = "";
+
+		if(array_key_exists(2, $words)){
+			$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
+			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
+		}
+		else
+			$word2 = "";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});
 			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
@@ -305,18 +314,18 @@ function rp_sex($finput){
 	$member_id = 0;
 	$botModule = new botModule($db);
 
-	if(is_null($words[1]) && is_null($data->object->fwd_messages[0]->from_id)){
+	if(array_key_exists(1, $words) && array_key_exists(0, $data->object->fwd_messages)){
 		$msg = ", используйте \"Секс <имя/фамилия/id/упоминание/перес. сообщение>\".";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
 		return 0;
 	}
 
-	if(!is_null($data->object->fwd_messages[0]->from_id)){
+	if(array_key_exists(0, $data->object->fwd_messages)){
 		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(bot_is_mention($words[1])){
+	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
 		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(is_numeric($words[1])) {
+	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
 		$member_id = intval($words[1]);
 	}
 
@@ -358,10 +367,19 @@ function rp_sex($finput){
 			");
 
 	} else {
-		$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
-		$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
-		$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
-		$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
+		if(array_key_exists(1, $words)){
+			$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
+			$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
+		}
+		else
+			$word1 = "";
+
+		if(array_key_exists(2, $words)){
+			$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
+			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
+		}
+		else
+			$word2 = "";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'screen_name,first_name_ins,last_name_ins'});
 			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
@@ -419,18 +437,18 @@ function rp_hug($finput){
 	$member_id = 0;
 	$botModule = new botModule($db);
 
-	if(is_null($words[1]) && is_null($data->object->fwd_messages[0]->from_id)){
+	if(array_key_exists(1, $words) && array_key_exists(0, $data->object->fwd_messages)){
 		$msg = ", используйте \"Обнять <имя/фамилия/id/упоминание/перес. сообщение>\".";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
 		return 0;
 	}
 
-	if(!is_null($data->object->fwd_messages[0]->from_id)){
+	if(array_key_exists(0, $data->object->fwd_messages)){
 		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(bot_is_mention($words[1])){
+	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
 		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(is_numeric($words[1])) {
+	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
 		$member_id = intval($words[1]);
 	}
 
@@ -468,10 +486,19 @@ function rp_hug($finput){
 			");
 
 	} else {
-		$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
-		$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
-		$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
-		$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
+		if(array_key_exists(1, $words)){
+			$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
+			$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
+		}
+		else
+			$word1 = "";
+
+		if(array_key_exists(2, $words)){
+			$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
+			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
+		}
+		else
+			$word2 = "";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'screen_name,first_name_acc,last_name_acc'});
 			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
@@ -525,18 +552,18 @@ function rp_bump($finput){
 	$member_id = 0;
 	$botModule = new botModule($db);
 
-	if(is_null($words[1]) && is_null($data->object->fwd_messages[0]->from_id)){
+	if(array_key_exists(1, $words) && array_key_exists(0, $data->object->fwd_messages)){
 		$msg = ", используйте \"Уебать <имя/фамилия/id/упоминание/перес. сообщение>\".";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
 		return 0;
 	}
 
-	if(!is_null($data->object->fwd_messages[0]->from_id)){
+	if(array_key_exists(0, $data->object->fwd_messages)){
 		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(bot_is_mention($words[1])){
+	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
 		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(is_numeric($words[1])) {
+	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
 		$member_id = intval($words[1]);
 	}
 
@@ -574,10 +601,19 @@ function rp_bump($finput){
 			");
 
 	} else {
-		$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
-		$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
-		$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
-		$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
+		if(array_key_exists(1, $words)){
+			$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
+			$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
+		}
+		else
+			$word1 = "";
+
+		if(array_key_exists(2, $words)){
+			$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
+			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
+		}
+		else
+			$word2 = "";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'screen_name,first_name_dat,last_name_dat'});
 			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
@@ -631,18 +667,18 @@ function rp_pissof($finput){
 	$member_id = 0;
 	$botModule = new botModule($db);
 
-	if(is_null($words[1]) && is_null($data->object->fwd_messages[0]->from_id)){
+	if(array_key_exists(1, $words) && array_key_exists(0, $data->object->fwd_messages)){
 		$msg = ", используйте \"Обоссать <имя/фамилия/id/упоминание/перес. сообщение>\".";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
 		return 0;
 	}
 
-	if(!is_null($data->object->fwd_messages[0]->from_id)){
+	if(array_key_exists(0, $data->object->fwd_messages)){
 		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(bot_is_mention($words[1])){
+	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
 		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(is_numeric($words[1])) {
+	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
 		$member_id = intval($words[1]);
 	}
 
@@ -680,10 +716,19 @@ function rp_pissof($finput){
 			");
 
 	} else {
-		$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
-		$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
-		$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
-		$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
+		if(array_key_exists(1, $words)){
+			$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
+			$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
+		}
+		else
+			$word1 = "";
+
+		if(array_key_exists(2, $words)){
+			$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
+			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
+		}
+		else
+			$word2 = "";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'screen_name,first_name_gen,last_name_gen'});
 			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
@@ -737,18 +782,18 @@ function rp_kiss($finput){
 	$member_id = 0;
 	$botModule = new botModule($db);
 
-	if(is_null($words[1]) && is_null($data->object->fwd_messages[0]->from_id)){
+	if(array_key_exists(1, $words) && array_key_exists(0, $data->object->fwd_messages)){
 		$msg = ", используйте \"Поцеловать <имя/фамилия/id/упоминание/перес. сообщение>\".";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
 		return 0;
 	}
 
-	if(!is_null($data->object->fwd_messages[0]->from_id)){
+	if(array_key_exists(0, $data->object->fwd_messages)){
 		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(bot_is_mention($words[1])){
+	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
 		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(is_numeric($words[1])) {
+	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
 		$member_id = intval($words[1]);
 	}
 
@@ -786,10 +831,19 @@ function rp_kiss($finput){
 			");
 
 	} else {
-		$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
-		$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
-		$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
-		$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
+		if(array_key_exists(1, $words)){
+			$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
+			$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
+		}
+		else
+			$word1 = "";
+
+		if(array_key_exists(2, $words)){
+			$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
+			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
+		}
+		else
+			$word2 = "";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'screen_name,first_name_acc,last_name_acc'});
 			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
@@ -843,18 +897,18 @@ function rp_hark($finput){
 	$member_id = 0;
 	$botModule = new botModule($db);
 
-	if(is_null($words[1]) && is_null($data->object->fwd_messages[0]->from_id)){
+	if(array_key_exists(1, $words) && array_key_exists(0, $data->object->fwd_messages)){
 		$msg = ", используйте \"Харкнуть <имя/фамилия/id/упоминание/перес. сообщение>\".";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
 		return 0;
 	}
 
-	if(!is_null($data->object->fwd_messages[0]->from_id)){
+	if(array_key_exists(0, $data->object->fwd_messages)){
 		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(bot_is_mention($words[1])){
+	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
 		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(is_numeric($words[1])) {
+	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
 		$member_id = intval($words[1]);
 	}
 
@@ -892,10 +946,19 @@ function rp_hark($finput){
 			");
 
 	} else {
-		$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
-		$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
-		$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
-		$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
+		if(array_key_exists(1, $words)){
+			$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
+			$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
+		}
+		else
+			$word1 = "";
+
+		if(array_key_exists(2, $words)){
+			$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
+			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
+		}
+		else
+			$word2 = "";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'screen_name,first_name_acc,last_name_acc'});
 			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
@@ -949,18 +1012,18 @@ function rp_suck($finput){
 	$member_id = 0;
 	$botModule = new botModule($db);
 
-	if(is_null($words[1]) && is_null($data->object->fwd_messages[0]->from_id)){
+	if(array_key_exists(1, $words) && array_key_exists(0, $data->object->fwd_messages)){
 		$msg = ", используйте \"Отсосать <имя/фамилия/id/упоминание/перес. сообщение>\".";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
 		return 0;
 	}
 
-	if(!is_null($data->object->fwd_messages[0]->from_id)){
+	if(array_key_exists(0, $data->object->fwd_messages)){
 		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(bot_is_mention($words[1])){
+	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
 		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(is_numeric($words[1])) {
+	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
 		$member_id = intval($words[1]);
 	}
 
@@ -1002,10 +1065,19 @@ function rp_suck($finput){
 			");
 
 	} else {
-		$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
-		$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
-		$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
-		$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
+		if(array_key_exists(1, $words)){
+			$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
+			$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
+		}
+		else
+			$word1 = "";
+
+		if(array_key_exists(2, $words)){
+			$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
+			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
+		}
+		else
+			$word2 = "";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'screen_name,first_name_gen,last_name_gen,sex'});
 			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
@@ -1063,18 +1135,18 @@ function rp_lick($finput){
 	$member_id = 0;
 	$botModule = new botModule($db);
 
-	if(is_null($words[1]) && is_null($data->object->fwd_messages[0]->from_id)){
+	if(array_key_exists(1, $words) && array_key_exists(0, $data->object->fwd_messages)){
 		$msg = ", используйте \"Отлизать <имя/фамилия/id/упоминание/перес. сообщение>\".";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
 		return 0;
 	}
 
-	if(!is_null($data->object->fwd_messages[0]->from_id)){
+	if(array_key_exists(0, $data->object->fwd_messages)){
 		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(bot_is_mention($words[1])){
+	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
 		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(is_numeric($words[1])) {
+	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
 		$member_id = intval($words[1]);
 	}
 
@@ -1116,10 +1188,19 @@ function rp_lick($finput){
 			");
 
 	} else {
-		$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
-		$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
-		$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
-		$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
+		if(array_key_exists(1, $words)){
+			$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
+			$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
+		}
+		else
+			$word1 = "";
+
+		if(array_key_exists(2, $words)){
+			$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
+			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
+		}
+		else
+			$word2 = "";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'screen_name,first_name_gen,last_name_gen,sex'});
 			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
@@ -1177,7 +1258,7 @@ function rp_gofuck($finput){
 	$member_id = 0;
 	$botModule = new botModule($db);
 
-	if(is_null($words[1]) && is_null($data->object->fwd_messages[0]->from_id)){
+	if(array_key_exists(1, $words) && array_key_exists(0, $data->object->fwd_messages)){
 		$botModule = new botModule($db);
 		$msg = ", используйте \"Послать <имя/фамилия/id/упоминание/перес. сообщение>\".";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
@@ -1185,11 +1266,11 @@ function rp_gofuck($finput){
 		return 0;
 	}
 
-	if(!is_null($data->object->fwd_messages[0]->from_id)){
+	if(array_key_exists(0, $data->object->fwd_messages)){
 		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(bot_is_mention($words[1])){
+	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
 		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(is_numeric($words[1])) {
+	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
 		$member_id = intval($words[1]);
 	}
 
@@ -1227,10 +1308,19 @@ function rp_gofuck($finput){
 			");
 
 	} else {
-		$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
-		$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
-		$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
-		$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
+		if(array_key_exists(1, $words)){
+			$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
+			$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
+		}
+		else
+			$word1 = "";
+
+		if(array_key_exists(2, $words)){
+			$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
+			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
+		}
+		else
+			$word2 = "";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'screen_name,first_name_acc,last_name_acc'});
 			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
