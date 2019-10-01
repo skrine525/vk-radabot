@@ -1,0 +1,13 @@
+[Unit]
+Description=A Python handler of vk-radabot
+After=multi-user.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/vk-radabot/cli
+ExecStart=/usr/bin/python bot-handler.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

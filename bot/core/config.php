@@ -1,6 +1,6 @@
 <?php
 
-define('BOT_CONFIG_FILE_PATH', "../bot/data/config.json");
+define('BOT_CONFIG_FILE_PATH', BOT_DATADIR."/config.json");
 
 function config_get($name){
     $env = json_decode(file_get_contents(BOT_CONFIG_FILE_PATH), true);

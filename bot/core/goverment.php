@@ -532,7 +532,7 @@ function goverment_flag($finput){
 					}
 				}
 				$photo_url = $photo_sizes[$photo_url_index]->url;
-				$path = "../tmp/photo".mt_rand(0, 65500).".jpg";
+				$path = BOT_TMPDIR."/photo".mt_rand(0, 65500).".jpg";
 				file_put_contents($path, file_get_contents($photo_url));
 				$response =  json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 					return API.photos.getMessagesUploadServer({'peer_id':{$data->object->peer_id}});"));
@@ -566,7 +566,7 @@ function goverment_flag($finput){
 					}
 				}
 				$photo_url = $photo_sizes[$photo_url_index]->url;
-				$path = "../tmp/photo".mt_rand(0, 65500).".jpg";
+				$path = BOT_TMPDIR."/photo".mt_rand(0, 65500).".jpg";
 				file_put_contents($path, file_get_contents($photo_url));
 				$response =  json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 					return API.photos.getMessagesUploadServer({'peer_id':{$data->object->peer_id}});"));
