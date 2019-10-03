@@ -7,6 +7,7 @@
 
 class RankSystem{ // Класс управления рангами
 	const RANKS_ARRAY = array("Создатель беседы", "Администратор");
+	const MINRANK_NAME = "Участник";
 
 	private $db;
 
@@ -15,8 +16,10 @@ class RankSystem{ // Класс управления рангами
 	}
 
 	public static function getRankNameByID($rank){
-		if(!is_null(self::RANKS_ARRAY[$rank]))
+		if(array_key_exists($rank, self::RANKS_ARRAY))
 			return self::RANKS_ARRAY[$rank];
+		elseif($rank == self::getMinRankValue())
+			return self::MINRANK_NAME;
 		else
 			return "rank_{$rank}";
 	}
@@ -774,33 +777,49 @@ function manager_nick($finput){
 		$nick = str_ireplace("\n", "", $nick);
 		if(!array_key_exists(0, $data->object->fwd_messages)){
 			if(mb_strlen($nick) <= 15){
+				if(array_search($nick, $db["bot_manager"]["user_nicknames"]) !== false){
+					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Указанный ник занят!", $data->object->from_id);
+					return 0;
+				}
 				$db["bot_manager"]["user_nicknames"]["id{$data->object->from_id}"] = $nick;
 				$msg = ", ✅ник установлен.";
 				vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
 			} else {
-				$msg = ", ⛔указанный ник больше 15 символов.";
+				$msg = ", ⛔Указанный ник больше 15 символов.";
 				vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
 			}
 		}
 		else{
-			$ranksys = new RankSystem($db);
-			if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверика на права
-				$botModule->sendSystemMsg_NoRights($data);
-				return 0;
-			}
+			if(mb_strlen($nick) <= 15){
+				$ranksys = new RankSystem($db);
+				if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверика на права
+					$botModule->sendSystemMsg_NoRights($data);
+					return 0;
+				}
 
-			$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%, ✅ник @id{$data->object->fwd_messages[0]->from_id} (пользователя) изменён!"), JSON_UNESCAPED_UNICODE);
-			$request = vk_parse_var($request, "appeal");
-			$response = json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-				API.messages.send({$request});
-				return 'ok';
-				"))->response;
-			if($response == 'ok')
-				$db["bot_manager"]["user_nicknames"]["id{$data->object->fwd_messages[0]->from_id}"] = $nick;
+				if(array_search($nick, $db["bot_manager"]["user_nicknames"]) !== false){
+					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Указанный ник занят!", $data->object->from_id);
+					return 0;
+				}
+
+				$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%, ✅ник @id{$data->object->fwd_messages[0]->from_id} (пользователя) изменён!"), JSON_UNESCAPED_UNICODE);
+				$request = vk_parse_var($request, "appeal");
+				$response = json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+					API.messages.send({$request});
+					return 'ok';
+					"))->response;
+				if($response == 'ok')
+					$db["bot_manager"]["user_nicknames"]["id{$data->object->fwd_messages[0]->from_id}"] = $nick;
+			} else {
+				$msg = ", ⛔Указанный ник больше 15 символов.";
+				vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
+				");
+			}
 		}
 	} else {
 		$msg = ", ⛔используйте\\\"!ник <ник>\\\" для управления ником.";
@@ -871,7 +890,7 @@ function manager_show_nicknames($finput){
 	$list_out = array(); // Выходной список
 
 	$list_number = $list_number_from_word; // Номер текущего списка
-	$list_size = 10; // Размер списка
+	$list_size = 20; // Размер списка
 	////////////////////////////////////////////////////
 	if(count($list_in) % $list_size == 0)
 		$list_max_number = intdiv(count($list_in), $list_size);
@@ -901,7 +920,7 @@ function manager_show_nicknames($finput){
 		var users = API.users.get({'user_ids':nicknames@.user_id});
 		var msg = appeal+', ники [{$list_number}/{$list_max_number}]:';
 		var i = 0; while(i < nicknames.length){
-			msg = msg + '\\n✅@id'+nicknames[i].user_id+' ('+users[i].first_name.substr(0, 2)+'. '+users[i].last_name+') - '+nicknames[i].nick;
+			msg = msg + '\\n✅@id'+nicknames[i].user_id+' ('+users[i].first_name.substr(0, 2)+'. '+users[i].last_name+') — '+nicknames[i].nick;
 			i = i + 1;
 		}
 		return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg,'disable_mentions':1});
@@ -1134,14 +1153,8 @@ function manager_rank($finput){
 	else{
 		$ranksys = new RankSystem($db);
 		$user_rank = $ranksys->getUserRank($data->object->from_id);
-
-		if(RankSystem::cmpRanks($user_rank, RankSystem::getMinRankValue()) == 0){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет ранга в этой беседе.", $data->object->from_id);
-		}
-		else{
-			$rank_name = RankSystem::getRankNameByID($user_rank);
-			$botModule->sendSimpleMessage($data->object->peer_id, ", Ваш ранг: {$rank_name} ({$user_rank}).", $data->object->from_id);
-		}
+		$rank_name = RankSystem::getRankNameByID($user_rank);
+		$botModule->sendSimpleMessage($data->object->peer_id, ", Ваш ранг: {$rank_name} ({$user_rank}).", $data->object->from_id);
 	}
 }
 
@@ -1227,7 +1240,7 @@ function manager_rank_list($finput){
 		$msg = $msg . "\n• rank_{$i} - {$ranks[$i]}";
 	}
 	$min_rank = RankSystem::getMinRankValue();
-	$msg = $msg . "\n• rank_{$min_rank} - Участник";
+	$msg = $msg . "\n• rank_{$min_rank} - ".RankSystem::getRankNameByID(RankSystem::getMinRankValue());
 	$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
 }
 

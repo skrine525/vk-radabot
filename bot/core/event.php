@@ -136,23 +136,6 @@ class Event{
   	}
 }
 
-function event_update_without_commands($finput){
-	// Инициализация базовых переменных
-	$data = $finput->data; 
-	$words = $finput->words;
-	$db = &$finput->db;
-
-	bot_leave_autokick($data);
-	bot_banned_kick($data, $db);
-	manager_show_invited_greetings($data, $db); // Обработчик приветствия для новый пользователей в беседе
-	goverment_referendum_system($data, $db);
-
-	fun_handler($data, $db);
-	stats_update($data, $words, $db); // Ведение статистики в беседе
-	wordgame_gameplay($data, $db); // Освновной обработчик игры в слова
-
-}
-
 function event_update($data){
 	$event = new Event($data); // Инициализирует класс
 	$event->loadDB(); // Подключаем базу данных
@@ -245,7 +228,23 @@ function event_update($data){
 	$event->addCommand("!giphy", 'giphy_handler');
 	$event->addCommand("слова", 'wordgame_cmd');
 
-	$event->setDefaultFunction('event_update_without_commands'); // Определение стандартной функции обработки событий
+	// Функция обработки событий вне командной среды
+	$event->setDefaultFunction(function ($finput){
+		// Инициализация базовых переменных
+		$data = $finput->data; 
+		$words = $finput->words;
+		$db = &$finput->db;
+
+		bot_leave_autokick($data);
+		bot_banned_kick($data, $db);
+		manager_show_invited_greetings($data, $db); // Обработчик приветствия для новый пользователей в беседе
+		goverment_referendum_system($data, $db);
+
+		fun_handler($data, $db);
+		stats_update($data, $words, $db); // Ведение статистики в беседе
+		wordgame_gameplay($data, $db); // Освновной обработчик игры в слова
+	});
+
 	$event->handle(); // Обработка
 	$event->saveDB(); // Сохранение базы данных
 	$event->exit(); // Очищение памяти

@@ -783,7 +783,7 @@ class SysMemes{
 
 		switch ($meme_name) {
 			case 'мемы';
-			$meme_str_list == "";
+			$meme_str_list = "";
 			for($i = 0; $i < count(self::MEMES); $i++){
 				$name = self::MEMES[$i];
 				if($meme_str_list == "")
@@ -875,13 +875,13 @@ class SysMemes{
 			return 'ok';
 
 			case 'юля':
-			//vk_call('messages.send', array('peer_id' => $data->object->peer_id, 'message' => "@id477530202 (Доскаааааааааааааааааааааааа)"));
-			$keyboard = vk_keyboard(true, array(
+			vk_call('messages.send', array('peer_id' => $data->object->peer_id, 'message' => "@id477530202 (Доскаааааааааааааааааааааааа)"));
+			/*$keyboard = vk_keyboard(true, array(
 				array(
 					vk_text_button("❤", array('command'=>'fun','meme_id'=>10), "secondary")
 				)
 			));
-			vk_call('messages.send', array('peer_id' => $data->object->peer_id, 'message' => "❤", 'keyboard' => $keyboard));
+			vk_call('messages.send', array('peer_id' => $data->object->peer_id, 'message' => "❤", 'keyboard' => $keyboard));*/
 			return 'ok';
 
 			case 'олды тут?':

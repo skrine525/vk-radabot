@@ -8,7 +8,7 @@ class BotModule{
 	}
 
 	public function makeExeAppeal($user_id, $varname = "appeal"){ // Создание переменной appeal с обращением к пользователю, посредством VKScript и vk_execute()
-		if(!is_null($this->db["bot_manager"]["user_nicknames"]) && array_key_exists("id{$user_id}", $this->db["bot_manager"]["user_nicknames"])){
+		if(array_key_exists('user_nicknames', $this->db["bot_manager"]) && array_key_exists("id{$user_id}", $this->db["bot_manager"]["user_nicknames"])){
 			$user_nick = $this->db["bot_manager"]["user_nicknames"]["id{$user_id}"];
 
 			return "var user = API.users.get({'user_ids':[{$user_id}],'fields':'screen_name'})[0]; var {$varname} = '@'+user.screen_name+' ({$user_nick})'; user = null;";
@@ -78,8 +78,7 @@ function bot_register($finput){ // Регистрация чата
 			'capital' => 'г. Мда');
 			$db["goverment"] = $gov_data;
 			$db["bot_manager"] = array(
-				'user_ranks' => array("id{$data->object->from_id}" => 0),
-				'user_nicknames' => array()
+				'user_ranks' => array("id{$data->object->from_id}" => 0)
 			);
 		}	
 	} else {
@@ -108,7 +107,7 @@ function bot_get_id_from_mention($msg){ // Получение ID из упоми
 	return null;
 }
 
-function bot_leave_autokick($data){ // Автокик после выхода из беседы
+function bot_leave_autokick($data){ // Автокик пользователя, вышедшего из беседы
 	if(property_exists($data->object, 'action')){
 		if ($data->object->action->type == "chat_kick_user" && $data->object->action->member_id == $data->object->from_id){
 			$chat_id = $data->object->peer_id - 2000000000;
@@ -155,7 +154,7 @@ function bot_banned_kick($data, &$db){ // Кик забаненных польз
 					}
 					else{
 						$res = json_decode(vk_execute($botModule->makeExeAppeal($data->object->action->member_id)."
-							API.messages.send({'peer_id':{$data->object->peer_id}, 'message':appeal+', таким долбаебам как ты, тут не место!'});
+							API.messages.send({'peer_id':{$data->object->peer_id}, 'message':appeal+', вы забанены в этой беседе!'});
 							API.messages.removeChatUser({'chat_id':{$chat_id},'user_id':{$data->object->action->member_id}});
 							return 0;
 							"));
