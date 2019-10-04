@@ -19,7 +19,7 @@ function main(){
 			}
 			else{
 				for($i = 0; $i < count($data->updates); $i++){
-					event_update($data->updates[$i]);
+					event_handle($data->updates[$i]);
 				}
 				$ts = $data->ts;
 			}	

@@ -11,7 +11,8 @@ function wordgame_main($data, $words, &$db){
 		wordgame_reset_word($session, $data->object->date);
 		wordgame_set_session($data->object->peer_id, $session);
 		$new_word = wordgame_get_encoded_word($session);
-		$msg = "[Слова] Игра запущена. Слово: {$new_word}.";
+		$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
+		$msg = "[Слова] Игра запущена. Слово ({$wordlen} б.): {$new_word}.";
 		$keyboard = vk_keyboard(false, array(
 			array(
 				vk_text_button("Подсказка", array('command'=>'word_game','act'=>1), "positive")
@@ -142,7 +143,7 @@ function wordgame_get_encoded_word($db){
 function wordgame_reset_word(&$db, $date){
 	mb_internal_encoding("UTF-8");
 	while (true){
-		$words_data = file("../bot/data/word_game/word_rus_database.txt");
+		$words_data = file(BOT_DATADIR."/word_game/word_rus_database.txt");
 		$rand = mt_rand(0, sizeof($words_data));
 		$word = str_ireplace("\n", "", $words_data[$rand]);
 		$word = str_ireplace("\r", "", $word);
@@ -225,7 +226,8 @@ function wordgame_gameplay($data, &$db){
 			wordgame_reset_word($session, $data->object->date);
 			wordgame_set_session($data->object->peer_id, $session);
 			$new_word = wordgame_get_encoded_word($session);
-			$msg = "[Слова] Новое слово: {$new_word}.";
+			$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
+			$msg = "[Слова] Новое слово ({$wordlen} б.): {$new_word}.";
 			$keyboard = vk_keyboard(false, array(
 				array(
 					vk_text_button("Подсказка", array('command'=>'word_game','act'=>1), "positive")
@@ -244,7 +246,8 @@ function wordgame_gameplay($data, &$db){
 		}
 		elseif ($message_text == "слово" && !$session["word_game"]["current_word"]["can_reset"]){
 			$word = wordgame_get_encoded_word($session);
-			$msg = "[Слова] Слово: {$word}.";
+			$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
+			$msg = "[Слова] Слово ({$wordlen} б.): {$word}.";
 			vk_execute("
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});
 				");

@@ -139,10 +139,8 @@ function bot_banned_kick($data, &$db){ // Кик забаненных польз
 	if(property_exists($data->object, 'action')){
 		if ($data->object->action->type == "chat_invite_user"){
 			$botModule = new BotModule($db);
-			$GLOBALS['CAN_SEND_INVITED_GREETING_MESSAGE'] = true;
 			for($i = 0; $i < sizeof($banned_users); $i++){
 				if ($banned_users[$i] == $data->object->action->member_id){
-					$GLOBALS['CAN_SEND_INVITED_GREETING_MESSAGE'] = false;
 					$chat_id = $data->object->peer_id - 2000000000;
 					$res = array();
 					$ranksys = new RankSystem($db);
@@ -153,14 +151,14 @@ function bot_banned_kick($data, &$db){ // Кик забаненных польз
 							"));
 					}
 					else{
-						$res = json_decode(vk_execute($botModule->makeExeAppeal($data->object->action->member_id)."
+						json_decode(vk_execute($botModule->makeExeAppeal($data->object->action->member_id)."
 							API.messages.send({'peer_id':{$data->object->peer_id}, 'message':appeal+', вы забанены в этой беседе!'});
 							API.messages.removeChatUser({'chat_id':{$chat_id},'user_id':{$data->object->action->member_id}});
 							return 0;
 							"));
+						return false;
 					}
 					if($res->response == 1){
-						$GLOBALS['CAN_SEND_INVITED_GREETING_MESSAGE'] = true;
 						$banned_users = bot_get_ban_array($db);
 						$user_id = $data->object->action->member_id;
 						for($i = 0; $i < sizeof($banned_users); $i++){
@@ -171,6 +169,7 @@ function bot_banned_kick($data, &$db){ // Кик забаненных польз
 								break;
 							}
 						}
+						return true;
 					}
 				}
 			}
@@ -548,53 +547,5 @@ function bot_help($finput){
 			break;
 	}
 }
-
-/*function bot_keyboard($data, $words){
-	mb_internal_encoding("UTF-8");
-	$command = mb_strtolower($words[1]);
-
-	if($command == "создать"){
-		$one_time = intval($words[2]);
-		$array = array();
-		$array_index = -1;
-		$can_edit_array = false;
-		$button_name = "";
-		$button_color = "";
-
-		for($i = 0; $i < count($words); $i++){
-			$words[$i] = str_ireplace("\n", "", $words[$i]);
-		}
-
-		for($i = 3; $i < count($words); $i++){
-			if ($words[$i] == "_begin"){
-				$can_edit_array = true;
-				$array[] = array();
-				$array_index = count($array)-1;
-			} elseif($words[$i] == "_end"){
-				$can_edit_array = false;
-			} elseif($words[$i] == "_bt_begin" && $can_edit_array){
-				$button_name = "";
-				$button_color = "";
-			} elseif($words[$i] == "_bt_label" && $can_edit_array){
-				$button_name = str_ireplace("%+%", " ", $words[$i+1]);
-			} elseif($words[$i] == "_bt_color" && $can_edit_array){
-				$button_color = $words[$i+1];
-			} elseif($words[$i] == "_bt_end" && $can_edit_array){
-				if(count($array[$array_index]) < 4){
-					$array[$array_index][] = vk_text_button($button_name, "", $button_color);
-				}
-			}
-		}
-
-		$keyboard = vk_keyboard($one_time, $array);
-
-		bot_debug($keyboard);
-
-		vk_execute("return API.messages.send({'peer_id':{$data->object->peer_id},'message':'Клавиатура:','keyboard':'{$keyboard}'});");
-	} elseif ($command == "убрать"){
-		$keyboard = vk_keyboard($one_time, array());
-		vk_execute("return API.messages.send({'peer_id':{$data->object->peer_id},'message':'Клавиатура убрана.','keyboard':'{$keyboard}'});");
-	}
-}*/
 
 ?>

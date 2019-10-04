@@ -997,7 +997,7 @@ function manager_greeting($finput){
 }
 
 function manager_show_invited_greetings($data, $db){
-	if(property_exists($data->object, 'action') && $data->object->action->type == "chat_invite_user" && array_key_exists("invited_greeting", $db["bot_manager"]) && $GLOBALS['CAN_SEND_INVITED_GREETING_MESSAGE'] && $data->object->action->member_id > 0){
+	if(property_exists($data->object, 'action') && $data->object->action->type == "chat_invite_user" && array_key_exists("invited_greeting", $db["bot_manager"])){
 		$greetings_text = $db["bot_manager"]["invited_greeting"];
 		$parsing_vars = array('USERID', 'USERNAME', 'USERNAME_GEN', 'USERNAME_DAT', 'USERNAME_ACC', 'USERNAME_INS', 'USERNAME_ABL');
 
@@ -1019,8 +1019,9 @@ function manager_show_invited_greetings($data, $db){
 		}
 
 		vk_execute($system_code."return API.messages.send({$message_json_request});");
+		return true;
 	}
-	unset($GLOBALS['CAN_SEND_INVITED_GREETING_MESSAGE']); // Очищаем память от ненужной переменной
+	return false;
 }
 
 function manager_rank($finput){

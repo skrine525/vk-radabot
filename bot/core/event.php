@@ -136,7 +136,7 @@ class Event{
   	}
 }
 
-function event_update($data){
+function event_handle($data){
 	$event = new Event($data); // Инициализирует класс
 	$event->loadDB(); // Подключаем базу данных
 
@@ -236,8 +236,8 @@ function event_update($data){
 		$db = &$finput->db;
 
 		bot_leave_autokick($data);
-		bot_banned_kick($data, $db);
-		manager_show_invited_greetings($data, $db); // Обработчик приветствия для новый пользователей в беседе
+		if(bot_banned_kick($data, $db))
+			manager_show_invited_greetings($data, $db); // Обработчик приветствия для новый пользователей в беседе
 		goverment_referendum_system($data, $db);
 
 		fun_handler($data, $db);
