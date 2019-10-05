@@ -182,8 +182,14 @@ function goverment_laws_cpanel($finput){
 
 				if($law["publisher_type"] == 1){
 					if($gov["president_id"] == $data->object->from_id){
-						$gov["laws"][$law_id-1] = $gov["laws"][count($gov["laws"])-1];
-						unset($gov["laws"][count($gov["laws"])-1]);
+						//$gov["laws"][$law_id-1] = $gov["laws"][count($gov["laws"])-1];
+						unset($gov["laws"][$law_id-1]);
+						$laws_tmp = array_values($gov["laws"]);
+						$laws = array();
+						for($i = 0; $i < count($laws_tmp); $i++){
+							$laws[] = $laws_tmp[$i];
+						}
+						$gov["laws"] = $laws;
 						$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Вы отменили закон №{$law_id}.", $data->object->from_id);
 					}
 					else{
@@ -192,8 +198,14 @@ function goverment_laws_cpanel($finput){
 				}
 				else{
 					if($gov["parliament_id"] == $data->object->from_id){
-						$gov["laws"][$law_id-1] = $gov["laws"][count($gov["laws"])-1];
-						unset($gov["laws"][count($gov["laws"])-1]);
+						//$gov["laws"][$law_id-1] = $gov["laws"][count($gov["laws"])-1];
+						unset($gov["laws"][$law_id-1]);
+						$laws_tmp = array_values($gov["laws"]);
+						$laws = array();
+						for($i = 0; $i < count($laws_tmp); $i++){
+							$laws[] = $laws_tmp[$i];
+						}
+						$gov["laws"] = $laws;
 						$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Вы отменили закон №{$law_id}.", $data->object->from_id);
 					}
 					else{

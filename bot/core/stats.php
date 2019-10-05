@@ -36,10 +36,15 @@ function stats_update($data, $words_tmp, &$db){
 	}
 	unset($words_tmp);
 
-	for($i = 0; $i < count($words); $i++){ // Общая ститистика по каждому написанному слову в беседе
-		if(!array_key_exists($words[$i], $stats["word_stats"]))
-			$stats["word_stats"][$words[$i]] = 0;
-		$stats["word_stats"][$words[$i]] = $stats["word_stats"][$words[$i]] + 1;
+	if(array_key_exists("word_stats", $stats)){
+		$indexing_words = array_keys($stats["word_stats"]);
+		for($i = 0; $i < count($indexing_words); $i++){
+			for($j = 0; $j < count($words); $j++){
+				if($indexing_words[$i] == $words[$j]){
+					$stats["word_stats"][$indexing_words[$i]] = $stats["word_stats"][$indexing_words[$i]] + 1;
+				}
+			}
+		}
 	}
 
 	if(!array_key_exists("id{$data->object->from_id}", $stats["user_word_count"]))
@@ -117,7 +122,7 @@ function stats_cmd_handler($finput){
 					);
 				}
 				$user_word_count = array();
-				for($i = 0; $i < count($user_word_count_tmp) && $i < 5; $i++){
+				for($i = 0; $i < count($user_word_count_tmp) && $i < 10; $i++){
 					$user_word_count[] = $user_word_count_tmp[$i];
 				}
 				unset($user_word_count_tmp);
@@ -130,7 +135,7 @@ function stats_cmd_handler($finput){
 					);
 				}
 				$user_msg_count = array();
-				for($i = 0; $i < count($user_msg_count_tmp) && $i < 5; $i++){
+				for($i = 0; $i < count($user_msg_count_tmp) && $i < 10; $i++){
 					$user_msg_count[] = $user_msg_count_tmp[$i];
 				}
 				unset($user_msg_count_tmp);
@@ -151,7 +156,7 @@ function stats_cmd_handler($finput){
 
 					msg = msg + '\\n\\n✅Всего слов в беседе: '+total_word_count+' слов(а)\\n&#12288;• Из них '+swear_word_count+' ('+swear_percent+'%) мат. слов(а)';
 
-					msg = msg + '\\n\\n✅Топ 10 популярных слов беседы:';
+					msg = msg + '\\n\\n✅Топ 10 популярных индексируемых слов:';
 					if(word_stats.length != 0){
 						var i = 0; while(i < word_stats.length){
 							msg = msg + '\\n&#12288;• '+word_stats[i].word+' — '+word_stats[i].count+' раз(а)';
@@ -162,7 +167,7 @@ function stats_cmd_handler($finput){
 						msg = msg + '\\n&#12288;⛔В беседе нет популярных слов!';
 					}
 
-					msg = msg + '\\n\\n✅Топ 5 пользователя по количеству слов:';
+					msg = msg + '\\n\\n✅Топ 10 пользователя по количеству слов:';
 
 					if(user_word_count.length != 0){
 						var users = API.users.get({'user_ids':user_word_count@.id});
@@ -175,7 +180,7 @@ function stats_cmd_handler($finput){
 						msg = msg + '\\n&#12288;⛔В беседе нет данных пользователей!';
 					}
 
-					msg = msg + '\\n\\n✅Топ 5 пользователя по количеству сообщений:';
+					msg = msg + '\\n\\n✅Топ 10 пользователя по количеству сообщений:';
 
 					if(user_msg_count.length != 0){
 						var users = API.users.get({'user_ids':user_msg_count@.id});
@@ -194,10 +199,145 @@ function stats_cmd_handler($finput){
 			else
 				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔В беседе пока что нет статистики.", $data->object->from_id);
 			break;
+
+		case 'indexing-words':
+			$stats = &$db["stats"];
+			$ranksys = new RankSystem($db);
+
+			if(array_key_exists(2, $words)){
+				$command = mb_strtolower($words[2]);
+			}
+			else{
+				$command = "";
+			}
+
+			switch ($command) {
+				case 'add':
+					if(!$ranksys->checkRank($data->object->from_id, 1)){
+						$botModule->sendSystemMsg_NoRights($data);
+						return 0;
+					}
+
+					if(array_key_exists(3, $words)){
+						$new_words = array();
+						for($i = 3; $i < count($words); $i++){
+							$new_words[] = $words[$i];
+						}
+					}
+					else{
+						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите слово(а).", $data->object->from_id);
+						return 0;
+					}
+
+					$added_words = array();
+					for($i = 0; $i < count($new_words); $i++){
+						$new_word = $new_words[$i];
+						if(!array_key_exists($new_word, $stats["word_stats"])){
+							$stats["word_stats"][$new_word] = 0;
+							$added_words[] = $new_word;
+						}
+					}
+					$str_list = "";
+					for($i = 0; $i < count($added_words); $i++){
+						if($str_list == "")
+							$str_list = "[{$added_words[$i]}]";
+						else
+							$str_list = $str_list . ", [{$added_words[$i]}]";
+					}
+
+					if(count($added_words) > 0)
+						$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Следующие слова теперь индексируются:\n{$str_list}", $data->object->from_id);
+					else
+						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Ни одно слово не было добавлено.", $data->object->from_id);
+
+					break;
+
+				case 'del':
+					if(array_key_exists(3, $words)){
+						$del_words = array();
+						for($i = 3; $i < count($words); $i++){
+							$del_words[] = $words[$i];
+						}
+					}
+					else{
+						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите слово(а).", $data->object->from_id);
+						return 0;
+					}
+
+					$deleted_words = array();
+					for($i = 0; $i < count($del_words); $i++){
+						$del_word = $del_words[$i];
+						if(array_key_exists($del_word, $stats["word_stats"])){
+							unset($stats["word_stats"][$del_word]);
+							$deleted_words[] = $del_word;
+						}
+					}
+					$str_list = "";
+					for($i = 0; $i < count($deleted_words); $i++){
+						if($str_list == "")
+							$str_list = "[{$deleted_words[$i]}]";
+						else
+							$str_list = $str_list . ", [{$deleted_words[$i]}]";
+					}
+
+					if(count($deleted_words) > 0)
+						$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Следующие слова больше не индексируются:\n{$str_list}", $data->object->from_id);
+					else
+						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Ни одно слово не было удалено.", $data->object->from_id);
+
+					break;
+
+				case 'list':
+					$indexing_words_list = array_keys($stats["word_stats"]);
+
+					if(count($indexing_words_list) == 0){
+						$botModule->sendSimpleMessage($data->object->peer_id, ", в беседе нет индекируемымых слов.", $data->object->from_id);
+						return 0;
+					}
+					$str_list = "";
+					for($i = 0; $i < count($indexing_words_list); $i++){
+						if($str_list == "")
+							$str_list = "[{$indexing_words_list[$i]}]";
+						else
+							$str_list = $str_list . ", [{$indexing_words_list[$i]}]";
+					}
+					$botModule->sendSimpleMessage($data->object->peer_id, ", 📝список индекируемымых слов:\n".$str_list, $data->object->from_id);
+					break;
+
+				case 'info':
+					if(array_key_exists(3, $words)){
+						$word = $words[3];
+					}
+					else{
+						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите слово.", $data->object->from_id);
+						return 0;
+					}
+
+					if(array_key_exists($word, $stats["word_stats"])){
+						$used_count = $stats["word_stats"][$word];
+						$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Слово \"{$word}\" было использовано {$used_count} раз(а).", $data->object->from_id);
+					}
+					else{
+						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Указанное слово не индексируется.", $data->object->from_id);
+						return 0;
+					}
+					break;
+				
+				default:
+					$botModule->sendCommandListFromArray($data, ", ⛔используйте:", array(
+					'!stats indexing-words add [w1] [w2] [w3]... - Добавление слов в список индекируемымых',
+					'!stats indexing-words del [w1] [w2] [w3]... - Удаление слов из списка индекируемымых',
+					'!stats indexing-words info [word] - Информация о слове',
+					'!stats indexing-words list - Список индекируемымых слов'
+					));
+					break;
+			}
+			break;
 		
 		default:
 			$botModule->sendCommandListFromArray($data, ", ⛔используйте:", array(
-				'!stats get - Показывает статистику'
+				'!stats get - Показывает статистику',
+				'!stats indexing-words - Управление индекируемыми словами'
 			));
 			break;
 	}

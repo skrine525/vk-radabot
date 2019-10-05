@@ -9,7 +9,7 @@ def config_get(name):
 	f = open("../bot/data/config.json")
 	env = json.loads(f.read())
 	f.close()
-	return env[name] or None
+	return env.get(name, None)
 
 def vk_call(method, parametres):
 	headers = {'Content-type': 'application/x-www-form-urlencoded'}
