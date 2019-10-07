@@ -227,6 +227,7 @@ function event_handle($data){
 	$event->addCommand("!unflip", 'fun_unflip');
 	$event->addCommand("!giphy", 'giphy_handler');
 	$event->addCommand("слова", 'wordgame_cmd');
+	$event->addCommand("загадки", "riddlegame_cmd_handler");
 
 	// Функция обработки событий вне командной среды
 	$event->setDefaultFunction(function ($finput){
@@ -238,11 +239,12 @@ function event_handle($data){
 		bot_leave_autokick($data);
 		if(bot_banned_kick($data, $db))
 			manager_show_invited_greetings($data, $db); // Обработчик приветствия для новый пользователей в беседе
-		goverment_referendum_system($data, $db);
+		goverment_referendum_system($data, $db); // Обработчик выборов президента в беседе
 
 		fun_handler($data, $db);
 		stats_update($data, $words, $db); // Ведение статистики в беседе
-		wordgame_gameplay($data, $db); // Освновной обработчик игры в слова
+		wordgame_gameplay($data, $db); // Освновной обработчик игры Слова
+		riddlegame_gameplay($data, $db); // Основной обработчик игры Загадки
 	});
 
 	$event->handle(); // Обработка

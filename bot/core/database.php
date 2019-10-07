@@ -1,6 +1,9 @@
 <?php
 
 function db_get($doc_id){
+	if(!file_exists(BOT_DBDIR))
+		mkdir(BOT_DBDIR);
+
 	$path = BOT_DBDIR."/{$doc_id}.json";
 	if(db_exists($doc_id))
 		return json_decode(file_get_contents($path), true);
@@ -9,6 +12,9 @@ function db_get($doc_id){
 }
 
 function db_set($doc_id, $doc_data){
+	if(!file_exists(BOT_DBDIR))
+		mkdir(BOT_DBDIR);
+
 	if(!is_null($doc_id)){
 		$path = BOT_DBDIR."/{$doc_id}.json";
 		file_put_contents($path, json_encode($doc_data, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT));
@@ -19,6 +25,9 @@ function db_set($doc_id, $doc_data){
 }
 
 function db_exists($doc_id){
+	if(!file_exists(BOT_DBDIR))
+		mkdir(BOT_DBDIR);
+
 	$path = BOT_DBDIR."/{$doc_id}.json";
 	return file_exists($path);
 }

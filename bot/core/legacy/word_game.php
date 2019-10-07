@@ -12,8 +12,7 @@ function wordgame_main($data, $words, &$db){
 		wordgame_set_session($data->object->peer_id, $session);
 		$new_word = wordgame_get_encoded_word($session);
 		$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
-		$explanation = $session["word_game"]["current_word"]["explanation"];
-		$msg = "[Слова] Игра запущена. Слово ({$wordlen} б.): {$new_word}.\nОписание: {$explanation}.";
+		$msg = "[Слова] Игра запущена. Слово ({$wordlen} б.): {$new_word}.";
 		$keyboard = vk_keyboard(false, array(
 			array(
 				vk_text_button("Подсказка", array('command'=>'word_game','act'=>1), "positive")
@@ -43,12 +42,9 @@ function wordgame_main($data, $words, &$db){
 			return API.messages.send({$json_request});
 			");
 	} elseif (mb_strtolower($words[1]) == 'рейтинг') {
-		if(array_key_exists("games", $db) && array_key_exists("word_game_rating", $db["games"]))
-				$array = $db["games"]["word_game_rating"];
-			else
-				$array = array();
+		$array = $db["games"]["word_game"]["rating_by_score"];
 
-		if(count($array) > 0){
+		if(!is_null($array)){
 			$stats = array();
 			foreach ($array as $key => $val) {
 	    		$stats[] = array('id' => mb_substr($key, 2, mb_strlen($key)), 'score' => $val);;
@@ -153,23 +149,37 @@ function wordgame_get_encoded_word($db){
 function wordgame_reset_word(&$db, $date){
 	mb_internal_encoding("UTF-8");
 	while (true){
-		$database = json_decode(file_get_contents("https://engine.lifeis.porn/api/words.php?rus=true"), true);
-		if($database["ok"]){
-			$word = $database["data"]["word"];
-			$explanation = $database["data"]["explanation"];
-			//$explanation = mb_strtoupper(mb_substr($explanation, 0, 1)) . mb_strtolower(mb_substr($explanation, 1));
-			$db["word_game"]["current_word"]["word"] = $word;
-			$db["word_game"]["current_word"]["explanation"] = $explanation;
-			$db["word_game"]["current_word"]["word_guessing_time"] = $date;
-			$db["word_game"]["current_word"]["opened_symbols"] = array();
-			$db["word_game"]["current_word"]["can_reset"] = false;
-			$db["word_game"]["current_word"]["used_hints"] = 0;
-			$db["word_game"]["current_word"]["last_using_hints_time"] = 0;
+		$words_data = file(BOT_DATADIR."/word_game/word_rus_database.txt");
+		$rand = mt_rand(0, sizeof($words_data));
+		$word = str_ireplace("\n", "", $words_data[$rand]);
+		$word = str_ireplace("\r", "", $word);
+		$db["word_game"]["current_word"]["word"] = $word;
+		$db["word_game"]["current_word"]["word_guessing_time"] = $date;
+		$db["word_game"]["current_word"]["opened_symbols"] = array();
+		$db["word_game"]["current_word"]["can_reset"] = false;
+		$db["word_game"]["current_word"]["used_hints"] = 0;
+		$db["word_game"]["current_word"]["last_using_hints_time"] = 0;
 
-			if (mb_strlen($db["word_game"]["current_word"]["word"]) > 3)
-				break;
-			}
+		if (mb_strlen($db["word_game"]["current_word"]["word"]) > 3)
+			break;
 	}
+}
+
+function wordgame_get_count_of_hints($number){
+	if($number <= 4)
+		return 2;
+	elseif($number <= 6)
+		return 3;
+	elseif($number <= 9)
+		return 4;
+	elseif($number <= 13)
+		return 5;
+	elseif($number <= 18)
+		return 6;
+	elseif($number <= 24)
+		return 7;
+	elseif($number <= 31)
+		return 8;
 }
 
 function wordgame_gameplay($data, &$db){
@@ -223,8 +233,7 @@ function wordgame_gameplay($data, &$db){
 			wordgame_set_session($data->object->peer_id, $session);
 			$new_word = wordgame_get_encoded_word($session);
 			$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
-			$explanation = $session["word_game"]["current_word"]["explanation"];
-			$msg = "[Слова] Новое слово ({$wordlen} б.): {$new_word}.\nОписание: {$explanation}.";
+			$msg = "[Слова] Новое слово ({$wordlen} б.): {$new_word}.";
 			$keyboard = vk_keyboard(false, array(
 				array(
 					vk_text_button("Подсказка", array('command'=>'word_game','act'=>1), "positive")
@@ -245,10 +254,8 @@ function wordgame_gameplay($data, &$db){
 			$word = wordgame_get_encoded_word($session);
 			$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
 			$msg = "[Слова] Слово ({$wordlen} б.): {$word}.";
-			$explanation = $session["word_game"]["current_word"]["explanation"];
-			$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "[Слова] Слово ({$wordlen} б.): {$word}.\nОписание: {$explanation}."), JSON_UNESCAPED_UNICODE);
 			vk_execute("
-				return API.messages.send({$json_request});
+				return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});
 				");
 		} elseif ($message_text == 'подсказка' && !$session["word_game"]["current_word"]["can_reset"]) {
 			mb_internal_encoding("UTF-8");
@@ -295,8 +302,7 @@ function wordgame_gameplay($data, &$db){
 							");
 					}
 				} else {
-					$left_time = 20 - ($data->object->date - $session["word_game"]["current_word"]["last_using_hints_time"]);
-					$msg = "[Слова] Подсказку можно использовать повторно через {$left_time} с.";
+					$msg = "[Слова] Нельзя использовать подсказки чаще 20 секунд.";
 					vk_execute("
 						return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});
 						");
@@ -344,10 +350,7 @@ function wordgame_gameplay($data, &$db){
 			$session["word_game"]["current_word"]["can_reset"] = true;
 			mb_internal_encoding("UTF-8");
 			$score = mb_strlen($word) - $session["word_game"]["current_word"]["used_hints"] - 2;
-			if(array_key_exists("games", $db) && array_key_exists("word_game_rating", $db["games"]))
-				$db["games"]["word_game_rating"]["id{$data->object->from_id}"] = $db["games"]["word_game_rating"]["id{$data->object->from_id}"] + $score;
-			else
-				$db["games"]["word_game_rating"]["id{$data->object->from_id}"] = $score;
+			$db["games"]["word_game"]["rating_by_score"]["id{$data->object->from_id}"] = $db["games"]["word_game"]["rating_by_score"]["id{$data->object->from_id}"] + $score;
 			wordgame_set_session($data->object->peer_id, $session);
 			$keyboard = vk_keyboard(false, array(
 				array(

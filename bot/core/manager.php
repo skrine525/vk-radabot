@@ -236,7 +236,12 @@ function manager_mode_cpanel($finput){
 		return 0;
 	}
 	elseif($modeValue == ""){
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔используйте \"!mode <name> <value>\".", $data->object->from_id);
+		$value = $chatModes->getModeValue($modeName);
+		if($value)
+			$value = "true";
+		else
+			$value = "false";
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Режим {$modeName} — {$value}.", $data->object->from_id);
 		return 0;
 	}
 	elseif($modeValue != "true" && $modeValue != "false"){
