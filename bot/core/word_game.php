@@ -86,7 +86,7 @@ function wordgame_main($data, $words, &$db){
 				var users = API.users.get({'user_ids':user_ids});
 				var msg = '[Слова] 📈Рейтинг беседы:\\n';
 				var i = 0; while(i < users.length){
-					msg = msg+(i+1)+'. @id'+users[i].id+' ('+users[i].first_name+' '+users[i].last_name+') - '+rating[i].score+' очка(ов)\\n';
+					msg = msg+(i+1)+'. @id'+users[i].id+' ('+users[i].first_name+' '+users[i].last_name+') — '+rating[i].score+' очка(ов)\\n';
 					i = i + 1;
 				}
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
@@ -211,7 +211,7 @@ function wordgame_gameplay($data, &$db){
 
 	if(array_key_exists('word_game', $session)){
 		if($data->object->date - $session["word_game"]["current_word"]["word_guessing_time"] >= 600 && !$session["word_game"]["current_word"]["can_reset"]){
-			$empty_keyboard = vk_keyboard(1, array());
+			$empty_keyboard = vk_keyboard(true, array());
 			wordgame_del_session($data->object->peer_id);
 			$msg = "[Слова] Игра остановлена.";
 			vk_execute("

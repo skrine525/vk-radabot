@@ -907,9 +907,9 @@ class SysMemes{
 			break;
 
 			case 'егор':
-			$msg = "@id458598210 (Пидорас), чтоб тебе аккаунт стима забанили, сука. Накрутчик ебаный, в рот тебя ебал";
-			vk_execute("
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});");
+			$msg = ", кс для даунов, тоесть ты ДАУН!";
+			vk_execute($botModule->makeExeAppeal(458598210)."
+				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
 			return 'ok';
 			break;
 

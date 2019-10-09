@@ -169,10 +169,10 @@ function bot_banned_kick($data, &$db){ // Кик забаненных польз
 								break;
 							}
 						}
-						return true;
 					}
 				}
 			}
+			return true;
 		}
 	}
 }

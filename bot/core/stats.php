@@ -5,7 +5,7 @@ define('STATS_SWEAR_WORDS', array("педик","гандон","идиот","еб
 function stats_update($data, $words_tmp, &$db){
 	if(!array_key_exists('stats', $db)){
 		$db["stats"] = array(
-			'word_stats' => array(),
+			//'word_stats' => array(),
 			'user_word_count' => array(),
 			'user_msg_count' => array(),
 			'total_word_count' => 0,
@@ -36,6 +36,7 @@ function stats_update($data, $words_tmp, &$db){
 	}
 	unset($words_tmp);
 
+	/*
 	if(array_key_exists("word_stats", $stats)){
 		$indexing_words = array_keys($stats["word_stats"]);
 		for($i = 0; $i < count($indexing_words); $i++){
@@ -46,6 +47,7 @@ function stats_update($data, $words_tmp, &$db){
 			}
 		}
 	}
+	*/
 
 	if(!array_key_exists("id{$data->object->from_id}", $stats["user_word_count"]))
 		$stats["user_word_count"]["id{$data->object->from_id}"] = 0;
@@ -81,7 +83,7 @@ function stats_cmd_handler($finput){
 	switch ($command) {
 		case 'get':
 			if(array_key_exists("stats", $db)){
-				$word_stats_db = $db["stats"]["word_stats"];
+				//$word_stats_db = $db["stats"]["word_stats"];
 				$user_word_count_db = $db["stats"]["user_word_count"];
 				$user_msg_count_db = $db["stats"]["user_msg_count"];
 				$total_word_count = $db["stats"]["total_word_count"];
@@ -97,11 +99,11 @@ function stats_cmd_handler($finput){
 				else
 					$swear_percent = 0;
 
-				arsort($word_stats_db);
+				//arsort($word_stats_db);
 				arsort($user_word_count_db);
 				arsort($user_msg_count_db);
 
-				$word_stats_tmp = array();
+				/*$word_stats_tmp = array();
 				foreach ($word_stats_db as $key => $value) {
 					$word_stats_tmp[] = array(
 						'word' => $key,
@@ -112,7 +114,7 @@ function stats_cmd_handler($finput){
 				for($i = 0; $i < count($word_stats_tmp) && $i < 10; $i++){
 					$word_stats[] = $word_stats_tmp[$i];
 				}
-				unset($word_stats_tmp);
+				unset($word_stats_tmp);*/
 
 				$user_word_count_tmp = array();
 				foreach ($user_word_count_db as $key => $value) {
@@ -140,13 +142,13 @@ function stats_cmd_handler($finput){
 				}
 				unset($user_msg_count_tmp);
 
-				$word_stats_json = json_encode($word_stats, JSON_UNESCAPED_UNICODE);
+				//$word_stats_json = json_encode($word_stats, JSON_UNESCAPED_UNICODE);
 				$user_msg_count_json = json_encode($user_msg_count, JSON_UNESCAPED_UNICODE);
 				$user_word_count_json = json_encode($user_word_count, JSON_UNESCAPED_UNICODE);
 
-				vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-					var word_stats = {$word_stats_json};
-					var user_word_count = {$user_word_count_json};
+				vk_execute($botModule->makeExeAppeal($data->object->from_id).""
+					//var word_stats = {$word_stats_json};
+					."var user_word_count = {$user_word_count_json};
 					var user_msg_count = {$user_msg_count_json};
 					var total_word_count = {$total_word_count};
 					var swear_word_count = {$swear_word_count};
@@ -154,20 +156,20 @@ function stats_cmd_handler($finput){
 
 					var msg = appeal+', статистика беседы:';
 
-					msg = msg + '\\n\\n✅Всего слов в беседе: '+total_word_count+' слов(а)\\n&#12288;• Из них '+swear_word_count+' ('+swear_percent+'%) мат. слов(а)';
+					msg = msg + '\\n\\n✅Всего слов в беседе: '+total_word_count+' слов(а)\\n&#12288;• Из них '+swear_word_count+' ('+swear_percent+'%) мат. слов(а)';"
 
-					msg = msg + '\\n\\n✅Топ 10 популярных индексируемых слов:';
-					if(word_stats.length != 0){
-						var i = 0; while(i < word_stats.length){
-							msg = msg + '\\n&#12288;• '+word_stats[i].word+' — '+word_stats[i].count+' раз(а)';
-							i = i + 1;
-						}
-					}
-					else{
-						msg = msg + '\\n&#12288;⛔В беседе нет популярных слов!';
-					}
+					//msg = msg + '\\n\\n✅Топ 10 популярных индексируемых слов:';
+					//if(word_stats.length != 0){
+					//	var i = 0; while(i < word_stats.length){
+					//		msg = msg + '\\n&#12288;• '+word_stats[i].word+' — '+word_stats[i].count+' раз(а)';
+					//		i = i + 1;
+					//	}
+					//}
+					//else{
+					//	msg = msg + '\\n&#12288;⛔В беседе нет популярных слов!';
+					//}
 
-					msg = msg + '\\n\\n✅Топ 10 пользователя по количеству слов:';
+					."msg = msg + '\\n\\n✅Топ 10 пользователя по количеству слов:';
 
 					if(user_word_count.length != 0){
 						var users = API.users.get({'user_ids':user_word_count@.id});
@@ -200,7 +202,7 @@ function stats_cmd_handler($finput){
 				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔В беседе пока что нет статистики.", $data->object->from_id);
 			break;
 
-		case 'indexing-words':
+		/*case 'indexing-words':
 			$stats = &$db["stats"];
 			$ranksys = new RankSystem($db);
 
@@ -333,11 +335,12 @@ function stats_cmd_handler($finput){
 					break;
 			}
 			break;
+		*/
 		
 		default:
 			$botModule->sendCommandListFromArray($data, ", ⛔используйте:", array(
-				'!stats get - Показывает статистику',
-				'!stats indexing-words - Управление индекируемыми словами'
+				'!stats get - Показывает статистику'//,
+				//'!stats indexing-words - Управление индекируемыми словами'
 			));
 			break;
 	}

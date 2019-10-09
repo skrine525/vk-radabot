@@ -28,10 +28,14 @@ ts = longpoll_data["ts"]
 
 while True:
 	data = json.loads(vk_longpoll(longpoll_data, ts))
-	if(data.get("updates") != None):	
+	failed = data.get('failed', None)
+
+	if(failed == 1):
+		ts = data["ts"]
+	elif(failed == 2 or failed == 3):
+		longpoll_data = json.loads(vk_call('groups.getLongPollServer', {'group_id': config_get('GROUP_ID')}))["response"]
+		ts = longpoll_data["ts"]
+	else:
 		base64_updates = base64.b64encode(bytes(json.dumps(data["updates"]).encode('utf-8')))
 		os.system("/usr/bin/php handle-php-bot-core-request.php "+base64_updates)
 		ts = data["ts"]
-	else:
-		longpoll_data = json.loads(vk_call('groups.getLongPollServer', {'group_id': config_get('GROUP_ID')}))["response"]
-		ts = longpoll_data["ts"]
