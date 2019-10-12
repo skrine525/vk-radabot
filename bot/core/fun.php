@@ -375,7 +375,7 @@ function fun_stockings($data, $db){ // Чулки
 
 	$random_number = mt_rand(0, 65500);
 	$msg = $messages_array[$random_number % sizeof($messages_array)];
-	$photo = json_decode(amina_execute("
+	$photo = json_decode(vk_userexecute("
 		var random_number = {$random_number};
 		var owner_id = -102853758; var album_id = 'wall';
 
@@ -399,7 +399,7 @@ function fun_buzova($finput){
 	$botModule = new BotModule($db);
 
 	$random_number = mt_rand(0, 65500);
-	$photo = json_decode(amina_execute("
+	$photo = json_decode(vk_userexecute("
 		var random_number = {$random_number};
 		var owner_id = 32707600; var album_id = 'wall';
 
@@ -422,7 +422,7 @@ function fun_karina($data, $db){
 	$botModule = new BotModule($db);
 
 	$random_number = mt_rand(0, 65500);
-	$photo = json_decode(amina_execute("
+	$photo = json_decode(vk_userexecute("
 		var random_number = {$random_number};
 		var owner_id = 153162173; var album_id = 'wall';
 
@@ -444,7 +444,7 @@ function fun_amina_cmd($finput){
 function fun_amina($data, $db){
 	$botModule = new BotModule($db);
 	$random_number = mt_rand(0, 65500);
-	$photo = json_decode(amina_execute("
+	$photo = json_decode(vk_userexecute("
 		var random_number = {$random_number};
 		var owner_id = 363887574; var album_id = 'wall';
 
@@ -461,7 +461,7 @@ function fun_amina($data, $db){
 
 function fun_like_avatar($data, $db){
 	$botModule = new BotModule($db);
-	$response = json_decode(amina_execute("
+	$response = json_decode(vk_userexecute("
 		var amina = API.users.get()[0];
 		var user = API.users.get({'user_ids':[{$data->object->from_id}],'fields':'photo_id'})[0];
 		var owner_id = '{$data->object->from_id}';
@@ -485,7 +485,7 @@ function fun_like_wallpost($data, $db){
 	$botModule = new BotModule($db);
 	if($data->object->attachments[0]->type == "wall"){
 		$wall_post = $data->object->attachments[0]->wall;
-		$response = json_decode(amina_execute("
+		$response = json_decode(vk_userexecute("
 		var amina = API.users.get()[0];
 		if(API.likes.isLiked({'user_id':amina.id,'type':'post','owner_id':{$wall_post->to_id},'item_id':{$wall_post->id}}).liked == 0){
 			var like = API.likes.add({'type':'post','owner_id':{$wall_post->to_id},'item_id':{$wall_post->id}});

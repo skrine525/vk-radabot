@@ -227,6 +227,7 @@ function event_handle($data){
 	$event->addCommand("!unflip", 'fun_unflip');
 	$event->addCommand("!giphy", 'giphy_handler');
 	$event->addCommand("слова", 'wordgame_cmd');
+	$event->addCommand("words", 'wordgame_eng_cmd');
 	$event->addCommand("загадки", "riddlegame_cmd_handler");
 
 	// Функция обработки событий вне командной среды
@@ -244,6 +245,7 @@ function event_handle($data){
 		fun_handler($data, $db);
 		stats_update($data, $words, $db); // Ведение статистики в беседе
 		wordgame_gameplay($data, $db); // Освновной обработчик игры Слова
+		wordgame_eng_gameplay($data, $db); // Освновной обработчик игры Words
 		riddlegame_gameplay($data, $db); // Основной обработчик игры Загадки
 	});
 

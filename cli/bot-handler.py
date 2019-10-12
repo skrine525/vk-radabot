@@ -13,7 +13,7 @@ def config_get(name):
 
 def vk_call(method, parametres):
 	headers = {'Content-type': 'application/x-www-form-urlencoded'}
-	parametres["access_token"] = config_get("VK_TOKEN")
+	parametres["access_token"] = config_get("VK_GROUP_TOKEN")
 	parametres["v"] = VK_VERSION
 	r = requests.post("https://api.vk.com/method/"+method, data=parametres, headers=headers)
 	return r.text
@@ -23,7 +23,7 @@ def vk_longpoll(data, ts, wait = 25):
 	r = requests.post(data["server"], data=parametres)
 	return r.text
 
-longpoll_data = json.loads(vk_call('groups.getLongPollServer', {'group_id': config_get('GROUP_ID')}))["response"]
+longpoll_data = json.loads(vk_call('groups.getLongPollServer', {'group_id': config_get('VK_GROUP_ID')}))["response"]
 ts = longpoll_data["ts"]
 
 while True:
@@ -33,7 +33,7 @@ while True:
 	if(failed == 1):
 		ts = data["ts"]
 	elif(failed == 2 or failed == 3):
-		longpoll_data = json.loads(vk_call('groups.getLongPollServer', {'group_id': config_get('GROUP_ID')}))["response"]
+		longpoll_data = json.loads(vk_call('groups.getLongPollServer', {'group_id': config_get('VK_GROUP_ID')}))["response"]
 		ts = longpoll_data["ts"]
 	else:
 		base64_updates = base64.b64encode(bytes(json.dumps(data["updates"]).encode('utf-8')))

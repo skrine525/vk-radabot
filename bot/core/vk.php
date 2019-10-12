@@ -6,7 +6,7 @@ define("VK_API_VERSION", 5.84); // Константа версии VK API
 
 function vk_call($method, $parametres){
 	$sys = array(
-		'access_token' => config_get('VK_TOKEN'),
+		'access_token' => config_get('VK_GROUP_TOKEN'),
 		'v' => VK_API_VERSION
 	);
 
@@ -26,6 +26,22 @@ function vk_execute($code){
 
 function vk_longpoll($data, $ts, $wait = 25){
 	return file_get_contents("{$data->server}?act=a_check&key={$data->key}&ts={$ts}&wait={$wait}");
+}
+
+function vk_userexecute($code){
+	$sys = array(
+		'access_token' => config_get("VK_USER_TOKEN"),
+		'v' => VK_API_VERSION
+	);
+
+	$options = array(
+   		'http' => array(  
+            'method'  => 'POST',
+            'header'  => 'Content-type: application/x-www-form-urlencoded', 
+            'content' => http_build_query(array('code' => $code)).'&'.http_build_query($sys)
+        )  
+	);
+	return file_get_contents('https://api.vk.com/method/execute', false, stream_context_create($options));
 }
 
 /// Клавиатура

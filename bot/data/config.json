@@ -1,8 +1,8 @@
 {
-	"VK_TOKEN": null,
-	"GROUP_ID": null,
+	"VK_GROUP_TOKEN": null,
+	"VK_GROUP_ID": null,
 	"VK_CONFIRMATION_CODE": null,
 	"VK_SECRET_KEY": null,
-	"AMINA_TOKEN": null,
+	"VK_USER_TOKEN": null,
 	"VOICERSS_KEY": null
 }

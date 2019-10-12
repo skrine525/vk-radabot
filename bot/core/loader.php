@@ -21,7 +21,6 @@ require_once(BOT_DIR."/core/fun.php");
 require_once(BOT_DIR."/core/roleplay.php");
 require_once(BOT_DIR."/core/manager.php");
 require_once(BOT_DIR."/core/giphy.php");
-require_once(BOT_DIR."/core/amina.php");
 require_once(BOT_DIR."/core/word_game.php");
 require_once(BOT_DIR."/core/riddle_game.php");
 require_once(BOT_DIR."/core/event.php");
