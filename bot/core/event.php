@@ -202,6 +202,7 @@ function event_handle($data){
 	$event->addCommand("послать", 'rp_gofuck');
 	$event->addCommand("кастрировать", 'rp_castrate');
 	$event->addCommand("посадить", "rp_sit");
+	$event->addCommand("пожать", "rp_shake");
 
 	// Fun
 	$event->addCommand("выбери", 'fun_choose');

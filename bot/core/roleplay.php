@@ -3,6 +3,7 @@
 ///////////////////////////////////////////////////////////
 /// API
 
+/*
 function rp_api_act_with($db, $data, $words, $msgMale, $msgFemale, $msgMyselfMale, $msgMyselfFemale, $sexOnly = 0, $sexErrorMsg = "невозможно выполнить действие с указанным пользователем (пользователь не того пола)."){
 	$member_id = 0;
 
@@ -97,6 +98,186 @@ function rp_api_act_with($db, $data, $words, $msgMale, $msgFemale, $msgMyselfMal
 		if(array_key_exists(2, $words)){
 			$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
 			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
+		}
+		else
+			$word2 = "";
+		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});
+			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
+			var word1 = '{$word1}';
+			var word2 = '{$word2}';
+
+			var member_index = -1;
+			var i = 0; while(i < members.profiles.length){
+				if(members.profiles[i].first_name == word1){
+					if(word2 == ''){
+						member_index = i;
+						i = members.profiles.length;
+					} else if (members.profiles[i].last_name == word2){
+						member_index = i;
+						i = members.profiles.length;
+					}
+				} else if(members.profiles[i].last_name == word1) {
+					member_index = i;
+					i = members.profiles.length;
+				}
+				i = i + 1;
+			};
+			if(member_index == -1){
+				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
+			}
+
+			var member = members.profiles[member_index];
+
+			var FROM_USERNAME = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+')';
+
+			var MEMBER_USERNAME = '@'+member.screen_name+' ('+member.first_name+' '+member.last_name+')';
+			var MEMBER_USERNAME_GEN = '@'+member.screen_name+' ('+member.first_name_gen+' '+member.last_name_gen+')';
+			var MEMBER_USERNAME_DAT = '@'+member.screen_name+' ('+member.first_name_dat+' '+member.last_name_dat+')';
+			var MEMBER_USERNAME_ACC = '@'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+')';
+			var MEMBER_USERNAME_INS = '@'+member.screen_name+' ('+member.first_name_ins+' '+member.last_name_ins+')';
+			var MEMBER_USERNAME_ABL = '@'+member.screen_name+' ('+member.first_name_abl+' '+member.last_name_abl+')';
+
+			var messages = {$messagesJson};
+
+			if({$sexOnly} != 0){
+				if(member.sex != {$sexOnly}){
+					return API.messages.send({'peer_id':{$data->object->peer_id},'message':messages.sexErrorMsg});
+				}
+			}
+
+			var msg = '';
+
+			if (member.id == {$data->object->from_id}){
+				if(member.sex == 1){
+					msg = messages.myselfFemale;
+				} else {
+					msg = messages.myselfMale;
+				}
+			} else {
+				if(from_user.sex == 1){
+					msg = messages.female;
+				} else {
+					msg = messages.male;
+				};
+			};
+
+			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
+			");
+	}
+}
+*/
+
+function rp_api_act_with($db, $data, $command, $user_info, $params){
+	// Переменные параметров РП действия
+	$msgMale = $params["msgMale"];
+	$msgFemale = $params["msgFemale"];
+	$msgMyselfMale = $params["msgMyselfMale"];
+	$msgMyselfFemale = $params["msgMyselfFemale"];
+	if(array_key_exists("sexOnly", $params) && gettype($params["sexOnly"]) == "integer")
+		$sexOnly = $params["sexOnly"];
+	else
+		$sexOnly = 0;
+	if(array_key_exists("sexErrorMsg", $params) && gettype($params["sexErrorMsg"]) == "string")
+		$sexErrorMsg = $params["sexErrorMsg"];
+	else
+		$sexErrorMsg = "невозможно выполнить действие с указанным пользователем (пользователь не того пола).";
+
+	// Логика РП действия
+	$member_id = 0;
+
+	$botModule = new botModule($db);
+	if(is_null($user_info) && array_key_exists(0, $data->object->fwd_messages)){
+		$msg = ", используйте \"Обнять <имя/фамилия/id/упоминание/перес. сообщение>\".";
+		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%__appeal__%, используйте \"{$command} <имя/фамилия/id/упоминание/перес. сообщение>\""), JSON_UNESCAPED_UNICODE);
+		$request = vk_parse_var($request, "__appeal__");
+		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			var __appeal__ = appeal;
+			appeal = null;
+			return API.messages.send({$request});");
+		return 0;
+	}
+
+	if(array_key_exists(0, $data->object->fwd_messages)){
+		$member_id = $data->object->fwd_messages[0]->from_id;
+	} elseif(!is_null($user_info) && bot_is_mention($user_info)){
+		$member_id = bot_get_id_from_mention($user_info);
+	} elseif(!is_null($user_info) && is_numeric($user_info)) {
+		$member_id = intval($user_info);
+	}
+
+	$messagesJson = json_encode(array('male' => $msgMale, 'female' => $msgFemale, 'myselfMale' => $msgMyselfMale, 'myselfFemale' => $msgMyselfFemale, 'sexErrorMsg' => $sexErrorMsg), JSON_UNESCAPED_UNICODE);
+
+	$messagesJson = vk_parse_vars($messagesJson, array("FROM_USERNAME", "MEMBER_USERNAME", "MEMBER_USERNAME_GEN", "MEMBER_USERNAME_DAT", "MEMBER_USERNAME_ACC", "MEMBER_USERNAME_INS", "MEMBER_USERNAME_ABL", "appeal"));
+
+	if($member_id > 0){
+		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			var users = API.users.get({'user_ids':[{$member_id},{$data->object->from_id}],'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});
+			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id}});
+			var from_user = users[1];
+			var member = users[0];
+			if({$member_id} == {$data->object->from_id}){ from_user = users[0]; }
+
+			var isContinue = false;
+			var i = 0; while(i < members.profiles.length){
+				if(members.profiles[i].id == {$member_id}){
+					isContinue = true;
+				}
+				i = i + 1;
+			}
+			if(!isContinue){
+				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
+			}
+
+			var FROM_USERNAME = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+')';
+
+			var MEMBER_USERNAME = '@'+member.screen_name+' ('+member.first_name+' '+member.last_name+')';
+			var MEMBER_USERNAME_GEN = '@'+member.screen_name+' ('+member.first_name_gen+' '+member.last_name_gen+')';
+			var MEMBER_USERNAME_DAT = '@'+member.screen_name+' ('+member.first_name_dat+' '+member.last_name_dat+')';
+			var MEMBER_USERNAME_ACC = '@'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+')';
+			var MEMBER_USERNAME_INS = '@'+member.screen_name+' ('+member.first_name_ins+' '+member.last_name_ins+')';
+			var MEMBER_USERNAME_ABL = '@'+member.screen_name+' ('+member.first_name_abl+' '+member.last_name_abl+')';
+
+			var messages = {$messagesJson};
+
+			if({$sexOnly} != 0){
+				if(member.sex != {$sexOnly}){
+					return API.messages.send({'peer_id':{$data->object->peer_id},'message':messages.sexErrorMsg});
+				}
+			}
+
+
+			var msg = '';
+
+			if ({$member_id} == {$data->object->from_id}){
+				if(member.sex == 1){
+					msg = messages.myselfFemale;
+				} else {
+					msg = messages.myselfMale;
+				}
+			} else {
+				if(from_user.sex == 1){
+					msg = messages.female;
+				} else {
+					msg = messages.male;
+				};
+			};
+
+			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
+			");
+
+	} else {
+		$user_info_words = explode(" ", $user_info);
+		if(array_key_exists(0, $user_info_words)){
+			$word1_array = preg_split('//u', strval($user_info_words[0]), null, PREG_SPLIT_NO_EMPTY);
+			$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($user_info_words[0]), 1);
+		}
+		else
+			$word1 = "";
+
+		if(array_key_exists(1, $user_info_words)){
+			$word2_array = preg_split('//u', strval($user_info_words[1]), null, PREG_SPLIT_NO_EMPTY);
+			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($user_info_words[1]), 1);
 		}
 		else
 			$word2 = "";
@@ -1371,7 +1552,21 @@ function rp_castrate($finput){ // Test
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	rp_api_act_with($db, $data, $words, "%FROM_USERNAME% кастрировал %MEMBER_USERNAME_ACC%.", "%FROM_USERNAME% кастрировала %MEMBER_USERNAME_ACC%.", "%appeal%, нельзя кастрировать себя.😐", "%appeal%, нельзя кастрировать себя.😐");
+	$params = array(
+		"msgMale" => "%FROM_USERNAME% кастрировал %MEMBER_USERNAME_ACC%.",
+		"msgFemale" => "%FROM_USERNAME% кастрировала %MEMBER_USERNAME_ACC%.",
+		"msgMyselfMale" => "%appeal%, нельзя кастрировать себя.😐",
+		"msgMyselfFemale" => "%appeal%, нельзя кастрировать себя.😐",
+	);
+
+	$user_info = "";
+	if(array_key_exists(1, $words)){
+		$user_info = $words[1];
+		if(array_key_exists(2, $words))
+			$user_info = $user_info . ' ' . $words[2];
+	}
+
+	rp_api_act_with($db, $data, "Кастрировать", $user_info, $params);
 }
 
 function rp_sit($finput){
@@ -1380,7 +1575,55 @@ function rp_sit($finput){
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	rp_api_act_with($db, $data, $words, "%FROM_USERNAME% посадил на бутылку %MEMBER_USERNAME_ACC%.🍾", "%FROM_USERNAME% посадила на бутылку %MEMBER_USERNAME_ACC%.🍾", "%FROM_USERNAME% сел на бутылку.🍾", "%FROM_USERNAME% села на бутылку.🍾");
+	$params = array(
+		"msgMale" => "%FROM_USERNAME% посадил на бутылку %MEMBER_USERNAME_ACC%.🍾",
+		"msgFemale" => "%FROM_USERNAME% посадила на бутылку %MEMBER_USERNAME_ACC%.🍾",
+		"msgMyselfMale" => "%FROM_USERNAME% сел на бутылку.🍾",
+		"msgMyselfFemale" => "%FROM_USERNAME% села на бутылку.🍾",
+	);
+
+	$user_info = "";
+	if(array_key_exists(1, $words)){
+		$user_info = $words[1];
+		if(array_key_exists(2, $words))
+			$user_info = $user_info . ' ' . $words[2];
+	}
+
+	rp_api_act_with($db, $data, "Посадить", $user_info, $params);
+}
+
+function rp_shake($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$words = $finput->words;
+	$db = &$finput->db;
+
+	switch (mb_strtolower($words[1])) {
+		case 'руку':
+			$params = array(
+				"msgMale" => "%FROM_USERNAME% пожал руку %MEMBER_USERNAME_DAT%.",
+				"msgFemale" => "%FROM_USERNAME% пожала руку %MEMBER_USERNAME_DAT%.",
+				"msgMyselfMale" => "%FROM_USERNAME% настолько ЧСВ, что пожал руку сам с себе.",
+				"msgMyselfFemale" => "%FROM_USERNAME% настолько ЧСВ, что пожала руку сама с себе.",
+			);
+
+			$user_info = "";
+			if(array_key_exists(2, $words)){
+				$user_info = $words[2];
+				if(array_key_exists(3, $words))
+					$user_info = $user_info . ' ' . $words[3];
+			}
+
+			rp_api_act_with($db, $data, "Пожать руку", $user_info, $params);
+			break;
+		
+		default:
+			$botModule = new botModule($db);
+			$botModule->sendCommandListFromArray($data, ", используйте:", array(
+				'Пожать руку <пользователь> - Жмет руку пользователю'
+			));
+			break;
+	}
 }
 
 ?>
