@@ -21,7 +21,7 @@ class BotModule{
 	function sendSimpleMessage($peer_id, $message, $from_id = null, $params = array()){ // Отправка простых сообщений
 		$appeal_code = "";
 		if(!is_null($from_id)){
-			$appeal_code = $this->makeExeAppeal($from_id);
+			$appeal_code = $this->makeExeAppeal($from_id)
 			$message = "%appeal%{$message}";
 		}
 		$request_array = array('peer_id' => $peer_id, 'message' => $message);
