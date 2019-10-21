@@ -25,7 +25,7 @@ class Event{
   		}
   	}
 
-  	public function addCommand($command, $method){
+  	public function addMessageCommand($command, $method){
   		if(!array_key_exists($command, $this->commands)){
   			$this->commands[$command] = $method;
   			return true;
@@ -34,7 +34,7 @@ class Event{
   			return false;
   	}
 
-  	public function addDBIgnoreCommand($command){
+  	public function addDBIgnoreMessageCommand($command){
   		$this->dbIgnoreCommandList[] = $command;
   	}
 
@@ -42,7 +42,7 @@ class Event{
   		$this->defaultFunc = $func;
   	}
 
-  	public function getCommandList(){
+  	public function getMessageCommandList(){
   		$list = array();
   		foreach ($this->commands as $key => $value) {
   			$list[] = $key;
@@ -141,95 +141,95 @@ function event_handle($data){
 	$event->loadDB(); // Подключаем базу данных
 
 	///// Игнорирование отсутствие базы данных для следующих комманд
-	//$event->addDBIgnoreCommand("!test");
-	$event->addDBIgnoreCommand("!reg");
+	//$event->addDBIgnoreMessageCommand("!test");
+	$event->addDBIgnoreMessageCommand("!reg");
 
 	///// Комманды
 
-	// Template - $event->addCommand("", function($finput){  });
+	// Template - $event->addMessageCommand("", function($finput){  });
 
 	// Основное
-	$event->addCommand("!cmdlist", 'bot_cmdlist');
-	$event->addCommand("!reg", 'bot_register');
-	$event->addCommand("!help", 'bot_help');
+	$event->addMessageCommand("!cmdlist", 'bot_cmdlist');
+	$event->addMessageCommand("!reg", 'bot_register');
+	$event->addMessageCommand("!help", 'bot_help');
 
 	// Правительство
-	$event->addCommand("!конституция", 'goverment_constitution');
-	$event->addCommand("!президент", 'goverment_president');
-	$event->addCommand("!строй", 'goverment_socorder');
-	$event->addCommand("!стройлист", 'goverment_socorderlist');
-	$event->addCommand("!законы", 'goverment_show_laws');
-	$event->addCommand("!закон", 'goverment_laws_cpanel');
-	$event->addCommand("!партия", 'goverment_batch');
-	$event->addCommand("!столица", 'goverment_capital');
-	$event->addCommand("!гимн", 'goverment_anthem');
-	$event->addCommand("!флаг", 'goverment_flag');
+	$event->addMessageCommand("!конституция", 'goverment_constitution');
+	$event->addMessageCommand("!президент", 'goverment_president');
+	$event->addMessageCommand("!строй", 'goverment_socorder');
+	$event->addMessageCommand("!стройлист", 'goverment_socorderlist');
+	$event->addMessageCommand("!законы", 'goverment_show_laws');
+	$event->addMessageCommand("!закон", 'goverment_laws_cpanel');
+	$event->addMessageCommand("!партия", 'goverment_batch');
+	$event->addMessageCommand("!столица", 'goverment_capital');
+	$event->addMessageCommand("!гимн", 'goverment_anthem');
+	$event->addMessageCommand("!флаг", 'goverment_flag');
 
 	// Система выборов
-	$event->addCommand("!votestart", 'goverment_referendum_start');
-	$event->addCommand("!votestop", 'goverment_referendum_stop');
-	$event->addCommand("!candidate", 'goverment_referendum_candidate');
-	$event->addCommand("!vote", 'goverment_referendum_vote');
+	$event->addMessageCommand("!votestart", 'goverment_referendum_start');
+	$event->addMessageCommand("!votestop", 'goverment_referendum_stop');
+	$event->addMessageCommand("!candidate", 'goverment_referendum_candidate');
+	$event->addMessageCommand("!vote", 'goverment_referendum_vote');
 
 	// Система управления беседой
-	$event->addCommand("онлайн", 'manager_online_list');
-	$event->addCommand("!ban", 'manager_ban_user');
-	$event->addCommand("!unban", 'manager_unban_user');
-	$event->addCommand("!banlist", 'manager_banlist_user');
-	$event->addCommand("!kick", 'manager_kick_user');
-	$event->addCommand("!ник", 'manager_nick');
-	$event->addCommand("!ранг", 'manager_rank');
-	$event->addCommand("!ранглист", 'manager_rank_list');
-	$event->addCommand("!ранги", 'manager_show_user_ranks');
-	$event->addCommand("!приветствие", 'manager_greeting');
-	$event->addCommand("!stats", 'stats_cmd_handler');
-	$event->addCommand("!modes", "manager_mode_list");
-	$event->addCommand("!mode", "manager_mode_cpanel");
+	$event->addMessageCommand("онлайн", 'manager_online_list');
+	$event->addMessageCommand("!ban", 'manager_ban_user');
+	$event->addMessageCommand("!unban", 'manager_unban_user');
+	$event->addMessageCommand("!banlist", 'manager_banlist_user');
+	$event->addMessageCommand("!kick", 'manager_kick_user');
+	$event->addMessageCommand("!ник", 'manager_nick');
+	$event->addMessageCommand("!ранг", 'manager_rank');
+	$event->addMessageCommand("!ранглист", 'manager_rank_list');
+	$event->addMessageCommand("!ранги", 'manager_show_user_ranks');
+	$event->addMessageCommand("!приветствие", 'manager_greeting');
+	$event->addMessageCommand("!stats", 'stats_cmd_handler');
+	$event->addMessageCommand("!modes", "manager_mode_list");
+	$event->addMessageCommand("!mode", "manager_mode_cpanel");
 
 	// RP-команды
-	$event->addCommand("!me", 'rp_me');
-	$event->addCommand("!do", 'rp_do');
-	$event->addCommand("!try", 'rp_try');
-	$event->addCommand("!s", 'rp_shout');
-	$event->addCommand("секс", 'rp_sex');
-	$event->addCommand("обнять", 'rp_hug');
-	$event->addCommand("уебать", 'rp_bump');
-	$event->addCommand("обоссать", 'rp_pissof');
-	$event->addCommand("поцеловать", 'rp_kiss');
-	$event->addCommand("харкнуть", 'rp_hark');
-	$event->addCommand("отсосать", 'rp_suck');
-	$event->addCommand("отлизать", 'rp_lick');
-	$event->addCommand("послать", 'rp_gofuck');
-	$event->addCommand("кастрировать", 'rp_castrate');
-	$event->addCommand("посадить", "rp_sit");
-	$event->addCommand("пожать", "rp_shake");
+	$event->addMessageCommand("!me", 'rp_me');
+	$event->addMessageCommand("!do", 'rp_do');
+	$event->addMessageCommand("!try", 'rp_try');
+	$event->addMessageCommand("!s", 'rp_shout');
+	$event->addMessageCommand("секс", 'rp_sex');
+	$event->addMessageCommand("обнять", 'rp_hug');
+	$event->addMessageCommand("уебать", 'rp_bump');
+	$event->addMessageCommand("обоссать", 'rp_pissof');
+	$event->addMessageCommand("поцеловать", 'rp_kiss');
+	$event->addMessageCommand("харкнуть", 'rp_hark');
+	$event->addMessageCommand("отсосать", 'rp_suck');
+	$event->addMessageCommand("отлизать", 'rp_lick');
+	$event->addMessageCommand("послать", 'rp_gofuck');
+	$event->addMessageCommand("кастрировать", 'rp_castrate');
+	$event->addMessageCommand("посадить", "rp_sit");
+	$event->addMessageCommand("пожать", "rp_shake");
 
 	// Fun
-	$event->addCommand("выбери", 'fun_choose');
-	$event->addCommand("сколько", 'fun_howmuch');
-	$event->addCommand("инфа", "fun_info");
-	$event->addCommand("!бузова", 'fun_buzova');
-	$event->addCommand("!карина", 'fun_karina_cmd');
-	$event->addCommand("!амина", 'fun_amina_cmd');
-	$event->addCommand("!memes", 'fun_memes_control_panel');
-	$event->addCommand("!чулки", 'fun_stockings_cmd');
-	$event->addCommand("бутылочка", 'fun_bottle');
-	$event->addCommand("!tts", 'fun_tts');
-	$event->addCommand("!say", "fun_say");
+	$event->addMessageCommand("выбери", 'fun_choose');
+	$event->addMessageCommand("сколько", 'fun_howmuch');
+	$event->addMessageCommand("инфа", "fun_info");
+	$event->addMessageCommand("!бузова", 'fun_buzova');
+	$event->addMessageCommand("!карина", 'fun_karina_cmd');
+	$event->addMessageCommand("!амина", 'fun_amina_cmd');
+	$event->addMessageCommand("!memes", 'fun_memes_control_panel');
+	$event->addMessageCommand("!чулки", 'fun_stockings_cmd');
+	$event->addMessageCommand("бутылочка", 'fun_bottle');
+	$event->addMessageCommand("!tts", 'fun_tts');
+	$event->addMessageCommand("!say", "fun_say");
 
 	// Прочее
-	$event->addCommand("лайк", 'bot_like_handler');
-	$event->addCommand("убрать", 'bot_remove_handler');
-	$event->addCommand("!id", 'bot_getid');
-	$event->addCommand("!ники", 'manager_show_nicknames');
-	$event->addCommand("!base64", 'bot_base64');
-	$event->addCommand("!shrug", 'fun_shrug');
-	$event->addCommand("!tableflip", 'fun_tableflip');
-	$event->addCommand("!unflip", 'fun_unflip');
-	$event->addCommand("!giphy", 'giphy_handler');
-	$event->addCommand("слова", 'wordgame_cmd');
-	$event->addCommand("words", 'wordgame_eng_cmd');
-	$event->addCommand("загадки", "riddlegame_cmd_handler");
+	$event->addMessageCommand("лайк", 'bot_like_handler');
+	$event->addMessageCommand("убрать", 'bot_remove_handler');
+	$event->addMessageCommand("!id", 'bot_getid');
+	$event->addMessageCommand("!ники", 'manager_show_nicknames');
+	$event->addMessageCommand("!base64", 'bot_base64');
+	$event->addMessageCommand("!shrug", 'fun_shrug');
+	$event->addMessageCommand("!tableflip", 'fun_tableflip');
+	$event->addMessageCommand("!unflip", 'fun_unflip');
+	$event->addMessageCommand("!giphy", 'giphy_handler');
+	$event->addMessageCommand("слова", 'wordgame_cmd');
+	$event->addMessageCommand("words", 'wordgame_eng_cmd');
+	$event->addMessageCommand("загадки", "riddlegame_cmd_handler");
 
 	// Функция обработки событий вне командной среды
 	$event->setDefaultFunction(function ($finput){

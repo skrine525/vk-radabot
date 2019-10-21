@@ -255,6 +255,17 @@ function bot_message_not_reg($data){ // Legacy
 	$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
 }
 
+define('BOT_CONFIG_FILE_PATH', BOT_DATADIR."/config.json");
+function bot_getconfig($name){
+    $env = json_decode(file_get_contents(BOT_CONFIG_FILE_PATH), true);
+    if($env == false){
+    	error_log("Unable to read config.json file. File not exists or invalid.");
+        return null;
+    }
+
+    return $env[$name];
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Прочее
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -390,7 +401,7 @@ function bot_cmdlist($finput){
 
 	/////////////////////////////////////////////////////
 	////////////////////////////////////////////////////
-	$list_in = $event->getCommandList(); // Входной список
+	$list_in = $event->getMessageCommandList(); // Входной список
 	$list_out = array(); // Выходной список
 
 	$list_number = $list_number_from_word; // Номер текущего списка

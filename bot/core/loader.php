@@ -10,7 +10,6 @@ define('BOT_TMPDIR', dirname(BOT_DIR)."/tmp"); // Директория врем�
 mb_internal_encoding("UTF-8");
 
 // Модуль для загрузки других модулей
-require_once(BOT_DIR."/core/config.php");
 require_once(BOT_DIR."/core/vk.php");
 //require_once(BOT_DIR."/core/mlab.php");
 require_once(BOT_DIR."/core/database.php"); // На замену mlab

@@ -95,7 +95,7 @@ function fun_memes_control_panel($finput){
 			return 0;
 		}
 
-		$event_command_list = $event->getCommandList();
+		$event_command_list = $event->getMessageCommandList();
 		for($i = 0; $i < count($event_command_list); $i++){ // Запрет на использование названий из Командной системы
 			if($meme_name == $event_command_list[$i]){
 				$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Данное имя нельзя использовать!", $data->object->from_id);
@@ -658,7 +658,7 @@ function fun_tts($finput){
 	}
 
 	$query = array(
-		'key' => config_get("VOICERSS_KEY"),
+		'key' => bot_getconfig("VOICERSS_KEY"),
 		'hl' => 'ru-ru',
 		'f' => '48khz_16bit_stereo',
 		'src' => $message,

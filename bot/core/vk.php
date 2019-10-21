@@ -6,7 +6,7 @@ define("VK_API_VERSION", 5.84); // Константа версии VK API
 
 function vk_call($method, $parametres){
 	$sys = array(
-		'access_token' => config_get('VK_GROUP_TOKEN'),
+		'access_token' => bot_getconfig('VK_GROUP_TOKEN'),
 		'v' => VK_API_VERSION
 	);
 
@@ -30,7 +30,7 @@ function vk_longpoll($data, $ts, $wait = 25){
 
 function vk_userexecute($code){
 	$sys = array(
-		'access_token' => config_get("VK_USER_TOKEN"),
+		'access_token' => bot_getconfig("VK_USER_TOKEN"),
 		'v' => VK_API_VERSION
 	);
 
