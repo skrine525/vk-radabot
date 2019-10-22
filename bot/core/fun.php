@@ -761,6 +761,354 @@ function fun_say($finput){
 	$botModule->sendSimpleMessage($data->object->peer_id, $vars["msg"], $appeal_id);
 }
 
+function fun_marriage($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$words = $finput->words;
+	$db = &$finput->db;
+
+	$botModule = new BotModule($db);
+
+	if(array_key_exists("fun", $db) && array_key_exists("marriages", $db["fun"])){
+		$marriages_db = &$db["fun"]["marriages"];
+	}
+	else{
+		$marriages_db = array(
+			'user_info' => array(),
+			'list' => array()
+		);
+		$db["fun"]["marriages"] = &$marriages_db;
+	}
+
+	$member_id = 0;
+
+	if(array_key_exists(0, $data->object->fwd_messages)){
+		$member_id = $data->object->fwd_messages[0]->from_id;
+	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
+		$member_id = bot_get_id_from_mention($words[1]);
+	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
+		$member_id = intval($words[1]);
+	} else {
+		if(array_key_exists(1, $words))
+			$word1 = mb_strtolower($words[1]);
+		else
+			$word1 = "";
+
+		switch ($word1) {
+			case 'да':
+				if(array_key_exists("id{$data->object->from_id}", $marriages_db["user_info"]) && $marriages_db["user_info"]["id{$data->object->from_id}"]["type"] == 0){
+					$partner_id = $marriages_db["user_info"]["id{$data->object->from_id}"]["partner_id"];
+					if(array_key_exists("id{$partner_id}", $marriages_db["user_info"])){
+						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔@id{$partner_id} (Пользователь) уже находится в браке.", $data->object->from_id);
+						unset($marriages_db["user_info"]["id{$data->object->from_id}"]);
+						return 0;
+					}
+					$marriages_db["list"][] = array(
+						'partner_1' => $partner_id,
+						'partner_2' => $data->object->from_id,
+						'start_time' => $data->object->date,
+						'end_time' => 0,
+						'terminated' => false
+					);
+					$marriage_id = count($marriages_db["list"]) - 1; // Получение ID брака
+					$marriages_db["user_info"]["id{$partner_id}"] = array(
+						'type' => 1,
+						'marriage_id' => $marriage_id
+					);
+					$marriages_db["user_info"]["id{$data->object->from_id}"] = array(
+						'type' => 1,
+						'marriage_id' => $marriage_id
+					);
+					vk_execute("
+						var users_info = API.users.get({'user_ids':[{$partner_id},{$data->object->from_id}]});
+						var partner_1 = users_info[0];
+						var partner_2 = users_info[1];
+						var msg = '❤@id'+partner_1.id+' ('+partner_1.first_name+' '+partner_1.last_name+') и @id'+partner_2.id+' ('+partner_2.first_name+' '+partner_2.last_name+') теперь семья❤';
+						API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
+						");
+				}
+				else{
+					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет приглашения о заключении брака.", $data->object->from_id);
+				}
+				break;
+
+			case 'нет':
+				if(array_key_exists("id{$data->object->from_id}", $marriages_db["user_info"]) && $marriages_db["user_info"]["id{$data->object->from_id}"]["type"] == 0){
+					$partner_id = $marriages_db["user_info"]["id{$data->object->from_id}"]["partner_id"];
+					unset($marriages_db["user_info"]["id{$data->object->from_id}"]);
+					vk_execute("
+						var users_info = API.users.get({'user_ids':[{$partner_id},{$data->object->from_id}],'fields':'sex,first_name_ins,last_name_ins'});
+						var partner_1 = users_info[0];
+						var partner_2 = users_info[1];
+						var sex_word = 'захотела';
+						if(partner_1.sex == 1){ sex_word = 'захотел'; }
+						var msg = '@id'+partner_2.id+' ('+partner_2.first_name+' '+partner_2.last_name+') не '+sex_word+' вступать в брак с @id'+partner_1.id+' ('+partner_1.first_name_ins+' '+partner_1.last_name_ins+').';
+						API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
+						");
+				}
+				else{
+					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет приглашения о заключении брака.", $data->object->from_id);
+				}
+				break;
+
+			case 'развод':
+				if(array_key_exists("id{$data->object->from_id}", $marriages_db["user_info"]) && $marriages_db["user_info"]["id{$data->object->from_id}"]["type"] == 1){
+					$marriage_info = &$marriages_db["list"][$marriages_db["user_info"]["id{$data->object->from_id}"]["marriage_id"]];
+					$marriage_info["terminated"] = true;
+					$marriage_info["end_time"] = $data->object->date;
+					unset($marriages_db["user_info"]["id{$marriage_info["partner_1"]}"]);
+					unset($marriages_db["user_info"]["id{$marriage_info["partner_2"]}"]);
+					vk_execute("
+						var users_info = API.users.get({'user_ids':[{$marriage_info["partner_1"]},{$marriage_info["partner_2"]}]});
+						var partner_1 = users_info[0];
+						var partner_2 = users_info[1];
+						var msg = '💔@id'+partner_1.id+' ('+partner_1.first_name+' '+partner_1.last_name+') и @id'+partner_2.id+' ('+partner_2.first_name+' '+partner_2.last_name+') больше не семья💔';
+						API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
+						");
+				}
+				else{
+					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы не состоите в браке.", $data->object->from_id);
+				}
+				break;
+
+			case 'помощь':
+				$botModule->sendCommandListFromArray($data, ", используйте:", array(
+					'Брак - Информация о текущем браке',
+					'Брак <пользователь> - Отправление запроса о заключении в брака',
+					'Брак да - Одобрение запроса',
+					'Брак нет - Отклонение запроса',
+					'Брак развод - Развод текущего брака',
+					'Брак помощь - Помощь в системе браков'
+				));
+				break;
+			
+			default:
+				if(array_key_exists("id{$data->object->from_id}", $marriages_db["user_info"]) && $marriages_db["user_info"]["id{$data->object->from_id}"]["type"] == 1){
+					$marriage_info = $marriages_db["list"][$marriages_db["user_info"]["id{$data->object->from_id}"]["marriage_id"]];
+					vk_execute("
+						var users_info = API.users.get({'user_ids':[{$marriage_info["partner_1"]},{$marriage_info["partner_2"]}],'fields':'first_name_ins,last_name_ins'});
+						var partner_1 = users_info[0];
+						var partner_2 = users_info[1];
+						var msg = '❤@id'+partner_1.id+' ('+partner_1.first_name+' '+partner_1.last_name+') находится в счастливом браке с @id'+partner_2.id+' ('+partner_2.first_name_ins+' '+partner_2.last_name_ins+')❤';
+						API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
+						");
+				}
+				else{
+					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы не состоите в браке.", $data->object->from_id);
+				}
+				break;
+		}
+		return 0;
+	}
+
+
+	if(!array_key_exists("id{$member_id}", $marriages_db["user_info"])){
+		if(array_key_exists("id{$data->object->from_id}", $marriages_db["user_info"])){
+			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы уже состоите в браке или получили приглашение.", $data->object->from_id);
+			return 0;
+		}
+		$marriages_db["user_info"]["id{$member_id}"] = array(
+			'type' => 0,
+			'partner_id' => $data->object->from_id
+		);
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Приглашение о заключении брака отправлено @id{$member_id} (пользователю).", $data->object->from_id);
+	}
+	else{
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔@id{$member_id} (Пользователь) уже состоит в браке или получил приглашение.", $data->object->from_id);
+	}
+}
+
+function fun_show_marriage_list($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$words = $finput->words;
+	$db = &$finput->db;
+
+	if(array_key_exists("fun", $db) && array_key_exists("marriages", $db["fun"])){
+		$marriages_db = &$db["fun"]["marriages"];
+	}
+	else{
+		$marriages_db = array(
+			'user_info' => array(),
+			'list' => array()
+		);
+		$db["fun"]["marriages"] = &$marriages_db;
+	}
+
+	$botModule = new BotModule($db);
+
+	if(array_key_exists(1, $words) && !is_numeric($words[1]))
+		$word = mb_strtolower($words[1]);
+	else
+		$word = "";
+
+	if($word == "история"){
+		$list = $marriages_db["list"];
+
+		if(count($list) == 0){
+			$botModule->sendSimpleMessage($data->object->peer_id, ", в беседе нет браков!", $data->object->from_id);
+			return 0;
+		}
+
+		if(array_key_exists(2, $words) && is_numeric($words[2]))
+			$list_number_from_word = intval($words[2]);
+		else
+			$list_number_from_word = 1;
+
+		/////////////////////////////////////////////////////
+		////////////////////////////////////////////////////
+		$list_in = &$list; // Входной список
+		$list_out = array(); // Выходной список
+
+		$list_number = $list_number_from_word; // Номер текущего списка
+		$list_size = 10; // Размер списка
+		////////////////////////////////////////////////////
+		if(count($list_in) % $list_size == 0)
+			$list_max_number = intdiv(count($list_in), $list_size);
+		else
+			$list_max_number = intdiv(count($list_in), $list_size)+1;
+		$list_min_index = ($list_size*$list_number)-$list_size;
+		if($list_size*$list_number >= count($list_in))	
+			$list_max_index = count($list_in)-1;
+		else
+			$list_max_index = $list_size*$list_number-1;
+		if($list_number <= $list_max_number && $list_number > 0){
+			// Обработчик списка
+			for($i = $list_min_index; $i <= $list_max_index; $i++){
+				$list_out[] = $list_in[$i];
+			}
+		}
+		else{
+			// Сообщение об ошибке
+			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
+			return 0;
+		}
+		////////////////////////////////////////////////////
+		////////////////////////////////////////////////////
+
+		for($i = 0; $i < count($list_out); $i++){
+			if($list_out[$i]["terminated"]){
+				//var days = ((current_date - marriages[i].start_time) - (current_date - marriages[i].start_time) % 86400) / 86400;
+				$days = (($data->object->date - $list_out[$i]["start_time"]) - ($data->object->date - $list_out[$i]["start_time"]) % 86400) / 86400;
+				$str_info = gmdate("d.m.Y", $list_out[$i]["start_time"]+10800)." - ".gmdate("d.m.Y | {$days} д.", $list_out[$i]["end_time"]+10800);
+				$list_out[$i]["str_info"] = $str_info;
+				unset($list_out[$i]["start_time"]);
+				unset($list_out[$i]["end_time"]);
+				unset($list_out[$i]["terminated"]);
+			}
+			else{
+				$days = (($data->object->date - $list_out[$i]["start_time"]) - ($data->object->date - $list_out[$i]["start_time"]) % 86400) / 86400;
+				$str_info = gmdate("с d.m.Y | {$days} д.", $list_out[$i]["start_time"]+10800);
+				$list_out[$i]["str_info"] = $str_info;
+				unset($list_out[$i]["start_time"]);
+				unset($list_out[$i]["end_time"]);
+				unset($list_out[$i]["terminated"]);
+			}
+		}
+
+		$marriages_json = json_encode($list_out, JSON_UNESCAPED_UNICODE);
+
+		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			var marriages = {$marriages_json};
+			var current_date = {$data->object->date};
+			var partner_1_info = API.users.get({'user_ids':marriages@.partner_1});
+			var partner_2_info = API.users.get({'user_ids':marriages@.partner_2});
+			var msg = appeal+', история браков беседы [$list_number/{$list_max_number}]:';
+			var i = 0; while(i < marriages.length){
+				var partner_1; var partner_2;
+				var j = 0; while(j < partner_1_info.length){
+					if(partner_1_info[j].id == marriages[i].partner_1){
+						partner_1 = partner_1_info[j];
+						j = partner_1_info.length;
+					}
+					j = j + 1;
+				}
+				var j = 0; while(j < partner_2_info.length){
+					if(partner_2_info[j].id == marriages[i].partner_2){
+						partner_2 = partner_2_info[j];
+						j = partner_2_info.length;
+					}
+					j = j + 1;
+				}
+					msg = msg + '\\n✅@id'+marriages[i].partner_1+' ('+partner_1.first_name.substr(0, 2)+'. '+partner_1.last_name+') и @id'+marriages[i].partner_2+' ('+partner_2.first_name.substr(0, 2)+'. '+partner_2.last_name+') ('+marriages[i].str_info+')';
+				i = i + 1;
+			}
+			API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
+			");
+	}
+	elseif($word == ""){
+		$list = array();
+		for($i = 0; $i < count($marriages_db["list"]); $i++){
+			if(!$marriages_db["list"][$i]["terminated"]){
+				$list[] = $marriages_db["list"][$i];
+			}
+		}
+
+		if(count($list) == 0){
+			$botModule->sendSimpleMessage($data->object->peer_id, ", в беседе нет браков!", $data->object->from_id);
+			return 0;
+		}
+
+		if(array_key_exists(1, $words) && is_numeric($words[1]))
+			$list_number_from_word = intval($words[1]);
+		else
+			$list_number_from_word = 1;
+
+		/////////////////////////////////////////////////////
+		////////////////////////////////////////////////////
+		$list_in = &$list; // Входной список
+		$list_out = array(); // Выходной список
+
+		$list_number = $list_number_from_word; // Номер текущего списка
+		$list_size = 10; // Размер списка
+		////////////////////////////////////////////////////
+		if(count($list_in) % $list_size == 0)
+			$list_max_number = intdiv(count($list_in), $list_size);
+		else
+			$list_max_number = intdiv(count($list_in), $list_size)+1;
+		$list_min_index = ($list_size*$list_number)-$list_size;
+		if($list_size*$list_number >= count($list_in))	
+			$list_max_index = count($list_in)-1;
+		else
+			$list_max_index = $list_size*$list_number-1;
+		if($list_number <= $list_max_number && $list_number > 0){
+			// Обработчик списка
+			for($i = $list_min_index; $i <= $list_max_index; $i++){
+				$list_out[] = $list_in[$i];
+			}
+		}
+		else{
+			// Сообщение об ошибке
+			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
+			return 0;
+		}
+		////////////////////////////////////////////////////
+		////////////////////////////////////////////////////
+
+		$marriages_json = json_encode($list_out, JSON_UNESCAPED_UNICODE);
+
+		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			var marriages = {$marriages_json};
+			var current_date = {$data->object->date};
+			var partner_1_info = API.users.get({'user_ids':marriages@.partner_1});
+			var partner_2_info = API.users.get({'user_ids':marriages@.partner_2});
+			var msg = appeal+', 🤵👰браки в беседе [$list_number/{$list_max_number}]:';
+			var i = 0; while(i < marriages.length){
+				var days = ((current_date - marriages[i].start_time) - (current_date - marriages[i].start_time) % 86400) / 86400;
+				msg = msg + '\\n❤@id'+marriages[i].partner_1+' ('+partner_1_info[i].first_name.substr(0, 2)+'. '+partner_1_info[i].last_name+') и @id'+marriages[i].partner_2+' ('+partner_2_info[i].first_name.substr(0, 2)+'. '+partner_2_info[i].last_name+') ('+days+' д.)❤';
+				i = i + 1;
+			}
+			API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
+			");
+	}
+	else{
+		$botModule->sendCommandListFromArray($data, ", используйте:", array(
+			'Браки <список> - Браки в беседе',
+			'Браки история <список> - Полная история браков беседы'
+		));
+	}
+}
+
 class SysMemes{
 	const MEMES = array('мемы', 'f', 'topa', 'mem1', 'mem2', 'андрей', 'олег', 'ябловод', 'люба 2', 'люба', 'керил', 'влад', 'юля', 'олды тут?', 'кб', 'некита', 'егор', 'данил', 'вова', 'ксюша', 'дрочить', 'саня', 'аля', 'дрочить на чулки', 'дрочить на карину', 'дрочить на амину', 'оффники', 'пашел нахуй', 'лохи беседы', 'дата регистрации', 'memory_get_usage', "memory_get_usage_real");
 

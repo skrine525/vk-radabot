@@ -214,8 +214,10 @@ function event_handle($data){
 	$event->addMessageCommand("!memes", 'fun_memes_control_panel');
 	$event->addMessageCommand("!чулки", 'fun_stockings_cmd');
 	$event->addMessageCommand("бутылочка", 'fun_bottle');
-	$event->addMessageCommand("!tts", 'fun_tts');
+	//$event->addMessageCommand("!tts", 'fun_tts');
 	$event->addMessageCommand("!say", "fun_say");
+	$event->addMessageCommand("брак", "fun_marriage");
+	$event->addMessageCommand("браки", "fun_show_marriage_list");
 
 	// Прочее
 	$event->addMessageCommand("лайк", 'bot_like_handler');
