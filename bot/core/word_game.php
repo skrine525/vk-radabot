@@ -122,10 +122,10 @@ function wordgame_main($data, $words, &$db){
 }
 
 function wordgame_get_session($peer_id){
-	if(!file_exists(BOT_DATADIR."/word_game/sessions"))
-		mkdir(BOT_DATADIR."/word_game/sessions");
+	if(!file_exists(BOT_DATADIR."/word_game_sessions"))
+		mkdir(BOT_DATADIR."/word_game_sessions");
 
-	$path = BOT_DATADIR."/word_game/sessions/{$peer_id}_session.json";
+	$path = BOT_DATADIR."/word_game_sessions/{$peer_id}_session.json";
 	if(file_exists($path))
 		return json_decode(file_get_contents($path), true);
 	else
@@ -133,17 +133,17 @@ function wordgame_get_session($peer_id){
 }
 
 function wordgame_set_session($peer_id, $data){
-	if(!file_exists(BOT_DATADIR."/word_game/sessions"))
-		mkdir(BOT_DATADIR."/word_game/sessions");
+	if(!file_exists(BOT_DATADIR."/word_game_sessions"))
+		mkdir(BOT_DATADIR."/word_game_sessions");
 
 	$data = json_encode($data, JSON_UNESCAPED_UNICODE);
-	$path = BOT_DATADIR."/word_game/sessions/{$peer_id}_session.json";
+	$path = BOT_DATADIR."/word_game_sessions/{$peer_id}_session.json";
 
 	file_put_contents($path, $data);
 }
 
 function wordgame_del_session($peer_id){
-	return unlink(BOT_DATADIR."/word_game/sessions/{$peer_id}_session.json");
+	return unlink(BOT_DATADIR."/word_game_sessions/{$peer_id}_session.json");
 }
 
 function wordgame_get_encoded_word($db){

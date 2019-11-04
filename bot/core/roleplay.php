@@ -3,199 +3,67 @@
 ///////////////////////////////////////////////////////////
 /// API
 
-/*
-function rp_api_act_with($db, $data, $words, $msgMale, $msgFemale, $msgMyselfMale, $msgMyselfFemale, $sexOnly = 0, $sexErrorMsg = "невозможно выполнить действие с указанным пользователем (пользователь не того пола)."){
-	$member_id = 0;
-
-	$botModule = new botModule($db);
-	if(array_key_exists(1, $words) && array_key_exists(0, $data->object->fwd_messages)){
-		$msg = ", используйте \"Обнять <имя/фамилия/id/упоминание/перес. сообщение>\".";
-		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%__appeal__%, используйте \"{$words[0]} <имя/фамилия/id/упоминание/перес. сообщение>\""), JSON_UNESCAPED_UNICODE);
-		$request = vk_parse_var($request, "__appeal__");
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var __appeal__ = appeal;
-			appeal = null;
-			return API.messages.send({$request});");
-		return 0;
-	}
-
-	if(array_key_exists(0, $data->object->fwd_messages)){
-		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
-		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
-		$member_id = intval($words[1]);
-	}
-
-	$messagesJson = json_encode(array('male' => $msgMale, 'female' => $msgFemale, 'myselfMale' => $msgMyselfMale, 'myselfFemale' => $msgMyselfFemale, 'sexErrorMsg' => $sexErrorMsg), JSON_UNESCAPED_UNICODE);
-
-	$messagesJson = vk_parse_vars($messagesJson, array("FROM_USERNAME", "MEMBER_USERNAME", "MEMBER_USERNAME_GEN", "MEMBER_USERNAME_DAT", "MEMBER_USERNAME_ACC", "MEMBER_USERNAME_INS", "MEMBER_USERNAME_ABL", "appeal"));
-
-	if($member_id > 0){
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var users = API.users.get({'user_ids':[{$member_id},{$data->object->from_id}],'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});
-			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id}});
-			var from_user = users[1];
-			var member = users[0];
-			if({$member_id} == {$data->object->from_id}){ from_user = users[0]; }
-
-			var isContinue = false;
-			var i = 0; while(i < members.profiles.length){
-				if(members.profiles[i].id == {$member_id}){
-					isContinue = true;
-				}
-				i = i + 1;
-			}
-			if(!isContinue){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
-			}
-
-			var FROM_USERNAME = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+')';
-
-			var MEMBER_USERNAME = '@'+member.screen_name+' ('+member.first_name+' '+member.last_name+')';
-			var MEMBER_USERNAME_GEN = '@'+member.screen_name+' ('+member.first_name_gen+' '+member.last_name_gen+')';
-			var MEMBER_USERNAME_DAT = '@'+member.screen_name+' ('+member.first_name_dat+' '+member.last_name_dat+')';
-			var MEMBER_USERNAME_ACC = '@'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+')';
-			var MEMBER_USERNAME_INS = '@'+member.screen_name+' ('+member.first_name_ins+' '+member.last_name_ins+')';
-			var MEMBER_USERNAME_ABL = '@'+member.screen_name+' ('+member.first_name_abl+' '+member.last_name_abl+')';
-
-			var messages = {$messagesJson};
-
-			if({$sexOnly} != 0){
-				if(member.sex != {$sexOnly}){
-					return API.messages.send({'peer_id':{$data->object->peer_id},'message':messages.sexErrorMsg});
-				}
-			}
-
-
-			var msg = '';
-
-			if ({$member_id} == {$data->object->from_id}){
-				if(member.sex == 1){
-					msg = messages.myselfFemale;
-				} else {
-					msg = messages.myselfMale;
-				}
-			} else {
-				if(from_user.sex == 1){
-					msg = messages.female;
-				} else {
-					msg = messages.male;
-				};
-			};
-
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
-
-	} else {
-		if(array_key_exists(1, $words)){
-			$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
-			$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
-		}
-		else
-			$word1 = "";
-
-		if(array_key_exists(2, $words)){
-			$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
-			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
-		}
-		else
-			$word2 = "";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});
-			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
-			var word1 = '{$word1}';
-			var word2 = '{$word2}';
-
-			var member_index = -1;
-			var i = 0; while(i < members.profiles.length){
-				if(members.profiles[i].first_name == word1){
-					if(word2 == ''){
-						member_index = i;
-						i = members.profiles.length;
-					} else if (members.profiles[i].last_name == word2){
-						member_index = i;
-						i = members.profiles.length;
-					}
-				} else if(members.profiles[i].last_name == word1) {
-					member_index = i;
-					i = members.profiles.length;
-				}
-				i = i + 1;
-			};
-			if(member_index == -1){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
-			}
-
-			var member = members.profiles[member_index];
-
-			var FROM_USERNAME = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+')';
-
-			var MEMBER_USERNAME = '@'+member.screen_name+' ('+member.first_name+' '+member.last_name+')';
-			var MEMBER_USERNAME_GEN = '@'+member.screen_name+' ('+member.first_name_gen+' '+member.last_name_gen+')';
-			var MEMBER_USERNAME_DAT = '@'+member.screen_name+' ('+member.first_name_dat+' '+member.last_name_dat+')';
-			var MEMBER_USERNAME_ACC = '@'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+')';
-			var MEMBER_USERNAME_INS = '@'+member.screen_name+' ('+member.first_name_ins+' '+member.last_name_ins+')';
-			var MEMBER_USERNAME_ABL = '@'+member.screen_name+' ('+member.first_name_abl+' '+member.last_name_abl+')';
-
-			var messages = {$messagesJson};
-
-			if({$sexOnly} != 0){
-				if(member.sex != {$sexOnly}){
-					return API.messages.send({'peer_id':{$data->object->peer_id},'message':messages.sexErrorMsg});
-				}
-			}
-
-			var msg = '';
-
-			if (member.id == {$data->object->from_id}){
-				if(member.sex == 1){
-					msg = messages.myselfFemale;
-				} else {
-					msg = messages.myselfMale;
-				}
-			} else {
-				if(from_user.sex == 1){
-					msg = messages.female;
-				} else {
-					msg = messages.male;
-				};
-			};
-
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
-	}
-}
-*/
-
-function rp_api_act_with($db, $data, $command, $user_info, $params){
+function roleplay_api_act_with($db, $data, $command, $user_info = "", $params){
 	// Переменные параметров РП действия
-	$msgMale = $params["msgMale"];
-	$msgFemale = $params["msgFemale"];
-	$msgMyselfMale = $params["msgMyselfMale"];
-	$msgMyselfFemale = $params["msgMyselfFemale"];
+	if(array_key_exists("msgMale", $params) && gettype($params["msgMale"]) == "string")
+		$msgMale = $params["msgMale"];
+	else{
+		$debug_backtrace = debug_backtrace();
+		error_log("Invalid parameter msgMale in function {$debug_backtrace[1]["function"]} in {$debug_backtrace[1]["file"]} on line {$debug_backtrace[1]["line"]}");
+		exit;
+	}
+
+	if(array_key_exists("msgFemale", $params) && gettype($params["msgFemale"]) == "string")
+		$msgFemale = $params["msgFemale"];
+	else{
+		$debug_backtrace = debug_backtrace();
+		error_log("Invalid parameter msgFemale msgFemale in function {$debug_backtrace[1]["function"]} in {$debug_backtrace[1]["file"]} on line {$debug_backtrace[1]["line"]}");
+		exit;
+	}
+
+	if(array_key_exists("msgMyselfMale", $params) && gettype($params["msgMyselfMale"]) == "string")
+		$msgMyselfMale = $params["msgMyselfMale"];
+	else{
+		$debug_backtrace = debug_backtrace();
+		error_log("Invalid parameter msgMyselfMale in function {$debug_backtrace[1]["function"]} in {$debug_backtrace[1]["file"]} on line {$debug_backtrace[1]["line"]}");
+		exit;
+	}
+
+	if(array_key_exists("msgMyselfFemale", $params) && gettype($params["msgMyselfFemale"]) == "string")
+		$msgMyselfFemale = $params["msgMyselfFemale"];
+	else{
+		$debug_backtrace = debug_backtrace();
+		error_log("Invalid parameter msgMyselfFemale in function {$debug_backtrace[1]["function"]} in {$debug_backtrace[1]["file"]} on line {$debug_backtrace[1]["line"]}");
+		exit;
+	}
+
+	if(array_key_exists("msgToAll", $params) && gettype($params["msgToAll"]) == "array")
+		$msgToAll = $params["msgToAll"];
+
 	if(array_key_exists("sexOnly", $params) && gettype($params["sexOnly"]) == "integer")
 		$sexOnly = $params["sexOnly"];
 	else
 		$sexOnly = 0;
+
 	if(array_key_exists("sexErrorMsg", $params) && gettype($params["sexErrorMsg"]) == "string")
 		$sexErrorMsg = $params["sexErrorMsg"];
 	else
 		$sexErrorMsg = "невозможно выполнить действие с указанным пользователем (пользователь не того пола).";
 
+
 	// Логика РП действия
 	$member_id = 0;
 
 	$botModule = new botModule($db);
-	if(is_null($user_info) && array_key_exists(0, $data->object->fwd_messages)){
-		$msg = ", используйте \"Обнять <имя/фамилия/id/упоминание/перес. сообщение>\".";
-		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%__appeal__%, используйте \"{$command} <имя/фамилия/id/упоминание/перес. сообщение>\""), JSON_UNESCAPED_UNICODE);
+	if($user_info == "" && !array_key_exists(0, $data->object->fwd_messages)){
+		$msg = ", используйте \"{$command} <имя/фамилия/id/упоминание/перес. сообщение>\".";
+		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%__appeal__%, используйте \"{$command} <имя/фамилия/id/упоминание/перес. сообщение>\"."), JSON_UNESCAPED_UNICODE);
 		$request = vk_parse_var($request, "__appeal__");
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			var __appeal__ = appeal;
 			appeal = null;
 			return API.messages.send({$request});");
-		return 0;
+		return false;
 	}
 
 	if(array_key_exists(0, $data->object->fwd_messages)){
@@ -206,11 +74,10 @@ function rp_api_act_with($db, $data, $command, $user_info, $params){
 		$member_id = intval($user_info);
 	}
 
-	$messagesJson = json_encode(array('male' => $msgMale, 'female' => $msgFemale, 'myselfMale' => $msgMyselfMale, 'myselfFemale' => $msgMyselfFemale, 'sexErrorMsg' => $sexErrorMsg), JSON_UNESCAPED_UNICODE);
-
-	$messagesJson = vk_parse_vars($messagesJson, array("FROM_USERNAME", "MEMBER_USERNAME", "MEMBER_USERNAME_GEN", "MEMBER_USERNAME_DAT", "MEMBER_USERNAME_ACC", "MEMBER_USERNAME_INS", "MEMBER_USERNAME_ABL", "appeal"));
-
 	if($member_id > 0){
+		$messagesJson = json_encode(array('male' => $msgMale, 'female' => $msgFemale, 'myselfMale' => $msgMyselfMale, 'myselfFemale' => $msgMyselfFemale, 'sexErrorMsg' => $sexErrorMsg), JSON_UNESCAPED_UNICODE);
+		$messagesJson = vk_parse_vars($messagesJson, array("FROM_USERNAME", "MEMBER_USERNAME", "MEMBER_USERNAME_GEN", "MEMBER_USERNAME_DAT", "MEMBER_USERNAME_ACC", "MEMBER_USERNAME_INS", "MEMBER_USERNAME_ABL", "appeal"));
+
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			var users = API.users.get({'user_ids':[{$member_id},{$data->object->from_id}],'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});
 			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id}});
@@ -229,14 +96,14 @@ function rp_api_act_with($db, $data, $command, $user_info, $params){
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
 			}
 
-			var FROM_USERNAME = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+')';
+			var FROM_USERNAME = '@'+from_user.screen_name+' ('+from_user.first_name.substr(0, 2)+'. '+from_user.last_name+')';
 
-			var MEMBER_USERNAME = '@'+member.screen_name+' ('+member.first_name+' '+member.last_name+')';
-			var MEMBER_USERNAME_GEN = '@'+member.screen_name+' ('+member.first_name_gen+' '+member.last_name_gen+')';
-			var MEMBER_USERNAME_DAT = '@'+member.screen_name+' ('+member.first_name_dat+' '+member.last_name_dat+')';
-			var MEMBER_USERNAME_ACC = '@'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+')';
-			var MEMBER_USERNAME_INS = '@'+member.screen_name+' ('+member.first_name_ins+' '+member.last_name_ins+')';
-			var MEMBER_USERNAME_ABL = '@'+member.screen_name+' ('+member.first_name_abl+' '+member.last_name_abl+')';
+			var MEMBER_USERNAME = '@'+member.screen_name+' ('+member.first_name.substr(0, 2)+'. '+member.last_name+')';
+			var MEMBER_USERNAME_GEN = '@'+member.screen_name+' ('+member.first_name_gen.substr(0, 2)+'. '+member.last_name_gen+')';
+			var MEMBER_USERNAME_DAT = '@'+member.screen_name+' ('+member.first_name_dat.substr(0, 2)+'. '+member.last_name_dat+')';
+			var MEMBER_USERNAME_ACC = '@'+member.screen_name+' ('+member.first_name_acc.substr(0, 2)+'. '+member.last_name_acc+')';
+			var MEMBER_USERNAME_INS = '@'+member.screen_name+' ('+member.first_name_ins.substr(0, 2)+'. '+member.last_name_ins+')';
+			var MEMBER_USERNAME_ABL = '@'+member.screen_name+' ('+member.first_name_abl.substr(0, 2)+'. '+member.last_name_abl+')';
 
 			var messages = {$messagesJson};
 
@@ -245,7 +112,6 @@ function rp_api_act_with($db, $data, $command, $user_info, $params){
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':messages.sexErrorMsg});
 				}
 			}
-
 
 			var msg = '';
 
@@ -267,6 +133,29 @@ function rp_api_act_with($db, $data, $command, $user_info, $params){
 			");
 
 	} else {
+		if(isset($msgToAll) && array_search(mb_strtolower($user_info), array('всем', 'всех', 'у всех', 'со всеми', 'на всех')) !== false){ // Выполнение действия над всеми
+			$msgToAllMale = vk_parse_var($msgToAll["male"], "FROM_USERNAME");
+			$msgToAllFemale = vk_parse_var($msgToAll["female"], "FROM_USERNAME");
+			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			var from_user = API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
+
+			var FROM_USERNAME = '@'+from_user.screen_name+' ('+from_user.first_name.substr(0, 2)+'. '+from_user.last_name+')';
+
+			var msg = '';
+			if(from_user.sex == 1){
+				msg = \"{$msgToAllFemale}\";
+			} else {
+				msg = \"{$msgToAllMale}\";
+			};
+
+			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
+			");
+			return;
+		}
+
+		$messagesJson = json_encode(array('male' => $msgMale, 'female' => $msgFemale, 'myselfMale' => $msgMyselfMale, 'myselfFemale' => $msgMyselfFemale, 'sexErrorMsg' => $sexErrorMsg), JSON_UNESCAPED_UNICODE);
+		$messagesJson = vk_parse_vars($messagesJson, array("FROM_USERNAME", "MEMBER_USERNAME", "MEMBER_USERNAME_GEN", "MEMBER_USERNAME_DAT", "MEMBER_USERNAME_ACC", "MEMBER_USERNAME_INS", "MEMBER_USERNAME_ABL", "appeal"));
+
 		$user_info_words = explode(" ", $user_info);
 		if(array_key_exists(0, $user_info_words)){
 			$word1_array = preg_split('//u', strval($user_info_words[0]), null, PREG_SPLIT_NO_EMPTY);
@@ -309,14 +198,14 @@ function rp_api_act_with($db, $data, $command, $user_info, $params){
 
 			var member = members.profiles[member_index];
 
-			var FROM_USERNAME = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+')';
+			var FROM_USERNAME = '@'+from_user.screen_name+' ('+from_user.first_name.substr(0, 2)+'. '+from_user.last_name+')';
 
-			var MEMBER_USERNAME = '@'+member.screen_name+' ('+member.first_name+' '+member.last_name+')';
-			var MEMBER_USERNAME_GEN = '@'+member.screen_name+' ('+member.first_name_gen+' '+member.last_name_gen+')';
-			var MEMBER_USERNAME_DAT = '@'+member.screen_name+' ('+member.first_name_dat+' '+member.last_name_dat+')';
-			var MEMBER_USERNAME_ACC = '@'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+')';
-			var MEMBER_USERNAME_INS = '@'+member.screen_name+' ('+member.first_name_ins+' '+member.last_name_ins+')';
-			var MEMBER_USERNAME_ABL = '@'+member.screen_name+' ('+member.first_name_abl+' '+member.last_name_abl+')';
+			var MEMBER_USERNAME = '@'+member.screen_name+' ('+member.first_name.substr(0, 2)+'. '+member.last_name+')';
+			var MEMBER_USERNAME_GEN = '@'+member.screen_name+' ('+member.first_name_gen.substr(0, 2)+'. '+member.last_name_gen+')';
+			var MEMBER_USERNAME_DAT = '@'+member.screen_name+' ('+member.first_name_dat.substr(0, 2)+'. '+member.last_name_dat+')';
+			var MEMBER_USERNAME_ACC = '@'+member.screen_name+' ('+member.first_name_acc.substr(0, 2)+'. '+member.last_name_acc+')';
+			var MEMBER_USERNAME_INS = '@'+member.screen_name+' ('+member.first_name_ins.substr(0, 2)+'. '+member.last_name_ins+')';
+			var MEMBER_USERNAME_ABL = '@'+member.screen_name+' ('+member.first_name_abl.substr(0, 2)+'. '+member.last_name_abl+')';
 
 			var messages = {$messagesJson};
 
@@ -348,9 +237,31 @@ function rp_api_act_with($db, $data, $command, $user_info, $params){
 }
 
 ///////////////////////////////////////////////////////////
+/// CMD init
+
+function roleplay_cmdinit(&$event){
+	$event->addMessageCommand("!me", 'roleplay_me');
+	$event->addMessageCommand("!do", 'roleplay_do');
+	$event->addMessageCommand("!try", 'roleplay_try');
+	$event->addMessageCommand("!s", 'roleplay_shout');
+	$event->addMessageCommand("секс", 'roleplay_sex');
+	$event->addMessageCommand("обнять", 'roleplay_hug');
+	$event->addMessageCommand("уебать", 'roleplay_bump');
+	$event->addMessageCommand("обоссать", 'roleplay_pissof');
+	$event->addMessageCommand("поцеловать", 'roleplay_kiss');
+	$event->addMessageCommand("харкнуть", 'roleplay_hark');
+	$event->addMessageCommand("отсосать", 'roleplay_suck');
+	$event->addMessageCommand("отлизать", 'roleplay_lick');
+	$event->addMessageCommand("послать", 'roleplay_gofuck');
+	$event->addMessageCommand("кастрировать", 'roleplay_castrate');
+	$event->addMessageCommand("посадить", "roleplay_sit");
+	$event->addMessageCommand("пожать", "roleplay_shake");
+}
+
+///////////////////////////////////////////////////////////
 /// Handlers
 
-function rp_me($finput){
+function roleplay_me($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
@@ -376,7 +287,7 @@ function rp_me($finput){
 	}
 }
 
-function rp_try($finput){
+function roleplay_try($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
@@ -408,7 +319,7 @@ function rp_try($finput){
 	}
 }
 
-function rp_do($finput){
+function roleplay_do($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
@@ -435,7 +346,7 @@ function rp_do($finput){
 	}
 }
 
-function rp_shout($finput){
+function roleplay_shout($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
@@ -486,1067 +397,227 @@ function rp_shout($finput){
 	}
 }
 
-function rp_sex($finput){
+function roleplay_sex($finput){ // Test
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	$member_id = 0;
-	$botModule = new botModule($db);
+	$params = array(
+		"msgMale" => "%FROM_USERNAME% занялся сексом с %MEMBER_USERNAME_INS%.😍",
+		"msgFemale" => "%FROM_USERNAME% занялась сексом с %MEMBER_USERNAME_INS%.😍",
+		"msgMyselfMale" => "%FROM_USERNAME% подрочил.🤗",
+		"msgMyselfFemale" => "%FROM_USERNAME% помастурбировала.🤗",
+		"msgToAll" => array(
+			"male" => "%FROM_USERNAME% занялся сексом со всем.😍",
+			"female" => "%FROM_USERNAME% занялась сексом со всем.😍"
+		)
+	);
 
-	if(array_key_exists(1, $words) && array_key_exists(0, $data->object->fwd_messages)){
-		$msg = ", используйте \"Секс <имя/фамилия/id/упоминание/перес. сообщение>\".";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
-		return 0;
-	}
+	$user_info = bot_get_word_argv($words, 1, "");
+	if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
+		$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
 
-	if(array_key_exists(0, $data->object->fwd_messages)){
-		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
-		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
-		$member_id = intval($words[1]);
-	}
-
-	if($member_id > 0){
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var users = API.users.get({'user_ids':[{$member_id},{$data->object->from_id}],'fields':'sex,screen_name,first_name_ins,last_name_ins'});
-			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id}});
-			var from_user = users[1];
-			var member = users[0];
-
-			var isContinue = false;
-			var i = 0; while(i < members.profiles.length){
-				if(members.profiles[i].id == {$member_id}){
-					isContinue = true;
-				}
-				i = i + 1;
-			}
-			if(!isContinue){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
-			}
-
-			var msg = '';
-
-			if ({$member_id} == {$data->object->from_id}){
-				if(member.sex == 1){
-					msg = '@'+member.screen_name+' ('+member.first_name+' '+member.last_name+') подрочила.🤗';
-				} else {
-					msg = '@'+member.screen_name+' ('+member.first_name+' '+member.last_name+') подрочил.🤗';
-				}
-			} else {
-				if(from_user.sex == 1){
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') занялась сексом с @'+member.screen_name+' ('+member.first_name_ins+' '+member.last_name_ins+').😍';
-				} else {
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') занялся сексом с @'+member.screen_name+' ('+member.first_name_ins+' '+member.last_name_ins+').😍';
-				};
-			};
-
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
-
-	} else {
-		if(array_key_exists(1, $words)){
-			$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
-			$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
-		}
-		else
-			$word1 = "";
-
-		if(array_key_exists(2, $words)){
-			$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
-			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
-		}
-		else
-			$word2 = "";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'screen_name,first_name_ins,last_name_ins'});
-			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
-			var word1 = '{$word1}';
-			var word2 = '{$word2}';
-
-			var member_index = -1;
-			var i = 0; while(i < members.profiles.length){
-				if(members.profiles[i].first_name == word1){
-					if(word2 == ''){
-						member_index = i;
-						i = members.profiles.length;
-					} else if (members.profiles[i].last_name == word2){
-						member_index = i;
-						i = members.profiles.length;
-					}
-				} else if(members.profiles[i].last_name == word1) {
-					member_index = i;
-					i = members.profiles.length;
-				}
-				i = i + 1;
-			};
-			if(member_index == -1){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
-			}
-
-			var member = members.profiles[member_index];
-			var msg = '';
-
-			if (member.id == {$data->object->from_id}){
-				if(from_user.sex == 1){
-					msg = '@'+member.screen_name+' ('+member.first_name+' '+member.last_name+') подрочила.🤗';
-				} else {
-					msg = '@'+member.screen_name+' ('+member.first_name+' '+member.last_name+') подрочил.🤗';
-				}
-			} else {
-				if(from_user.sex == 1){
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') занялась сексом с @'+member.screen_name+' ('+member.first_name_ins+' '+member.last_name_ins+').😍';
-				} else {
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') занялся сексом с @'+member.screen_name+' ('+member.first_name_ins+' '+member.last_name_ins+').😍';
-				};
-			};
-
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
-	}
+	roleplay_api_act_with($db, $data, "Секс", $user_info, $params);
 }
 
-function rp_hug($finput){
+function roleplay_hug($finput){ // Test
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	$member_id = 0;
-	$botModule = new botModule($db);
+	$params = array(
+		"msgMale" => "%FROM_USERNAME% обнял %MEMBER_USERNAME_ACC%.🤗",
+		"msgFemale" => "%FROM_USERNAME% обняла %MEMBER_USERNAME_ACC%.🤗",
+		"msgMyselfMale" => "%FROM_USERNAME% обнял сам себя.🤗",
+		"msgMyselfFemale" => "%FROM_USERNAME% обняла сама себя.🤗",
+		"msgToAll" => array(
+			"male" => "%FROM_USERNAME% обнял всех.🤗",
+			"female" => "%FROM_USERNAME% обняла всех.🤗"
+		)
+	);
 
-	if(array_key_exists(1, $words) && array_key_exists(0, $data->object->fwd_messages)){
-		$msg = ", используйте \"Обнять <имя/фамилия/id/упоминание/перес. сообщение>\".";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
-		return 0;
-	}
+	$user_info = bot_get_word_argv($words, 1, "");
+	if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
+		$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
 
-	if(array_key_exists(0, $data->object->fwd_messages)){
-		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
-		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
-		$member_id = intval($words[1]);
-	}
-
-	if($member_id > 0){
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var users = API.users.get({'user_ids':[{$member_id},{$data->object->from_id}],'fields':'sex,screen_name,first_name_acc,last_name_acc'});
-			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id}});
-			var from_user = users[1];
-			var member = users[0];
-
-			var isContinue = false;
-			var i = 0; while(i < members.profiles.length){
-				if(members.profiles[i].id == {$member_id}){
-					isContinue = true;
-				}
-				i = i + 1;
-			}
-			if(!isContinue){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
-			}
-
-			var msg = '';
-
-			if ({$member_id} == {$data->object->from_id}){
-				msg = appeal+', нельзя обнять себя.😐';
-			} else {
-				if(from_user.sex == 1){
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') обняла @'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+').🤗';
-				} else {
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') обнял @'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+').🤗';
-				};
-			};
-
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
-
-	} else {
-		if(array_key_exists(1, $words)){
-			$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
-			$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
-		}
-		else
-			$word1 = "";
-
-		if(array_key_exists(2, $words)){
-			$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
-			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
-		}
-		else
-			$word2 = "";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'screen_name,first_name_acc,last_name_acc'});
-			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
-			var word1 = '{$word1}';
-			var word2 = '{$word2}';
-
-			var member_index = -1;
-			var i = 0; while(i < members.profiles.length){
-				if(members.profiles[i].first_name == word1){
-					if(word2 == ''){
-						member_index = i;
-						i = members.profiles.length;
-					} else if (members.profiles[i].last_name == word2){
-						member_index = i;
-						i = members.profiles.length;
-					}
-				} else if(members.profiles[i].last_name == word1) {
-					member_index = i;
-					i = members.profiles.length;
-				}
-				i = i + 1;
-			};
-			if(member_index == -1){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
-			}
-
-			var member = members.profiles[member_index];
-			var msg = '';
-
-			if (member.id == {$data->object->from_id}){
-				msg = appeal+', нельзя обнять себя.😐';
-			} else {
-				if(from_user.sex == 1){
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') обняла @'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+').🤗';
-				} else {
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') обнял @'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+').🤗';
-				};
-			};
-
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
-	}
+	roleplay_api_act_with($db, $data, "Обнять", $user_info, $params);
 }
 
-function rp_bump($finput){
+function roleplay_bump($finput){ // Test
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	$member_id = 0;
-	$botModule = new botModule($db);
+	$params = array(
+		"msgMale" => "%FROM_USERNAME% уебал %MEMBER_USERNAME_DAT%.👊🏻",
+		"msgFemale" => "%FROM_USERNAME% уебала %MEMBER_USERNAME_DAT%.👊🏻",
+		"msgMyselfMale" => "%FROM_USERNAME% уебал сам себе.👊🏻",
+		"msgMyselfFemale" => "%FROM_USERNAME% уебала сама себе.👊🏻",
+		"msgToAll" => array(
+			"male" => "%FROM_USERNAME% уебал всем.👊🏻",
+			"female" => "%FROM_USERNAME% уебал всем.👊🏻"
+		)
+	);
 
-	if(array_key_exists(1, $words) && array_key_exists(0, $data->object->fwd_messages)){
-		$msg = ", используйте \"Уебать <имя/фамилия/id/упоминание/перес. сообщение>\".";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
-		return 0;
-	}
+	$user_info = bot_get_word_argv($words, 1, "");
+	if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
+		$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
 
-	if(array_key_exists(0, $data->object->fwd_messages)){
-		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
-		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
-		$member_id = intval($words[1]);
-	}
-
-	if($member_id > 0){
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var users = API.users.get({'user_ids':[{$member_id},{$data->object->from_id}],'fields':'sex,screen_name,first_name_dat,last_name_dat'});
-			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id}});
-			var from_user = users[1];
-			var member = users[0];
-
-			var isContinue = false;
-			var i = 0; while(i < members.profiles.length){
-				if(members.profiles[i].id == {$member_id}){
-					isContinue = true;
-				}
-				i = i + 1;
-			}
-			if(!isContinue){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
-			}
-
-			var msg = '';
-
-			if ({$member_id} == {$data->object->from_id}){
-				msg = appeal+', нельзя уебать себе.😐';
-			} else {
-				if(from_user.sex == 1){
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') уебала @'+member.screen_name+' ('+member.first_name_dat+' '+member.last_name_dat+').👊🏻';
-				} else {
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') уебал @'+member.screen_name+' ('+member.first_name_dat+' '+member.last_name_dat+').👊🏻';
-				};
-			};
-
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
-
-	} else {
-		if(array_key_exists(1, $words)){
-			$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
-			$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
-		}
-		else
-			$word1 = "";
-
-		if(array_key_exists(2, $words)){
-			$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
-			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
-		}
-		else
-			$word2 = "";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'screen_name,first_name_dat,last_name_dat'});
-			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
-			var word1 = '{$word1}';
-			var word2 = '{$word2}';
-
-			var member_index = -1;
-			var i = 0; while(i < members.profiles.length){
-				if(members.profiles[i].first_name == word1){
-					if(word2 == ''){
-						member_index = i;
-						i = members.profiles.length;
-					} else if (members.profiles[i].last_name == word2){
-						member_index = i;
-						i = members.profiles.length;
-					}
-				} else if(members.profiles[i].last_name == word1) {
-					member_index = i;
-					i = members.profiles.length;
-				}
-				i = i + 1;
-			};
-			if(member_index == -1){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
-			}
-
-			var member = members.profiles[member_index];
-			var msg = '';
-
-			if (member.id == {$data->object->from_id}){
-				msg = appeal+', нельзя уебать себе.😐';
-			} else {
-				if(from_user.sex == 1){
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') уебала @'+member.screen_name+' ('+member.first_name_dat+' '+member.last_name_dat+').👊🏻';
-				} else {
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') уебал @'+member.screen_name+' ('+member.first_name_dat+' '+member.last_name_dat+').👊🏻';
-				};
-			};
-
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
-	}
+	roleplay_api_act_with($db, $data, "Уебать", $user_info, $params);
 }
 
-function rp_pissof($finput){
+function roleplay_pissof($finput){ // Test
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	$member_id = 0;
-	$botModule = new botModule($db);
+	$params = array(
+		"msgMale" => "%FROM_USERNAME% обоссал %MEMBER_USERNAME_GEN%.💦",
+		"msgFemale" => "%FROM_USERNAME% обоссала %MEMBER_USERNAME_GEN%.💦",
+		"msgMyselfMale" => "%FROM_USERNAME% обоссал сам себя.💦",
+		"msgMyselfFemale" => "%FROM_USERNAME% обоссал сама себя.💦",
+		"msgToAll" => array(
+			"male" => "%FROM_USERNAME% обоссал всех.💦",
+			"female" => "%FROM_USERNAME% обоссала всех.💦"
+		)
+	);
 
-	if(array_key_exists(1, $words) && array_key_exists(0, $data->object->fwd_messages)){
-		$msg = ", используйте \"Обоссать <имя/фамилия/id/упоминание/перес. сообщение>\".";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
-		return 0;
-	}
+	$user_info = bot_get_word_argv($words, 1, "");
+	if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
+		$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
 
-	if(array_key_exists(0, $data->object->fwd_messages)){
-		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
-		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
-		$member_id = intval($words[1]);
-	}
-
-	if($member_id > 0){
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var users = API.users.get({'user_ids':[{$member_id},{$data->object->from_id}],'fields':'sex,screen_name,first_name_gen,last_name_gen'});
-			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id}});
-			var from_user = users[1];
-			var member = users[0];
-
-			var isContinue = false;
-			var i = 0; while(i < members.profiles.length){
-				if(members.profiles[i].id == {$member_id}){
-					isContinue = true;
-				}
-				i = i + 1;
-			}
-			if(!isContinue){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
-			}
-
-			var msg = '';
-
-			if ({$member_id} == {$data->object->from_id}){
-				msg = appeal+', нельзя обоссать себя.😐';
-			} else {
-				if(from_user.sex == 1){
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') обоссала @'+member.screen_name+' ('+member.first_name_gen+' '+member.last_name_gen+').💦';
-				} else {
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') обоссал @'+member.screen_name+' ('+member.first_name_gen+' '+member.last_name_gen+').💦';
-				};
-			};
-
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
-
-	} else {
-		if(array_key_exists(1, $words)){
-			$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
-			$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
-		}
-		else
-			$word1 = "";
-
-		if(array_key_exists(2, $words)){
-			$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
-			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
-		}
-		else
-			$word2 = "";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'screen_name,first_name_gen,last_name_gen'});
-			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
-			var word1 = '{$word1}';
-			var word2 = '{$word2}';
-
-			var member_index = -1;
-			var i = 0; while(i < members.profiles.length){
-				if(members.profiles[i].first_name == word1){
-					if(word2 == ''){
-						member_index = i;
-						i = members.profiles.length;
-					} else if (members.profiles[i].last_name == word2){
-						member_index = i;
-						i = members.profiles.length;
-					}
-				} else if(members.profiles[i].last_name == word1) {
-					member_index = i;
-					i = members.profiles.length;
-				}
-				i = i + 1;
-			};
-			if(member_index == -1){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
-			}
-
-			var member = members.profiles[member_index];
-			var msg = '';
-
-			if (member.id == {$data->object->from_id}){
-				msg = appeal+', нельзя обоссать себя.😐';
-			} else {
-				if(from_user.sex == 1){
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') обоссала @'+member.screen_name+' ('+member.first_name_gen+' '+member.last_name_gen+').💦';
-				} else {
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') обоссал @'+member.screen_name+' ('+member.first_name_gen+' '+member.last_name_gen+').💦';
-				};
-			};
-
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
-	}
+	roleplay_api_act_with($db, $data, "Обоссать", $user_info, $params);
 }
 
-function rp_kiss($finput){
+function roleplay_kiss($finput){ // Test
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	$member_id = 0;
-	$botModule = new botModule($db);
+	$params = array(
+		"msgMale" => "%FROM_USERNAME% поцеловал %MEMBER_USERNAME_ACC%.😘",
+		"msgFemale" => "%FROM_USERNAME% поцеловала %MEMBER_USERNAME_ACC%.😘",
+		"msgMyselfMale" => "%FROM_USERNAME% поцеловал сам себя.😘",
+		"msgMyselfFemale" => "%FROM_USERNAME% поцеловала сама себя.😘",
+		"msgToAll" => array(
+			"male" => "%FROM_USERNAME% поцеловал всех.😘",
+			"female" => "%FROM_USERNAME% поцеловала всех.😘"
+		)
+	);
 
-	if(array_key_exists(1, $words) && array_key_exists(0, $data->object->fwd_messages)){
-		$msg = ", используйте \"Поцеловать <имя/фамилия/id/упоминание/перес. сообщение>\".";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
-		return 0;
-	}
+	$user_info = bot_get_word_argv($words, 1, "");
+	if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
+		$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
 
-	if(array_key_exists(0, $data->object->fwd_messages)){
-		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
-		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
-		$member_id = intval($words[1]);
-	}
-
-	if($member_id > 0){
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var users = API.users.get({'user_ids':[{$member_id},{$data->object->from_id}],'fields':'sex,screen_name,first_name_acc,last_name_acc'});
-			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id}});
-			var from_user = users[1];
-			var member = users[0];
-
-			var isContinue = false;
-			var i = 0; while(i < members.profiles.length){
-				if(members.profiles[i].id == {$member_id}){
-					isContinue = true;
-				}
-				i = i + 1;
-			}
-			if(!isContinue){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
-			}
-
-			var msg = '';
-
-			if ({$member_id} == {$data->object->from_id}){
-				msg = appeal+', нельзя поцеловать себя.😐';
-			} else {
-				if(from_user.sex == 1){
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') поцеловала @'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+').😘';
-				} else {
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') поцеловал @'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+').😘';
-				};
-			};
-
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
-
-	} else {
-		if(array_key_exists(1, $words)){
-			$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
-			$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
-		}
-		else
-			$word1 = "";
-
-		if(array_key_exists(2, $words)){
-			$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
-			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
-		}
-		else
-			$word2 = "";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'screen_name,first_name_acc,last_name_acc'});
-			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
-			var word1 = '{$word1}';
-			var word2 = '{$word2}';
-
-			var member_index = -1;
-			var i = 0; while(i < members.profiles.length){
-				if(members.profiles[i].first_name == word1){
-					if(word2 == ''){
-						member_index = i;
-						i = members.profiles.length;
-					} else if (members.profiles[i].last_name == word2){
-						member_index = i;
-						i = members.profiles.length;
-					}
-				} else if(members.profiles[i].last_name == word1) {
-					member_index = i;
-					i = members.profiles.length;
-				}
-				i = i + 1;
-			};
-			if(member_index == -1){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
-			}
-
-			var member = members.profiles[member_index];
-			var msg = '';
-
-			if (member.id == {$data->object->from_id}){
-				msg = appeal+', нельзя поцеловать себя.😐';
-			} else {
-				if(from_user.sex == 1){
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') поцеловала @'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+').😘';
-				} else {
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') поцеловал @'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+').😘';
-				};
-			};
-
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
-	}
+	roleplay_api_act_with($db, $data, "Поцеловать", $user_info, $params);
 }
 
-function rp_hark($finput){
+function roleplay_hark($finput){ // Test
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	$member_id = 0;
-	$botModule = new botModule($db);
+	$params = array(
+		"msgMale" => "%FROM_USERNAME% харкнул в %MEMBER_USERNAME_ACC%.",
+		"msgFemale" => "%FROM_USERNAME% харкнула в %MEMBER_USERNAME_ACC%.",
+		"msgMyselfMale" => "%FROM_USERNAME% харкнул сам на себя.",
+		"msgMyselfFemale" => "%FROM_USERNAME% харкнула сама на себя.",
+		"msgToAll" => array(
+			"male" => "%FROM_USERNAME% харкнул на всех.",
+			"female" => "%FROM_USERNAME% харкнула на всех."
+		)
+	);
 
-	if(array_key_exists(1, $words) && array_key_exists(0, $data->object->fwd_messages)){
-		$msg = ", используйте \"Харкнуть <имя/фамилия/id/упоминание/перес. сообщение>\".";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
-		return 0;
-	}
+	$user_info = bot_get_word_argv($words, 1, "");
+	if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
+		$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
 
-	if(array_key_exists(0, $data->object->fwd_messages)){
-		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
-		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
-		$member_id = intval($words[1]);
-	}
-
-	if($member_id > 0){
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var users = API.users.get({'user_ids':[{$member_id},{$data->object->from_id}],'fields':'sex,screen_name,first_name_acc,last_name_acc'});
-			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id}});
-			var from_user = users[1];
-			var member = users[0];
-
-			var isContinue = false;
-			var i = 0; while(i < members.profiles.length){
-				if(members.profiles[i].id == {$member_id}){
-					isContinue = true;
-				}
-				i = i + 1;
-			}
-			if(!isContinue){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
-			}
-
-			var msg = '';
-
-			if ({$member_id} == {$data->object->from_id}){
-				msg = appeal+', нельзя харкнуть в себя.😐';
-			} else {
-				if(from_user.sex == 1){
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') харкнула в @'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+').😈';
-				} else {
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') харкнул в @'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+').😈';
-				};
-			};
-
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
-
-	} else {
-		if(array_key_exists(1, $words)){
-			$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
-			$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
-		}
-		else
-			$word1 = "";
-
-		if(array_key_exists(2, $words)){
-			$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
-			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
-		}
-		else
-			$word2 = "";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'screen_name,first_name_acc,last_name_acc'});
-			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
-			var word1 = '{$word1}';
-			var word2 = '{$word2}';
-
-			var member_index = -1;
-			var i = 0; while(i < members.profiles.length){
-				if(members.profiles[i].first_name == word1){
-					if(word2 == ''){
-						member_index = i;
-						i = members.profiles.length;
-					} else if (members.profiles[i].last_name == word2){
-						member_index = i;
-						i = members.profiles.length;
-					}
-				} else if(members.profiles[i].last_name == word1) {
-					member_index = i;
-					i = members.profiles.length;
-				}
-				i = i + 1;
-			};
-			if(member_index == -1){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
-			}
-
-			var member = members.profiles[member_index];
-			var msg = '';
-
-			if (member.id == {$data->object->from_id}){
-				msg = appeal+', нельзя харкнуть в себя.😐';
-			} else {
-				if(from_user.sex == 1){
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') харкнула в @'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+').😈';
-				} else {
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') харкнул в @'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+').😈';
-				};
-			};
-
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
-	}
+	roleplay_api_act_with($db, $data, "Харкнуть", $user_info, $params);
 }
 
-function rp_suck($finput){
+function roleplay_suck($finput){ // Test
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	$member_id = 0;
-	$botModule = new botModule($db);
+	$params = array(
+		"msgMale" => "%FROM_USERNAME% отсосал у %MEMBER_USERNAME_GEN%.🍌",
+		"msgFemale" => "%FROM_USERNAME% отсосала у %MEMBER_USERNAME_GEN%.🍌",
+		"msgMyselfMale" => "%FROM_USERNAME% попытался отсосать у себя.😂",
+		"msgMyselfFemale" => "%FROM_USERNAME% попыталась отсосать у себя.😂",
+		"msgToAll" => array(
+			"male" => "%FROM_USERNAME% отсосал у всех.🍌",
+			"female" => "%FROM_USERNAME% отсосала у всех.🍌"
+		),
+		"sexOnly" => 2,
+		"sexErrorMsg" => "%appeal%, нельзя отсосать у девочки.😂"
+	);
 
-	if(array_key_exists(1, $words) && array_key_exists(0, $data->object->fwd_messages)){
-		$msg = ", используйте \"Отсосать <имя/фамилия/id/упоминание/перес. сообщение>\".";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
-		return 0;
-	}
+	$user_info = bot_get_word_argv($words, 1, "");
+	if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
+		$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
 
-	if(array_key_exists(0, $data->object->fwd_messages)){
-		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
-		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
-		$member_id = intval($words[1]);
-	}
-
-	if($member_id > 0){
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var users = API.users.get({'user_ids':[{$member_id},{$data->object->from_id}],'fields':'sex,screen_name,first_name_gen,last_name_gen'});
-			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id}});
-			var from_user = users[1];
-			var member = users[0];
-
-			var isContinue = false;
-			var i = 0; while(i < members.profiles.length){
-				if(members.profiles[i].id == {$member_id}){
-					isContinue = true;
-				}
-				i = i + 1;
-			}
-			if(!isContinue){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
-			}
-
-			if(member.sex == 1){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', нельзя отсосать девочке!😂'});
-			}
-
-			var msg = '';
-
-			if ({$member_id} == {$data->object->from_id}){
-				msg = appeal+', нельзя отсосать себе.😐';
-			} else {
-				if(from_user.sex == 1){
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') отсосала у @'+member.screen_name+' ('+member.first_name_gen+' '+member.last_name_gen+').🍌';
-				} else {
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') отсосал у @'+member.screen_name+' ('+member.first_name_gen+' '+member.last_name_gen+').🍌';
-				};
-			};
-
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
-
-	} else {
-		if(array_key_exists(1, $words)){
-			$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
-			$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
-		}
-		else
-			$word1 = "";
-
-		if(array_key_exists(2, $words)){
-			$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
-			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
-		}
-		else
-			$word2 = "";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'screen_name,first_name_gen,last_name_gen,sex'});
-			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
-			var word1 = '{$word1}';
-			var word2 = '{$word2}';
-
-			var member_index = -1;
-			var i = 0; while(i < members.profiles.length){
-				if(members.profiles[i].first_name == word1){
-					if(word2 == ''){
-						member_index = i;
-						i = members.profiles.length;
-					} else if (members.profiles[i].last_name == word2){
-						member_index = i;
-						i = members.profiles.length;
-					}
-				} else if(members.profiles[i].last_name == word1) {
-					member_index = i;
-					i = members.profiles.length;
-				}
-				i = i + 1;
-			};
-			if(member_index == -1){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
-			}
-
-			if(members.profiles[member_index].sex == 1){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', нельзя отсосать девочке!😂'});
-			}
-
-			var member = members.profiles[member_index];
-			var msg = '';
-
-			if (member.id == {$data->object->from_id}){
-				msg = appeal+', нельзя отсосать себе.😐';
-			} else {
-				if(from_user.sex == 1){
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') отсосала у @'+member.screen_name+' ('+member.first_name_gen+' '+member.last_name_gen+').🍌';
-				} else {
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') отсосал у @'+member.screen_name+' ('+member.first_name_gen+' '+member.last_name_gen+').🍌';
-				};
-			};
-
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
-	}
+	roleplay_api_act_with($db, $data, "Отсосать", $user_info, $params);
 }
 
-function rp_lick($finput){
+function roleplay_lick($finput){ // Test
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	$member_id = 0;
-	$botModule = new botModule($db);
+	$params = array(
+		"msgMale" => "%FROM_USERNAME% отлизал у %MEMBER_USERNAME_GEN%.🍑",
+		"msgFemale" => "%FROM_USERNAME% отлизала у %MEMBER_USERNAME_GEN%.🍑",
+		"msgMyselfMale" => "%FROM_USERNAME% попытался отлизать у себя.😂",
+		"msgMyselfFemale" => "%FROM_USERNAME% попыталась отлизать у себя.😂",
+		"msgToAll" => array(
+			"male" => "%FROM_USERNAME% отлизал у всех.🍑",
+			"female" => "%FROM_USERNAME% отлизал у всех.🍑"
+		),
+		"sexOnly" => 1,
+		"sexErrorMsg" => "%appeal%, нельзя отлизать у мальчика.😂"
+	);
 
-	if(array_key_exists(1, $words) && array_key_exists(0, $data->object->fwd_messages)){
-		$msg = ", используйте \"Отлизать <имя/фамилия/id/упоминание/перес. сообщение>\".";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
-		return 0;
-	}
+	$user_info = bot_get_word_argv($words, 1, "");
+	if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
+		$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
 
-	if(array_key_exists(0, $data->object->fwd_messages)){
-		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
-		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
-		$member_id = intval($words[1]);
-	}
-
-	if($member_id > 0){
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var users = API.users.get({'user_ids':[{$member_id},{$data->object->from_id}],'fields':'sex,screen_name,first_name_gen,last_name_gen'});
-			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id}});
-			var from_user = users[1];
-			var member = users[0];
-
-			var isContinue = false;
-			var i = 0; while(i < members.profiles.length){
-				if(members.profiles[i].id == {$member_id}){
-					isContinue = true;
-				}
-				i = i + 1;
-			}
-			if(!isContinue){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
-			}
-
-			if(member.sex == 2){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', нельзя отлизать мальчику!😂'});
-			}
-
-			var msg = '';
-
-			if ({$member_id} == {$data->object->from_id}){
-				msg = appeal+', нельзя отлизать себе.😐';
-			} else {
-				if(from_user.sex == 1){
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') отлизала у @'+member.screen_name+' ('+member.first_name_gen+' '+member.last_name_gen+').🍑';
-				} else {
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') отлизал у @'+member.screen_name+' ('+member.first_name_gen+' '+member.last_name_gen+').🍑';
-				};
-			};
-
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
-
-	} else {
-		if(array_key_exists(1, $words)){
-			$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
-			$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
-		}
-		else
-			$word1 = "";
-
-		if(array_key_exists(2, $words)){
-			$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
-			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
-		}
-		else
-			$word2 = "";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'screen_name,first_name_gen,last_name_gen,sex'});
-			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
-			var word1 = '{$word1}';
-			var word2 = '{$word2}';
-
-			var member_index = -1;
-			var i = 0; while(i < members.profiles.length){
-				if(members.profiles[i].first_name == word1){
-					if(word2 == ''){
-						member_index = i;
-						i = members.profiles.length;
-					} else if (members.profiles[i].last_name == word2){
-						member_index = i;
-						i = members.profiles.length;
-					}
-				} else if(members.profiles[i].last_name == word1) {
-					member_index = i;
-					i = members.profiles.length;
-				}
-				i = i + 1;
-			};
-			if(member_index == -1){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
-			}
-
-			if(members.profiles[member_index].sex == 2){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', нельзя отлизать мальчику!😂'});
-			}
-
-			var member = members.profiles[member_index];
-			var msg = '';
-
-			if (member.id == {$data->object->from_id}){
-				msg = appeal+', нельзя отлизать себе.😐';
-			} else {
-				if(from_user.sex == 1){
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') отлизала у @'+member.screen_name+' ('+member.first_name_gen+' '+member.last_name_gen+').🍑';
-				} else {
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') отлизал у @'+member.screen_name+' ('+member.first_name_gen+' '+member.last_name_gen+').🍑';
-				};
-			};
-
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
-	}
+	roleplay_api_act_with($db, $data, "Отсосать", $user_info, $params);
 }
 
-function rp_gofuck($finput){
+function roleplay_gofuck($finput){ // Test
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	$member_id = 0;
-	$botModule = new botModule($db);
+	$params = array(
+		"msgMale" => "%FROM_USERNAME% послал %MEMBER_USERNAME_ACC%.",
+		"msgFemale" => "%FROM_USERNAME% послала %MEMBER_USERNAME_ACC%.",
+		"msgMyselfMale" => "%FROM_USERNAME% послал сам себя.",
+		"msgMyselfFemale" => "%FROM_USERNAME% послала сама себя.",
+		"msgToAll" => array(
+			"male" => "%FROM_USERNAME% послал всех.",
+			"female" => "%FROM_USERNAME% послала всех."
+		)
+	);
 
-	if(array_key_exists(1, $words) && array_key_exists(0, $data->object->fwd_messages)){
-		$botModule = new botModule($db);
-		$msg = ", используйте \"Послать <имя/фамилия/id/упоминание/перес. сообщение>\".";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
-		return 0;
-	}
+	$user_info = bot_get_word_argv($words, 1, "");
+	if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
+		$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
 
-	if(array_key_exists(0, $data->object->fwd_messages)){
-		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
-		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
-		$member_id = intval($words[1]);
-	}
-
-	if($member_id > 0){
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var users = API.users.get({'user_ids':[{$member_id},{$data->object->from_id}],'fields':'sex,screen_name,first_name_acc,last_name_acc'});
-			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id}});
-			var from_user = users[1];
-			var member = users[0];
-
-			var isContinue = false;
-			var i = 0; while(i < members.profiles.length){
-				if(members.profiles[i].id == {$member_id}){
-					isContinue = true;
-				}
-				i = i + 1;
-			}
-			if(!isContinue){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
-			}
-
-			var msg = '';
-
-			if ({$member_id} == {$data->object->from_id}){
-				msg = appeal+', нельзя послать нахуй себя.😐';
-			} else {
-				if(from_user.sex == 1){
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') послала нахуй @'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+').🖕🏻';
-				} else {
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') послал нахуй @'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+').🖕🏻';
-				};
-			};
-
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
-
-	} else {
-		if(array_key_exists(1, $words)){
-			$word1_array = preg_split('//u', strval($words[1]), null, PREG_SPLIT_NO_EMPTY);
-			$word1 = mb_strtoupper($word1_array[0]) . mb_substr(strval($words[1]), 1);
-		}
-		else
-			$word1 = "";
-
-		if(array_key_exists(2, $words)){
-			$word2_array = preg_split('//u', strval($words[2]), null, PREG_SPLIT_NO_EMPTY);
-			$word2 = mb_strtoupper($word2_array[0]) . mb_substr(strval($words[2]), 1);
-		}
-		else
-			$word2 = "";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'screen_name,first_name_acc,last_name_acc'});
-			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
-			var word1 = '{$word1}';
-			var word2 = '{$word2}';
-
-			var member_index = -1;
-			var i = 0; while(i < members.profiles.length){
-				if(members.profiles[i].first_name == word1){
-					if(word2 == ''){
-						member_index = i;
-						i = members.profiles.length;
-					} else if (members.profiles[i].last_name == word2){
-						member_index = i;
-						i = members.profiles.length;
-					}
-				} else if(members.profiles[i].last_name == word1) {
-					member_index = i;
-					i = members.profiles.length;
-				}
-				i = i + 1;
-			};
-			if(member_index == -1){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
-			}
-
-			var member = members.profiles[member_index];
-			var msg = '';
-
-			if (member.id == {$data->object->from_id}){
-				msg = appeal+', нельзя послать нахуй себя.😐';
-			} else {
-				if(from_user.sex == 1){
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') послала нахуй @'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+').🖕🏻';
-				} else {
-					msg = '@'+from_user.screen_name+' ('+from_user.first_name+' '+from_user.last_name+') послал нахуй @'+member.screen_name+' ('+member.first_name_acc+' '+member.last_name_acc+').🖕🏻';
-				};
-			};
-
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
-	}
+	roleplay_api_act_with($db, $data, "Послать", $user_info, $params);
 }
 
-function rp_castrate($finput){ // Test
+function roleplay_castrate($finput){ // Test
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
@@ -1559,17 +630,14 @@ function rp_castrate($finput){ // Test
 		"msgMyselfFemale" => "%appeal%, нельзя кастрировать себя.😐",
 	);
 
-	$user_info = "";
-	if(array_key_exists(1, $words)){
-		$user_info = $words[1];
-		if(array_key_exists(2, $words))
-			$user_info = $user_info . ' ' . $words[2];
-	}
+	$user_info = bot_get_word_argv($words, 1, "");
+	if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
+		$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
 
-	rp_api_act_with($db, $data, "Кастрировать", $user_info, $params);
+	roleplay_api_act_with($db, $data, "Кастрировать", $user_info, $params);
 }
 
-function rp_sit($finput){
+function roleplay_sit($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
@@ -1580,19 +648,20 @@ function rp_sit($finput){
 		"msgFemale" => "%FROM_USERNAME% посадила на бутылку %MEMBER_USERNAME_ACC%.🍾",
 		"msgMyselfMale" => "%FROM_USERNAME% сел на бутылку.🍾",
 		"msgMyselfFemale" => "%FROM_USERNAME% села на бутылку.🍾",
+		"msgToAll" => array(
+			"male" => "%FROM_USERNAME% посадил на бутылку всех.",
+			"female" => "%FROM_USERNAME% пасадила на бутылку всех."
+		)
 	);
 
-	$user_info = "";
-	if(array_key_exists(1, $words)){
-		$user_info = $words[1];
-		if(array_key_exists(2, $words))
-			$user_info = $user_info . ' ' . $words[2];
-	}
+	$user_info = bot_get_word_argv($words, 1, "");
+	if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
+		$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
 
-	rp_api_act_with($db, $data, "Посадить", $user_info, $params);
+	roleplay_api_act_with($db, $data, "Посадить", $user_info, $params);
 }
 
-function rp_shake($finput){
+function roleplay_shake($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
@@ -1605,16 +674,17 @@ function rp_shake($finput){
 				"msgFemale" => "%FROM_USERNAME% пожала руку %MEMBER_USERNAME_DAT%.",
 				"msgMyselfMale" => "%FROM_USERNAME% настолько ЧСВ, что пожал руку сам с себе.",
 				"msgMyselfFemale" => "%FROM_USERNAME% настолько ЧСВ, что пожала руку сама с себе.",
+				"msgToAll" => array(
+					"male" => "%FROM_USERNAME% пожал руку всем.",
+					"female" => "%FROM_USERNAME% пожала руку всем."
+				)
 			);
 
-			$user_info = "";
-			if(array_key_exists(2, $words)){
-				$user_info = $words[2];
-				if(array_key_exists(3, $words))
-					$user_info = $user_info . ' ' . $words[3];
-			}
+			$user_info = bot_get_word_argv($words, 2, "");
+			if($user_info != "" && bot_get_word_argv($words, 3, "") != "")
+				$user_info = $user_info . " " . bot_get_word_argv($words, 3, "");
 
-			rp_api_act_with($db, $data, "Пожать руку", $user_info, $params);
+			roleplay_api_act_with($db, $data, "Пожать руку", $user_info, $params);
 			break;
 		
 		default:

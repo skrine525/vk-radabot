@@ -1,0 +1,62 @@
+{
+	"janitor": {
+		"name": "Дворник",
+		"rest_time": 600,
+		"salary": 200,
+		"message":{
+			"male": "{USERNAME} убрал самолетики после забастовки Телеграма, тем самым заработав {SALARY}.",
+			"female": "{USERNAME} убрала самолетики после забастовки Телеграма, тем самым заработав {SALARY}."
+		},
+		"item_dependencies": []
+	},
+	"scavenger": {
+		"name": "Уборщик мусора",
+		"rest_time": 1200,
+		"salary": 400,
+		"message":{
+			"male": "{USERNAME} убрал территорию от мусора и заработал {SALARY}.",
+			"female": "{USERNAME} убрала территорию от мусора и заработала {SALARY}."
+		},
+		"item_dependencies": []
+	},
+	"newspaper_delivery_man": {
+		"name": "Доставщик газет",
+		"rest_time": 1200,
+		"salary": 600,
+		"message":{
+			"male": "{USERNAME} доставил газету к последнему дому и заработал {SALARY}.",
+			"female": "{USERNAME} доставила газету к последнему дому и заработала {SALARY}."
+		},
+		"item_dependencies": ["vehicle:level_2:1"]
+	},
+	"sales_assistant": {
+		"name": "Помощник продавца",
+		"rest_time": 1500,
+		"salary": 1000,
+		"message":{
+			"male": "{USERNAME} продал очередной рулон туалетной бумаги. Его зарплата — {SALARY}.",
+			"female": "{USERNAME} продала очередной рулон туалетной бумаги. Ее зарплата — {SALARY}."
+		},
+		"item_dependencies": ["edu:level_2:1"]
+	},
+	"president_low": {
+		"name": "Президент (Среднее образование)",
+		"rest_time": 3600,
+		"salary": 5000,
+		"message":{
+			"male": "Подписав новый закон, президент {USERNAME} заработал {SALARY}.",
+			"female": "Подписав новый закон, президент {USERNAME} заработал {SALARY}."
+		},
+		"item_dependencies": ["edu:level_2:1","govdoc:presidential_certificate:1"]
+	},
+	"president_high": {
+		"name": "Президент (Высшее образование)",
+		"rest_time": 1800,
+		"salary": 15000,
+		"message":{
+			"male": "Подписав новый закон, президент {USERNAME} заработал {SALARY}.",
+			"female": "Подписав новый закон, президент {USERNAME} заработал {SALARY}."
+		},
+		"item_dependencies": ["edu:level_5:1","govdoc:presidential_certificate:1"]
+	}
+}

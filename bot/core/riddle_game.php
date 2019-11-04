@@ -1,6 +1,6 @@
 <?php
 
-function riddlegame_cmd_handler($finput){
+function riddlegame_cmd($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
@@ -18,7 +18,7 @@ function riddlegame_cmd_handler($finput){
 			$session = riddlegame_get_session($data->object->peer_id);
 			if(array_key_exists("riddle_game", $session)){
 				$botModule->sendSimpleMessage($data->object->peer_id, "[Загадки] Сессия уже активна.");
-				return 0;
+				return;
 			}
 
 			$session = riddlegame_init_session($data, $db);
@@ -44,7 +44,7 @@ function riddlegame_cmd_handler($finput){
 			$session = riddlegame_get_session($data->object->peer_id);
 			if(!array_key_exists("riddle_game", $session)){
 				$botModule->sendSimpleMessage($data->object->peer_id, "[Загадки] Сессия не активна.");
-				return 0;
+				return;
 			}
 			$chat_id = $data->object->peer_id - 2000000000;
 			unlink(BOT_DATADIR."/riddle_sessions/chat{$chat_id}_session.json");
@@ -191,13 +191,13 @@ function riddlegame_gameplay($data, &$db){
 						$session = riddlegame_get_session($data->object->peer_id);
 						if(!array_key_exists("riddle_game", $session)){
 							$botModule->sendSimpleMessage($data->object->peer_id, "[Загадки] Сессия не активна.");
-							return 0;
+							return;
 						}
 						$chat_id = $data->object->peer_id - 2000000000;
 						unlink(BOT_DATADIR."/riddle_sessions/chat{$chat_id}_session.json");
 						$keyboard = vk_keyboard(true, array());
 						$botModule->sendSimpleMessage($data->object->peer_id, "[Загадки] Сессия остановлена.", null, array('keyboard' => $keyboard));
-						return 0;
+						return;
 						break;
 				}
 			}

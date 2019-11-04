@@ -1,0 +1,309 @@
+{
+	"items":{
+		"test": {
+			"best_girl": {
+				"name": "Удостоверение самой охуенной девочки",
+				"price": 0,
+				"can_sell": false,
+				"buy_limit": 1
+			}
+		},
+
+		"govdoc": {
+			"presidential_certificate":{
+				"name": "Удостоверение президента",
+				"price": 0,
+				"can_sell": false,
+				"buy_limit": 1
+			}
+		},
+
+		"doc": {
+			"prostitution_permit": {
+				"name": "Разрешение на проституцию",
+				"price": 0,
+				"can_sell": false,
+				"buy_limit": 1
+			}
+		},
+
+		"vehicle":{
+			"level_1": {
+				"name": "Самокат",
+				"price": 2000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_2": {
+				"name": "Велосипед",
+				"price": 4000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_3": {
+				"name": "Гироскутер",
+				"price": 10000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_4": {
+				"name": "Мопед Honda Tact",
+				"price": 25000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_5": {
+				"name": "ВАЗ-2105",
+				"price": 35000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_6": {
+				"name": "ВАЗ-2106",
+				"price": 45000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_7": {
+				"name": "ВАЗ-2107",
+				"price": 65000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_8": {
+				"name": "ВАЗ-2107 (Вишнёвая семёрка)",
+				"price": 150000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_9": {
+				"name": "Lada Priora",
+				"price": 250000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_10": {
+				"name": "Lada Granta",
+				"price": 400000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_11": {
+				"name": "Toyota Alteza",
+				"price": 650000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_12": {
+				"name": "Nissan Primera",
+				"price": 780000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_13": {
+				"name": "Subaru Impreza WRX",
+				"price": 965000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_14": {
+				"name": "Infinity G35",
+				"price": 1247000,
+				"can_sell": true,
+				"buy_limit": 1
+			}
+		},
+
+		"immovables": {
+			"level_1": {
+				"name": "Палатка",
+				"price": 3000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_2": {
+				"name": "Халупа в селе",
+				"price": 100000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_3": {
+				"name": "Комната в посёлке",
+				"price": 250000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_4": {
+				"name": "Двухкомнатная квартира в городе",
+				"price": 600000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_5": {
+				"name": "Трёхкомнатная квартира в столице",
+				"price": 1500000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_6": {
+				"name": "Шестикомнатная квартира в столице",
+				"price": 5000000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_7": {
+				"name": "Вилла в Комо",
+				"price": 54000000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_8": {
+				"name": "Аппартаменты во Франции",
+				"price": 186500000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_9": {
+				"name": "Жилой комплекс в Лос Анжелесе",
+				"price": 436000000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_80": {
+				"name": "Дом Олега",
+				"price": 10000000000,
+				"can_sell": true,
+				"buy_limit": 1
+			}
+		},
+
+		"phone": {
+			"level_1": {
+				"name": "Nokia 3310",
+				"price": 2500,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_2": {
+				"name": "Samsung X510",
+				"price": 5000,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_3": {
+				"name": "Sony Ericsson K750i",
+				"price": 8500,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_4": {
+				"name": "Apple iPhone 2G",
+				"price": 14999,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_5": {
+				"name": "Apple iPhone 5s",
+				"price": 24999,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_6": {
+				"name": "Apple iPhone 6s",
+				"price": 39999,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_7": {
+				"name": "Apple iPhone 8 Plus",
+				"price": 74999,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_8": {
+				"name": "Apple iPhone 10 XS Max",
+				"price": 119999,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_9": {
+				"name": "Apple iPhone 11 Pro Max",
+				"price": 239999,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_10": {
+				"name": "Apple iPhone 12 XS Ultra Pro Max Edition",
+				"price": 889999,
+				"can_sell": true,
+				"buy_limit": 1
+			},
+			"level_11": {
+				"name": "Apple iPhone 2G (Запечатанная коробка)",
+				"price": 5000000,
+				"can_sell": true,
+				"buy_limit": 1
+			}
+		},
+
+		"edu": {
+			"level_1": {
+				"name": "Начальное образование",
+				"price": 10000,
+				"can_sell": false,
+				"buy_limit": 1
+			},
+			"level_2": {
+				"name": "Общее среднее образование",
+				"price": 30000,
+				"can_sell": false,
+				"buy_limit": 1
+			},
+			"level_3": {
+				"name": "Полное среднее образование",
+				"price": 70000,
+				"can_sell": false,
+				"buy_limit": 1
+			},
+			"level_4": {
+				"name": "Профессиональное среднее образование",
+				"price": 130000,
+				"can_sell": false,
+				"buy_limit": 1
+			},
+			"level_5": {
+				"name": "Бакалавриат высшего образования",
+				"price": 250000,
+				"can_sell": false,
+				"buy_limit": 1
+			},
+			"level_6": {
+				"name": "Магистр высшего образования",
+				"price": 700000,
+				"can_sell": false,
+				"buy_limit": 1
+			},
+			"level_7": {
+				"name": "Доктор высшего образования",
+				"price": 1500000,
+				"can_sell": false,
+				"buy_limit": 1
+			}
+		}
+	},
+
+	"shop_sections":[
+		{
+			"name": "Транспорт",
+			"item_type": "vehicle"
+		},
+		{
+			"name": "Недвижимость",
+			"item_type": "immovables"
+		},
+		{
+			"name": "Телефон",
+			"item_type": "phone"
+		}
+	]
+}

@@ -2,7 +2,7 @@
 
 define('STATS_SWEAR_WORDS', array("педик","гандон","идиот","ебл","ёб","ублюд","шлюх","шалав","твар","дерьмо","хуе","урод","еба","ёба","сук","пидр","пидар","бля","пизд","хуи","хуй","манд")); // Константа корней матных слов
 
-function stats_update($data, $words_tmp, &$db){
+function stats_update($data, &$db){
 	if(!array_key_exists('stats', $db)){
 		$db["stats"] = array(
 			//'word_stats' => array(),
@@ -17,24 +17,16 @@ function stats_update($data, $words_tmp, &$db){
 
 	$chatModes = new ChatModes($db);
 	if(!$chatModes->getModeValue("stats_enabled"))
-		return 0;
+		return;
 
 	if(is_null($stats))
 		$stats = array();
 
 	if($data->object->text == "") // Отключение ведения статистики, если текст сообщения пустой
-		return 0;
+		return;
 
-	$words = array();
-
-	for($i = 0; $i < count($words_tmp); $i++){
-		$exploded_words = explode("\n", $words_tmp[$i]);
-		for($j = 0; $j < count($exploded_words); $j++){
-			if($exploded_words[$j] != "")
-				$words[] = mb_strtolower($exploded_words[$j]);
-		}
-	}
-	unset($words_tmp);
+	$text = mb_eregi_replace("\n", "", $data->object->text);
+	$words = explode(" ", $text);
 
 	/*
 	if(array_key_exists("word_stats", $stats)){
@@ -217,7 +209,7 @@ function stats_cmd_handler($finput){
 				case 'add':
 					if(!$ranksys->checkRank($data->object->from_id, 1)){
 						$botModule->sendSystemMsg_NoRights($data);
-						return 0;
+						return;
 					}
 
 					if(array_key_exists(3, $words)){
@@ -228,7 +220,7 @@ function stats_cmd_handler($finput){
 					}
 					else{
 						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите слово(а).", $data->object->from_id);
-						return 0;
+						return;
 					}
 
 					$added_words = array();
@@ -263,7 +255,7 @@ function stats_cmd_handler($finput){
 					}
 					else{
 						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите слово(а).", $data->object->from_id);
-						return 0;
+						return;
 					}
 
 					$deleted_words = array();
@@ -294,7 +286,7 @@ function stats_cmd_handler($finput){
 
 					if(count($indexing_words_list) == 0){
 						$botModule->sendSimpleMessage($data->object->peer_id, ", в беседе нет индекируемымых слов.", $data->object->from_id);
-						return 0;
+						return;
 					}
 					$str_list = "";
 					for($i = 0; $i < count($indexing_words_list); $i++){
@@ -312,7 +304,7 @@ function stats_cmd_handler($finput){
 					}
 					else{
 						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите слово.", $data->object->from_id);
-						return 0;
+						return;
 					}
 
 					if(array_key_exists($word, $stats["word_stats"])){
@@ -321,7 +313,7 @@ function stats_cmd_handler($finput){
 					}
 					else{
 						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Указанное слово не индексируется.", $data->object->from_id);
-						return 0;
+						return;
 					}
 					break;
 				

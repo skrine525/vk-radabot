@@ -8,7 +8,7 @@ class BotModule{
 	}
 
 	public function makeExeAppeal($user_id, $varname = "appeal"){ // Создание переменной appeal с обращением к пользователю, посредством VKScript и vk_execute()
-		if(array_key_exists('user_nicknames', $this->db["bot_manager"]) && array_key_exists("id{$user_id}", $this->db["bot_manager"]["user_nicknames"])){
+		if(isset($this->db) && array_key_exists('user_nicknames', $this->db["bot_manager"]) && array_key_exists("id{$user_id}", $this->db["bot_manager"]["user_nicknames"])){
 			$user_nick = $this->db["bot_manager"]["user_nicknames"]["id{$user_id}"];
 
 			return "var user = API.users.get({'user_ids':[{$user_id}],'fields':'screen_name'})[0]; var {$varname} = '@'+user.screen_name+' ({$user_nick})'; user = null;";
@@ -16,6 +16,47 @@ class BotModule{
 		else{
 			return "var user = API.users.get({'user_ids':[{$user_id}],'fields':'screen_name'})[0]; var {$varname} = '@'+user.screen_name+' ('+user.first_name.substr(0, 2)+'. '+user.last_name+')'; user = null;";
 		}
+	}
+
+	public function makeExeAppeals($user_ids, $varname = "appeals"){ // Создание переменной appeal с обращением к пользователю, посредством VKScript и vk_execute()
+		if(gettype($user_ids) != "array")
+			return "";
+		$user_ids = array_values(array_unique($user_ids));
+
+		$from_db = array();
+		for($i = 0; $i < count($user_ids); $i++){
+			if(isset($this->db) && array_key_exists('user_nicknames', $this->db["bot_manager"]) && array_key_exists("id{$user_ids[$i]}", $this->db["bot_manager"]["user_nicknames"])){
+				$from_db[] = array(
+					'id' => $user_ids[$i],
+					'nick' => $this->db["bot_manager"]["user_nicknames"]["id{$user_ids[$i]}"]
+				);
+			}
+			else{
+				$from_db[] = array(
+					'id' => $user_ids[$i],
+					'nick' => ""
+				);
+			}
+		}
+
+		$from_db_json = json_encode($from_db, JSON_UNESCAPED_UNICODE);
+
+		$code = "var from_db = {$from_db_json};
+			var users = API.users.get({'user_ids':from_db@.id});
+			var {$varname} = [];
+			var i = 0; while(i < from_db.length){
+				if(from_db[i].nick == ''){
+					var nick = '@id'+from_db[i].id+' ('+users[i].first_name.substr(0, 2)+'. '+users[i].last_name+')';
+					{$varname} = {$varname} + [{user_id:from_db[i].id,nick:nick}];
+				}
+				else{
+					var nick = '@id'+from_db[i].id+' ('+from_db[i].nick+')';
+					{$varname} = {$varname} + [{user_id:from_db[i].id,nick:nick}];
+				}
+				i = i + 1;
+			}";
+
+		return $code;
 	}
 
 	function sendSimpleMessage($peer_id, $message, $from_id = null, $params = array()){ // Отправка простых сообщений
@@ -54,7 +95,6 @@ function bot_register($finput){ // Регистрация чата
 
 	$botModule = new BotModule($db);
 	if (bot_check_reg($db) == false){
-		//$confa_info = json_decode(vk_call('messages.getConversationsById', array('peer_ids' => $data->object->peer_id, 'extended' => 1, 'fields' => 'first_name_gen,last_name_gen')));
 		$response = json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id).bot_test_rights_exe($data->object->peer_id, $data->object->from_id, true, "%appeal%, &#9940;У вас нет прав для этой команды.")."
 			var chat = API.messages.getConversationsById({'peer_ids':[{$data->object->peer_id}],'extended':1}).items[0];
 
@@ -67,11 +107,10 @@ function bot_register($finput){ // Регистрация чата
 			return {'result':1,'batch_name':'Полит. партия '+owner.first_name_gen+' '+owner.last_name_gen};
 			"))->response;
 		if ($response->result == 1){
-			//$president_data = json_decode(vk_call('users.get', array('user_ids' => $data->object->from_id, 'fields' => 'first_name_gen,last_name_gen')));
 			$gov_data = array('soc_order' => 1,
-			'president_id' => $data->object->from_id,
+			'president_id' => 0,
 			'parliament_id' => $data->object->from_id,
-			'batch_name' => $response->batch_name,
+			'batch_name' => "Нет данных",
 			'laws' => array(),
 			'anthem' => "nil",
 			'flag' => "nil",
@@ -86,6 +125,23 @@ function bot_register($finput){ // Регистрация чата
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			return API.messages.send({'peer_id':{$data->object->peer_id}, 'message':appeal+'{$msg}'});
 			");
+	}
+}
+
+function bot_pre_handle_function($event){
+	$db = &$event->getDB();
+	$data = $event->getData();
+
+	if($data->type != "message_new" || $data->object->peer_id < 2000000000)
+		return;
+
+	if(!bot_check_reg($db))
+		return;
+
+	if(AntiFlood::handler($data, $db)){
+		$event->saveDB();
+		$event->exit();
+		exit;
 	}
 }
 
@@ -127,48 +183,29 @@ function bot_debug($str){ // Debug function
 	$botModule->sendSimpleMessage(219011658, "DEBUG: {$str}");
 }
 
-function bot_execute_api($data){ // API for !exe and !exe_debug commands
-	$params = "var peer_id = {$data->object->peer_id};\n
-	var from_id = {$data->object->from_id};\n";
-	return $params;
-}
-
 function bot_banned_kick($data, &$db){ // Кик забаненных пользователей после приглашения
-	$banned_users = bot_get_ban_array($db);
+	$banned_users = BanSystem::getBanList($db);
 
 	if(property_exists($data->object, 'action')){
 		if ($data->object->action->type == "chat_invite_user"){
 			$botModule = new BotModule($db);
 			for($i = 0; $i < sizeof($banned_users); $i++){
-				if ($banned_users[$i] == $data->object->action->member_id){
+				if ($banned_users[$i]["user_id"] == $data->object->action->member_id){
 					$chat_id = $data->object->peer_id - 2000000000;
-					$res = array();
 					$ranksys = new RankSystem($db);
 					if($ranksys->checkRank($data->object->from_id, 1)){
-						$res = json_decode(vk_execute("
+						vk_execute("
 							API.messages.send({'peer_id':{$data->object->peer_id},'message':'@id{$data->object->action->member_id} (Пользователь) был приглашен @id{$data->object->from_id} (администратором) беседы и автоматически разбанен.'});
-							return 1;
-							"));
+							");
+						BanSystem::unbanUser($db, $data->object->action->member_id);
 					}
 					else{
+						$ban_info = BanSystem::getUserBanInfo($db, $data->object->action->member_id);
 						json_decode(vk_execute($botModule->makeExeAppeal($data->object->action->member_id)."
-							API.messages.send({'peer_id':{$data->object->peer_id}, 'message':appeal+', вы забанены в этой беседе!'});
+							API.messages.send({'peer_id':{$data->object->peer_id}, 'message':appeal+', вы забанены в этой беседе!\\nПричина: {$ban_info["reason"]}.'});
 							API.messages.removeChatUser({'chat_id':{$chat_id},'user_id':{$data->object->action->member_id}});
-							return 0;
 							"));
 						return false;
-					}
-					if($res->response == 1){
-						$banned_users = bot_get_ban_array($db);
-						$user_id = $data->object->action->member_id;
-						for($i = 0; $i < sizeof($banned_users); $i++){
-							if($user_id == $banned_users[$i]){
-								$banned_users[$i] = $banned_users[sizeof($banned_users)-1];
-								unset($banned_users[sizeof($banned_users)-1]);
-								bot_set_ban_array($db, $banned_users);
-								break;
-							}
-						}
 					}
 				}
 			}
@@ -225,21 +262,67 @@ function bot_test_rights_exe($chat_id, $user_id, $check_owner = false, $msgInval
 	return $code;
 }
 
+function bot_test_initcmd($event){
+	$event->addMessageCommand("тестовая-клава", function($finput){
+		// Инициализация базовых переменных
+		$data = $finput->data; 
+		$words = $finput->words;
+		$db = &$finput->db;
+
+		$rnd = mt_rand(0, 256);
+		$buttons = array(
+			array(
+				vk_text_button("Кнопка", array(
+					'command' => 'test_button',
+					'params' => array(
+						'num' => $rnd
+					)
+				), "positive")
+			)
+		);
+		$keyboard = vk_keyboard_inline($buttons);
+		$botModule = new BotModule($db);
+		$botModule->sendSimpleMessage($data->object->peer_id, ", Тестовая кнопка создана. Число внутри полезной нагрузки: {$rnd}.", $data->object->from_id, array("keyboard" => $keyboard));
+	});
+
+	$event->addKeyboardCommand("test_button", function($finput){
+		// Инициализация базовых переменных
+		$data = $finput->data; 
+		$payload = $finput->payload;
+		$db = &$finput->db;
+
+		$botModule = new BotModule($db);
+		$botModule->sendSimpleMessage($data->object->peer_id, ", Число внутри полезной нагрузки кнопки: {$payload->params->num}.", $data->object->from_id);
+	});
+
+	$event->addMessageCommand("!testtime", function ($finput){
+		// Инициализация базовых переменных
+		$data = $finput->data; 
+		$words = $finput->words;
+		$db = &$finput->db;
+
+		$msg = "VK Time: {$data->object->date}\nPHP Time: ".time();
+		$botModule = new BotModule($db);
+		$botModule->sendSimpleMessage($data->object->peer_id, $msg);
+	});
+
+	$event->addMessageCommand("!test-appeals", function($finput){
+		// Инициализация базовых переменных
+		$data = $finput->data; 
+		$words = $finput->words;
+		$db = &$finput->db;
+
+		$botModule = new BotModule($db);
+
+		$result = vk_execute($botModule->makeExeAppeals(array(1, 2, 558226012))." return appeals;");
+
+		$botModule->sendSimpleMessage($data->object->peer_id, $result);
+	});
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Работа с Database
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-function bot_set_ban_array(&$db, $array){
-	$db["bot_manager"]["banned_users"] = $array;
-}
-
-function bot_get_ban_array($db){
-	if (!array_key_exists("banned_users", $db["bot_manager"])){
-		return array();
-	} else {
-		return $db["bot_manager"]["banned_users"];
-	}
-}
 
 function bot_check_reg($db){ // Проверка на регистрацию
 	if(is_null($db)){
@@ -248,6 +331,17 @@ function bot_check_reg($db){ // Проверка на регистрацию
 	return true;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Прочее
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+function bot_get_word_argv($words, $index, $default = ""){
+	if(array_key_exists($index, $words))
+		return $words[$index];
+	else
+		return $default;
+
+}
 
 function bot_message_not_reg($data){ // Legacy
 	$msg = ", ⛔беседа не зарегистрирована. Используйте \"!reg\".";
@@ -255,7 +349,6 @@ function bot_message_not_reg($data){ // Legacy
 	$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
 }
 
-define('BOT_CONFIG_FILE_PATH', BOT_DATADIR."/config.json");
 function bot_getconfig($name){
     $env = json_decode(file_get_contents(BOT_CONFIG_FILE_PATH), true);
     if($env == false){
@@ -265,10 +358,6 @@ function bot_getconfig($name){
 
     return $env[$name];
 }
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Прочее
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 function bot_keyboard_remove($data){
 	$keyboard = vk_keyboard(false, array());
@@ -289,12 +378,15 @@ function bot_like_handler($finput){
 		$command = "";
 	if($command == "аву")
 		fun_like_avatar($data, $db);
-	elseif($command == "пост")
-		fun_like_wallpost($data, $db);
+	/*elseif($command == "пост")
+		fun_like_wallpost($data, $db);*/
 	else{
-		$commands = array(
+		/*$commands = array(
 			'Лайк аву - Лайкает аву',
 			'Лайк пост <пост> - Лайкает пост'
+		);*/
+		$commands = array(
+			'Лайк аву - Лайкает аву'
 		);
 
 		$botModule = new BotModule($db);
@@ -344,7 +436,7 @@ function bot_getid($finput){
 		$member_id = bot_get_id_from_mention($words[1]);
 	} else {
 		$botModule->sendSimpleMessage($data->object->peer_id, ", Ваш ID: {$data->object->from_id}.", $data->object->from_id);
-		return 0;
+		return;
 	}
 
 	$botModule->sendSimpleMessage($data->object->peer_id, ", ID: {$member_id}.", $data->object->from_id);
@@ -364,7 +456,7 @@ function bot_base64($finput){
 
 	if($str_data == ""){
 		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Используйте !base64 <data>.", $data->object->from_id);
-		return 0;
+		return;
 	}
 
 	$decoded_data = base64_decode($str_data);
@@ -373,14 +465,14 @@ function bot_base64($finput){
 		$encoded_data = base64_encode($str_data);
 		if(strlen($encoded_data) > $CHARS_LIMIT){
 			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Зашифрованный текст превышает {$CHARS_LIMIT} симоволов.", $data->object->from_id);
-			return 0;
+			return;
 		}
 		$botModule->sendSimpleMessage($data->object->peer_id, ", Зашифрованный текст:\n{$encoded_data}", $data->object->from_id);
 	}
 	else{
 		if(strlen($decoded_data) > $CHARS_LIMIT){
 			$botModule->sendSimpleMessage($data->object->peer_id, ", Дешифрованный текст превышает {$CHARS_LIMIT} симоволов.", $data->object->from_id);
-			return 0;
+			return;
 		}
 		$botModule->sendSimpleMessage($data->object->peer_id, ", Дешифрованный текст:\n{$decoded_data}", $data->object->from_id);
 	}
@@ -425,12 +517,42 @@ function bot_cmdlist($finput){
 	else{
 		// Сообщение об ошибке
 		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
-		return 0;
+		return;
 	}
 	////////////////////////////////////////////////////
 	////////////////////////////////////////////////////
 
 	$botModule->sendCommandListFromArray($data, ", список команд [$list_number/$list_max_number]:", $list_out);
+}
+
+function bot_call_all($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$words = $finput->words;
+	$db = &$finput->db;
+
+	$botModule = new BotModule($db);
+	$ranksys = new RankSystem($db);
+
+	if(!$ranksys->checkRank($data->object->from_id, 1)){
+		$botModule->sendSystemMsg_NoRights($data);
+		return;
+	}
+
+	vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		var peer_id = {$data->object->peer_id};
+		var from_id = {$data->object->from_id};
+		var members = API.messages.getConversationMembers({'peer_id':peer_id});
+
+		var msg = appeal+' созывает всех!';
+		var i = 0; while (i < members.profiles.length){
+			if(members.profiles[i].id != from_id){
+				msg = msg + '@id'+members.profiles[i].id+'(&#12288;)';
+			}
+			i = i + 1;
+		};
+		API.messages.send({'peer_id':peer_id,'message':msg});
+		");
 }
 
 function bot_help($finput){
@@ -515,7 +637,7 @@ function bot_help($finput){
 				'!приветствие - Управление приветствием',
 				'!stats - Управление статистикой беседы',
 				'!modes - Список всех Режимов беседы',
-				'!mode <name> <value> - Управление Режимом беседы'
+				'!mode <name> <value> - Управление Режимом беседы',
 			);
 
 			$botModule->sendCommandListFromArray($data, ', 📰Команды управления беседой:', $commands);
@@ -523,6 +645,7 @@ function bot_help($finput){
 
 		case 'other':
 			$commands = array(
+				'!зов - Упоминает всех участников беседы',
 				'!чулки - Случайная фотография девочек в чулочках',
 				'!амина - Случайная фотография со стены @id363887574 (Амины Мирзоевой)',
 				'!карина - Случайная фотография со стены @id153162173 (Карины Сычевой)',

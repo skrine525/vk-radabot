@@ -3,31 +3,50 @@
 class Event{
 	private $data;
 	private $db;
-	private $commands;
+	private $messageCommands; // Массив текстовых команд
+	private $keyboardCommands; // Массив команд клавиатуры
 	private $defaultFunc;
 	private $dbIgnoreCommandList;
 
 	function __construct($data) {
 		$this->data = $data;
-		$this->commands = array();
+		$this->messageCommands = array();
+		$this->keyboardCommands = array();
 		$this->dbIgnoreCommandList = array();
+	}
+
+	public function getData(){
+		return $this->data;
 	}
 
   	public function loadDB(){
   		$peer_id = $this->data->object->peer_id - 2000000000;
-   		$this->db = db_get("{$peer_id}_database");
+   		$this->db = db_get("chat{$peer_id}");
+  	}
+
+  	public function &getDB(){
+  		return $this->db;
   	}
 
   	public function saveDB(){
   		if(bot_check_reg($this->db)){
   			$peer_id = $this->data->object->peer_id - 2000000000;
-   			db_set("{$peer_id}_database", $this->db);
+   			db_set("chat{$peer_id}", $this->db);
   		}
   	}
 
   	public function addMessageCommand($command, $method){
-  		if(!array_key_exists($command, $this->commands)){
-  			$this->commands[$command] = $method;
+  		if(!array_key_exists($command, $this->messageCommands)){
+  			$this->messageCommands[$command] = $method;
+  			return true;
+  		}
+  		else
+  			return false;
+  	}
+
+  	public function addKeyboardCommand($command, $method){
+  		if(!array_key_exists($command, $this->keyboardCommands)){
+  			$this->keyboardCommands[$command] = $method;
   			return true;
   		}
   		else
@@ -44,7 +63,7 @@ class Event{
 
   	public function getMessageCommandList(){
   		$list = array();
-  		foreach ($this->commands as $key => $value) {
+  		foreach ($this->messageCommands as $key => $value) {
   			$list[] = $key;
   		}
   		return $list;
@@ -53,7 +72,7 @@ class Event{
   	public function exit(){
   		unset($this->data);
   		unset($this->db);
-  		unset($this->commands);
+  		unset($this->messageCommands);
   		unset($this->defaultFunc);
   		unset($this->dbIgnoreCommandList);
   	}
@@ -70,11 +89,12 @@ class Event{
 			}
 
 			$words = explode(' ', $this->data->object->text); // Извлекаем слова из сообщения
-
-			mb_internal_encoding("UTF-8"); 
 			$command = mb_strtolower($words[0]); // Переводим команду в нижний регистр
 
-			if(array_key_exists($command, $this->commands)){
+			if(property_exists($this->data->object, "payload")) // Необходимо для системы клавиатурных комманд
+				$payload = (object) json_decode($this->data->object->payload);
+
+			if(array_key_exists($command, $this->messageCommands)){
 				if(!bot_check_reg($this->db)){ // Проверка на регистрацию в системе
 					$ignore = false;
 					for($i = 0; $i < count($this->dbIgnoreCommandList); $i++){
@@ -96,7 +116,25 @@ class Event{
 					'event' => &$this
 				);
 		
-				$method = $this->commands[$command]; // Получение значения Callback'а
+				$method = $this->messageCommands[$command]; // Получение значения Callback'а
+				$method($finput); // Выполнение Callback'а
+
+				return true;
+			}
+			elseif(isset($payload) && property_exists($payload, "command") && property_exists($payload, "params") && gettype($payload->params) == "object" && array_key_exists($payload->command, $this->keyboardCommands)){
+				if(!bot_check_reg($this->db)){ // Проверка на регистрацию в системе
+					bot_message_not_reg($this->data);
+					return false;
+				}
+
+				$finput = (object) array(
+					'data' => $this->data,
+					'payload' => $payload,
+					'db' => &$this->db,
+					'event' => &$this
+				);
+		
+				$method = $this->keyboardCommands[$payload->command]; // Получение значения Callback'а
 				$method($finput); // Выполнение Callback'а
 
 				return true;
@@ -118,7 +156,7 @@ class Event{
 
 					$finput = (object) array(
 						'data' => $this->data,
-						'words' => $words,
+						//'words' => $words,
 						'db' => &$this->db,
 						'event' => &$this
 					);
@@ -140,13 +178,14 @@ function event_handle($data){
 	$event = new Event($data); // Инициализирует класс
 	$event->loadDB(); // Подключаем базу данных
 
+	bot_pre_handle_function($event); // Функция предварительной обработки
+
 	///// Игнорирование отсутствие базы данных для следующих комманд
-	//$event->addDBIgnoreMessageCommand("!test");
 	$event->addDBIgnoreMessageCommand("!reg");
 
 	///// Комманды
 
-	// Template - $event->addMessageCommand("", function($finput){  });
+	// Template - $event->addMessageCommand("command", "callback");
 
 	// Основное
 	$event->addMessageCommand("!cmdlist", 'bot_cmdlist');
@@ -175,6 +214,7 @@ function event_handle($data){
 	$event->addMessageCommand("онлайн", 'manager_online_list');
 	$event->addMessageCommand("!ban", 'manager_ban_user');
 	$event->addMessageCommand("!unban", 'manager_unban_user');
+	$event->addMessageCommand("!baninfo", 'manager_baninfo_user');
 	$event->addMessageCommand("!banlist", 'manager_banlist_user');
 	$event->addMessageCommand("!kick", 'manager_kick_user');
 	$event->addMessageCommand("!ник", 'manager_nick');
@@ -187,22 +227,7 @@ function event_handle($data){
 	$event->addMessageCommand("!mode", "manager_mode_cpanel");
 
 	// RP-команды
-	$event->addMessageCommand("!me", 'rp_me');
-	$event->addMessageCommand("!do", 'rp_do');
-	$event->addMessageCommand("!try", 'rp_try');
-	$event->addMessageCommand("!s", 'rp_shout');
-	$event->addMessageCommand("секс", 'rp_sex');
-	$event->addMessageCommand("обнять", 'rp_hug');
-	$event->addMessageCommand("уебать", 'rp_bump');
-	$event->addMessageCommand("обоссать", 'rp_pissof');
-	$event->addMessageCommand("поцеловать", 'rp_kiss');
-	$event->addMessageCommand("харкнуть", 'rp_hark');
-	$event->addMessageCommand("отсосать", 'rp_suck');
-	$event->addMessageCommand("отлизать", 'rp_lick');
-	$event->addMessageCommand("послать", 'rp_gofuck');
-	$event->addMessageCommand("кастрировать", 'rp_castrate');
-	$event->addMessageCommand("посадить", "rp_sit");
-	$event->addMessageCommand("пожать", "rp_shake");
+	roleplay_cmdinit($event);
 
 	// Fun
 	$event->addMessageCommand("выбери", 'fun_choose');
@@ -229,15 +254,22 @@ function event_handle($data){
 	$event->addMessageCommand("!tableflip", 'fun_tableflip');
 	$event->addMessageCommand("!unflip", 'fun_unflip');
 	$event->addMessageCommand("!giphy", 'giphy_handler');
+	$event->addMessageCommand("!зов", 'bot_call_all');
 	$event->addMessageCommand("слова", 'wordgame_cmd');
 	$event->addMessageCommand("words", 'wordgame_eng_cmd');
-	$event->addMessageCommand("загадки", "riddlegame_cmd_handler");
+	$event->addMessageCommand("загадки", "riddlegame_cmd");
+
+	// Economy
+	economy_initcmd($event);
+
+	// Для тестирование плюшек
+	bot_test_initcmd($event);
 
 	// Функция обработки событий вне командной среды
 	$event->setDefaultFunction(function ($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		//$words = $finput->words;
 		$db = &$finput->db;
 
 		bot_leave_autokick($data);
@@ -246,7 +278,7 @@ function event_handle($data){
 		goverment_referendum_system($data, $db); // Обработчик выборов президента в беседе
 
 		fun_handler($data, $db);
-		stats_update($data, $words, $db); // Ведение статистики в беседе
+		stats_update($data, $db); // Ведение статистики в беседе
 		wordgame_gameplay($data, $db); // Освновной обработчик игры Слова
 		wordgame_eng_gameplay($data, $db); // Освновной обработчик игры Words
 		riddlegame_gameplay($data, $db); // Основной обработчик игры Загадки

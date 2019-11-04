@@ -80,7 +80,8 @@ class ChatModes{
 	const MODES = array( // Константа всех Режимов
 		// Template - array('name' => name, 'default_state' => state)
 		array('name' => 'allow_memes', 'default_state' => true),
-		array('name' => 'stats_enabled', 'default_state' => false)
+		array('name' => 'stats_enabled', 'default_state' => false),
+		array('name' => 'antiflood_enabled', 'default_state' => true)
 	);
 
 	private $db;
@@ -146,6 +147,169 @@ class ChatModes{
 	}
 }
 
+class BanSystem{
+	public static function getBanList($db){
+		if(array_key_exists("banned_users", $db["bot_manager"]))
+			$data = $db["bot_manager"]["banned_users"];
+		else
+			$data = array();
+
+		return array_values($data);
+	}
+
+	public static function getUserBanInfo($db, $user_id){
+		if(array_key_exists("banned_users", $db["bot_manager"]) && array_key_exists("id{$user_id}", $db["bot_manager"]["banned_users"]))
+			return $db["bot_manager"]["banned_users"]["id{$user_id}"];
+
+		return false;
+	}
+
+	public static function banUser(&$db, $user_id, $reason, $banned_by, $time){
+		if(array_key_exists("banned_users", $db["bot_manager"]))
+			$data = &$db["bot_manager"]["banned_users"];
+		else{
+			$data = array();
+			$db["bot_manager"]["banned_users"] = &$data;
+		}
+
+		if(array_key_exists("id{$user_id}", $data))
+			return false;
+		else{
+			$data["id{$user_id}"] = array(
+				'user_id' => intval($user_id),
+				'reason' => $reason,
+				'banned_by' => $banned_by,
+				'time' => $time
+			);
+
+			return true;
+		}
+	}
+
+	public static function unbanUser(&$db, $user_id){
+		if(array_key_exists("banned_users", $db["bot_manager"]))
+			$data = &$db["bot_manager"]["banned_users"];
+		else{
+			$data = array();
+			$db["bot_manager"]["banned_users"] = &$data;
+		}
+
+		if(array_key_exists("id{$user_id}", $data)){
+			unset($data["id{$user_id}"]);
+			return true;
+		}
+		else
+			return false;
+	}
+}
+
+class AntiFlood{
+	private $db;
+	private $peer_id;
+
+	const TIME_INTERVAL = 10; // Промежуток времени в секундах
+	const MSG_COUNT_MAX = 5; // Максимальное количество сообщений в промежуток времени
+	const MSG_LENGTH_MAX = 2048; // Максимальная длинна сообщения
+
+	function __construct($peer_id){
+		$this->peer_id = $peer_id - 2000000000;
+
+		if(!file_exists(BOT_DATADIR."/antiflood"))
+		mkdir(BOT_DATADIR."/antiflood");
+
+		if(file_exists(BOT_DATADIR."/antiflood/chat{$this->peer_id}.json"))
+			$this->db = json_decode(file_get_contents(BOT_DATADIR."/antiflood/chat{$this->peer_id}.json"), true);
+		else
+			$this->db = array();
+	}
+
+	public function save(){
+		file_put_contents(BOT_DATADIR."/antiflood/chat{$this->peer_id}.json", json_encode($this->db, JSON_UNESCAPED_UNICODE));
+	}
+
+	public function checkMember($data){
+		$time = $data->object->date;
+		$member_id = $data->object->from_id;
+		$text = $data->object->text;
+
+		if(mb_strlen($text) > self::MSG_LENGTH_MAX) // Ограничение на длинну сообщения
+			return true;
+
+		if(array_key_exists("member{$member_id}", $this->db)){ // Ограничение на частоту сообщений
+			$user_data = &$this->db["member{$member_id}"];
+			if($time - $user_data["time"] >= self::TIME_INTERVAL){
+				$user_data = array(
+					'msg_count' => 1,
+					'time' => $time
+				);
+				return false;
+			}
+			else{
+				$user_data["msg_count"] = $user_data["msg_count"] + 1;
+				if($user_data["msg_count"] > self::MSG_COUNT_MAX){
+					return true;
+				}
+			}
+		}
+		else{
+			$this->db["member{$member_id}"] = array(
+				'msg_count' => 1,
+				'time' => $time
+			);
+			return false;
+		}
+	}
+
+	public static function handler($data, &$db){
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue('antiflood_enabled')){
+			if(file_exists(BOT_DATADIR."/antiflood/chat{$data->object->peer_id}.json"))
+				unlink(BOT_DATADIR."/antiflood/chat{$data->object->peer_id}.json");
+			return false;
+		}
+
+		$returnValue = false;
+
+		$floodSystem = new AntiFlood($data->object->peer_id);
+		if($floodSystem->checkMember($data)){
+			$botModule = new BotModule($db);
+			$ranksys = new RankSystem($db);
+
+			if($ranksys->checkRank($data->object->from_id, 1))
+				return false;
+
+			$response = json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+				var peer_id = {$data->object->peer_id};
+				var member_id = {$data->object->from_id};
+				var user = API.users.get({'user_ids':member_id})[0];
+				var members = API.messages.getConversationMembers({'peer_id':peer_id});
+
+				var user_index = -1;
+				var i = 0; while (i < members.items.length){
+					if(members.items[i].member_id == user.id){
+						user_index = i;
+						i = members.items.length;
+					};
+					i = i + 1;
+				};
+
+				if(!members.items[user_index].is_admin && user_index != -1){
+					var msg = 'Пользователь '+appeal+' был кикнут. Причина: Флуд.';
+					API.messages.send({'peer_id':peer_id,'message':msg});
+					API.messages.removeChatUser({'chat_id':peer_id-2000000000,'member_id':user.id});
+					return true;
+				}
+				return false;
+				"))->response;
+
+			if($response == true)
+				$returnValue = true;
+		}
+		$floodSystem->save();
+		return $returnValue;
+	}
+}
+
 /////////////////////////////////////////////
 /// Handlers
 
@@ -189,7 +353,7 @@ function manager_mode_list($finput){
 	else{
 		// Сообщение об ошибке
 		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
-		return 0;
+		return;
 	}
 
 	$message = ", список режимов беседы:";
@@ -216,9 +380,9 @@ function manager_mode_cpanel($finput){
 
 	mb_internal_encoding("UTF-8");
 
-	if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверика на права
+	if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверка на права
 		$botModule->sendSystemMsg_NoRights($data);
-		return 0;
+		return;
 	}
 
 	if(array_key_exists(1, $words))
@@ -233,7 +397,7 @@ function manager_mode_cpanel($finput){
 
 	if($modeName == ""){
 		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔используйте \"!mode <name> <value>\".", $data->object->from_id);
-		return 0;
+		return;
 	}
 	elseif($modeValue == ""){
 		$value = $chatModes->getModeValue($modeName);
@@ -242,11 +406,11 @@ function manager_mode_cpanel($finput){
 		else
 			$value = "false";
 		$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Режим {$modeName} — {$value}.", $data->object->from_id);
-		return 0;
+		return;
 	}
 	elseif($modeValue != "true" && $modeValue != "false"){
 		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Ошибка! Параметр <value> должен состоять из одного значения: true или false.", $data->object->from_id);
-		return 0;
+		return;
 	}
 
 	$modeValueBoolean = true;
@@ -269,150 +433,83 @@ function manager_ban_user($finput){
 	$ranksys = new RankSystem($db);
 	$botModule = new BotModule($db);
 
-	if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверика на права
+	if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверка на права
 		$botModule->sendSystemMsg_NoRights($data);
-		return 0;
+		return;
 	}
 
-	if(!bot_check_reg($db)){
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', данная беседа не зарегистрирована!'});
-				");
-		return 'error';
+	if(array_key_exists(0, $data->object->fwd_messages)){
+		$member_id = $data->object->fwd_messages[0]->from_id;
+		$reason = mb_substr($data->object->text, 5);
+	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
+		$member_id = bot_get_id_from_mention($words[1]);
+		$reason = mb_substr($data->object->text, 6 + mb_strlen($words[1]));
+	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
+		$member_id = intval($words[1]);
+		$reason = mb_substr($data->object->text, 6 + mb_strlen($words[1]));
+	} else $member_id = 0;
+
+	if($member_id == 0){
+		$msg = ", используйте \"!ban <пользователь> <причина>\".";
+		$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+		return;
 	}
 
-	$member_ids = array();
-	for($i = 0; $i < sizeof($data->object->fwd_messages); $i++){
-		$isContinue = true;
-		for($j = 0; $j < sizeof($member_ids); $j++){
-			if($member_ids[$j] == $data->object->fwd_messages[$i]->from_id){
-				$isContinue = false;
-				break;
-			}
-		}
-		if($isContinue){
-			$member_ids[] = $data->object->fwd_messages[$i]->from_id;
-		}
+	if($ranksys->checkRank($member_id, 1)){
+		$rank_name = RankSystem::getRankNameByID($ranksys->getUserRank($member_id));
+		$msg = ", @id{$member_id} (Пользователя) нельзя забанить. Причина: Пользователь имеет ранг {$rank_name}.";
+		$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+		return;
 	}
-	for($i = 1; $i < sizeof($words); $i++){
-		if(bot_is_mention($words[$i])){
-			$member_id = bot_get_id_from_mention($words[$i]);
-			$isContinue = true;
-			for($j = 0; $j < sizeof($member_ids); $j++){
-				if($member_ids[$j] == $member_id){
-					$isContinue = false;
-					break;
-				}
-			}
-			if($isContinue){
-				$member_ids[] = $member_id;
-			}
-		} elseif(is_numeric($words[$i])) {
-			$member_id = intval($words[$i]);
-			$isContinue = true;
-			for($j = 0; $j < sizeof($member_ids); $j++){
-				if($member_ids[$j] == $member_id){
-					$isContinue = false;
-					break;
-				}
-			}
-			if($isContinue){
-				$member_ids[] = $member_id;
-			}
-		}
+	elseif(BanSystem::getUserBanInfo($db, $member_id) !== false){
+		$msg = ", @id{$member_id} (Пользователя) нельзя забанить. Причина: Пользователь уже забанен.";
+		$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+		return;
 	}
 
-	if(sizeof($member_ids) == 0){
-		$msg = ", используйте \\\"!ban <упоминание/id>\\\" или перешлите сообщение с командой \\\"!ban\\\".";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
-				");
-		return 0;
-	} else if(sizeof($member_ids) > 10) {
-		$msg = ", нельзя забанить более 10 участников одновременно.";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
-				");
-		return 0;
+	if($reason == "")
+		$reason = "Не указано";
+	else{
+		$reason = mb_eregi_replace("\n", " ", $reason);
 	}
 
-	for($i = 0; $i < count($member_ids); $i++){ // Проверка на ранг
-
-		if($ranksys->checkRank($member_ids[$i], 1)){
-			//unset($member_ids[$i]);
-			$member_ids[$i] = 0;
-		}
-	}
-
-	$banned_users = bot_get_ban_array($db);
-	for($i = 0; $i < count($member_ids); $i++){
-		for($j = 0; $j < count($banned_users); $j++){
-			if($member_ids[$i] == $banned_users[$j]){
-				$member_ids[$i] = $member_ids[count($member_ids)-1];
-				unset($member_ids[count($member_ids)-1]);
-				break;
-			}
-		}
-	}
-
-	$member_ids_exe_array = $member_ids[0];
-	for($i = 1; $i < sizeof($member_ids); $i++){
-		$member_ids_exe_array = $member_ids_exe_array.','.$member_ids[$i];
-	}
+	$ban_info = json_encode(array("user_id" => $member_id, "reason" => $reason), JSON_UNESCAPED_UNICODE);
 
 	$res = json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 		var peer_id = {$data->object->peer_id};
-		var member_ids = [{$member_ids_exe_array}];
-		var users = API.users.get({'user_ids':member_ids});
+		var ban_info = {$ban_info};
+		var users = API.users.get({'user_ids':[{$member_id}]});
 		var members = API.messages.getConversationMembers({'peer_id':peer_id});
-		var banned_ids = [];
 
-		var msg = ', следующие пользователи были забанены:\\n';
-		var msg_banned_users = '';
-
-		var j = 0; while(j < users.length){
-			var user_id = users[j].id;
-			var user_id_index = -1;
-			var i = 0; while (i < members.items.length){
-				if(members.items[i].member_id == user_id){
-					user_id_index = i;
-					i = members.items.length;
-				};
-				i = i + 1;
-			};
-
-			if(!members.items[user_id_index].is_admin){
-				API.messages.removeChatUser({'chat_id':peer_id-2000000000,'member_id':user_id});
-				msg_banned_users = msg_banned_users + '✅@id'+ user_id + ' (' + users[j].first_name + ' ' + users[j].last_name + ')\\n';
-				banned_ids = banned_ids + [user_id];
-			}
-			j = j + 1;
-		};
-		if(msg_banned_users != ''){
-			API.messages.send({'peer_id':peer_id,'message':appeal+msg+msg_banned_users});
-			return banned_ids;
-		} else {
-			msg = ', ни один пользователь не был забанен.';
+		var user = 0;
+		if(users.length > 0){
+			user = users[0];
+		}
+		else{
+			var msg = ', указанного пользователя не существует.';
 			API.messages.send({'peer_id':peer_id,'message':appeal+msg});
-			return banned_ids;
+			return 'nioh';
 		}
-		"));
-	if(sizeof($res->response) > 0){
-		$banned_users = bot_get_ban_array($db);
-		for($i = 0; $i < sizeof($res->response); $i++){
-			$isContinue = true;
-			for($j = 0; $j < sizeof($banned_users); $j++){
-				if($banned_users[$j] == $res->response[$i]){
-					$isContinue = false;
-					break;
+
+		var user_id = ban_info.user_id;
+		var user_id_index = -1;
+		var i = 0; while (i < members.items.length){
+			if(members.items[i].member_id == user_id){
+				if(members.items[i].is_admin){
+					var msg = ', @id{$member_id} (Пользователя) нельзя забанить. Причина: Пользователь является администратором беседы.';
+					API.messages.send({'peer_id':peer_id,'message':appeal+msg});
+					return 'nioh';
 				}
-			}
-			if($isContinue){
-				$banned_users[] = $res->response[$i];
-			}
-		}
-		bot_set_ban_array($db, $banned_users);
-	}
+			};
+			i = i + 1;
+		};
+		var msg = appeal+', пользователь @id{$member_id} ('+user.first_name.substr(0, 2)+'. '+user.last_name+') был забанен в этой беседе.\\nПричина: '+ban_info.reason+'.';
+		API.messages.send({'peer_id':peer_id,'message':msg});
+		API.messages.removeChatUser({'chat_id':peer_id-2000000000,'member_id':user_id});
+		return 'ok';
+		"), false);
+	if($res->response == 'ok')
+		BanSystem::banUser($db, $member_id, $reason, $data->object->from_id, $data->object->date);
 }
 
 function manager_unban_user($finput){
@@ -424,16 +521,9 @@ function manager_unban_user($finput){
 	$botModule = new BotModule($db);
 	$ranksys = new RankSystem($db);
 
-	if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверика на права
+	if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверка на права
 		$botModule->sendSystemMsg_NoRights($data);
-		return 0;
-	}
-
-	if(!bot_check_reg($db)){
-		vk_execute(goverment_legacy.$botModule->makeExeAppeal($data->object->from_id)."
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', данная беседа не зарегистрирована!'});
-				");
-		return 'error';
+		return;
 	}
 
 	$member_ids = array();
@@ -482,24 +572,22 @@ function manager_unban_user($finput){
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
-		return 0;
+		return;
 	} else if(sizeof($member_ids) > 10) {
 		$msg = ", нельзя разбанить более 10 участников одновременно.";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
-		return 0;
+		return;
 	}
 
 	$unbanned_member_ids = array();
 
-	$banned_users = bot_get_ban_array($db);
+	$banned_users = BanSystem::getBanList($db);
 	for($i = 0; $i < sizeof($member_ids); $i++){
 		for($j = 0; $j < sizeof($banned_users); $j++){
-			if($member_ids[$i] == $banned_users[$j]){
-				$unbanned_member_ids[] = $banned_users[$j];
-				//$banned_users[$j] = $banned_users[sizeof($banned_users)-1];
-				//unset($banned_users[sizeof($banned_users)-1]);
+			if($member_ids[$i] == $banned_users[$j]["user_id"]){
+				$unbanned_member_ids[] = $banned_users[$j]["user_id"];
 			}
 		}
 	}
@@ -536,13 +624,11 @@ function manager_unban_user($finput){
 	if($res->response == 'ok'){
 		for($i = 0; $i < sizeof($unbanned_member_ids); $i++){
 			for($j = 0; $j < sizeof($banned_users); $j++){
-				if($unbanned_member_ids[$i] == $banned_users[$j]){
-					$banned_users[$j] = $banned_users[sizeof($banned_users)-1];
-					unset($banned_users[sizeof($banned_users)-1]);
+				if($unbanned_member_ids[$i] == $banned_users[$j]["user_id"]){
+					BanSystem::unbanUser($db, $unbanned_member_ids[$i]);
 				}
 			}
 		}
-		bot_set_ban_array($db, $banned_users);
 	}
 }
 
@@ -554,23 +640,16 @@ function manager_banlist_user($finput){
 
 	$botModule = new BotModule($db);
 
-	if(!bot_check_reg($db)){
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', данная беседа не зарегистрирована!'});
-			");
-		return 'error';
-	}
-
 	if(array_key_exists(1, $words))
 		$list_number_from_word = intval($words[1]);
 	else
 		$list_number_from_word = 1;
 
 
-	$banned_users = bot_get_ban_array($db);
+	$banned_users = BanSystem::getBanList($db);
 	if(sizeof($banned_users) == 0){
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', в беседе нет забаненных пользователей.'});");
-		return 0;
+		return;
 	}
 
 	/////////////////////////////////////////////////////
@@ -599,12 +678,16 @@ function manager_banlist_user($finput){
 	else{
 		// Сообщение об ошибке
 		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
-		return 0;
+		return;
 	}
 	////////////////////////////////////////////////////
 	////////////////////////////////////////////////////
 
-	$users_list = json_encode($list_out, JSON_UNESCAPED_UNICODE);
+	for($i = 0; $i < count($list_out); $i++){
+		$users_list[] = $list_out[$i]["user_id"];
+	}
+
+	$users_list = json_encode($users_list, JSON_UNESCAPED_UNICODE);
 
 	//$users_list = json_encode($banned_users, JSON_UNESCAPED_UNICODE);
 
@@ -620,6 +703,52 @@ function manager_banlist_user($finput){
 		");
 }
 
+function manager_baninfo_user($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$words = $finput->words;
+	$db = &$finput->db;
+
+	$botModule = new BotModule($db);
+
+	if(array_key_exists(0, $data->object->fwd_messages)){
+		$member_id = $data->object->fwd_messages[0]->from_id;
+		$reason = mb_substr($data->object->text, 5);
+	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
+		$member_id = bot_get_id_from_mention($words[1]);
+		$reason = mb_substr($data->object->text, 6 + mb_strlen($words[1]));
+	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
+		$member_id = intval($words[1]);
+		$reason = mb_substr($data->object->text, 6 + mb_strlen($words[1]));
+	} else $member_id = 0;
+
+	if($member_id == 0){
+		$msg = ", используйте \"!baninfo <пользователь>\".";
+		$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+		return;
+	}
+
+	$user_baninfo = BanSystem::getUserBanInfo($db, $member_id);
+
+	if($user_baninfo !== false){
+		$baninfo = json_encode($user_baninfo, JSON_UNESCAPED_UNICODE);
+		$strtime = gmdate("d.m.Y H:i:s", $user_baninfo["time"]+10800);
+		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			var baninfo = {$baninfo};
+			var users = API.users.get({'user_ids':[baninfo.user_id,baninfo.banned_by],'fields':'first_name_ins,last_name_ins'});
+			var user = users[0];
+			var banned_by_user = users[1];
+
+			var msg = ', Информация о блокировке:\\n👤Имя пользователя: @id'+user.id+' ('+user.first_name+' '+user.last_name+')\\n🚔Выдан: @id'+banned_by_user.id+' ('+banned_by_user.first_name_ins+' '+banned_by_user.last_name_ins+')\\n📅Время выдачи: {$strtime}\\n✏Причина: '+baninfo.reason+'.';
+
+			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+msg});
+			");
+	}
+	else{
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Указанный @id{$member_id} (пользователь) не заблокирован.", $data->object->from_id);
+	}
+}
+
 function manager_kick_user($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
@@ -629,9 +758,9 @@ function manager_kick_user($finput){
 	$botModule = new BotModule($db);
 
 	$ranksys = new RankSystem($db);
-	if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверика на права
+	if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверка на права
 		$botModule->sendSystemMsg_NoRights($data);
-		return 0;
+		return;
 	}
 
 	$member_ids = array();
@@ -680,13 +809,13 @@ function manager_kick_user($finput){
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
-		return 0;
+		return;
 	} else if(sizeof($member_ids) > 10) {
 		$msg = ", нельзя кикнуть более 10 участников одновременно.";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
-		return 0;
+		return;
 	}
 
 	for($i = 0; $i < count($member_ids); $i++){ // Проверка на ранг
@@ -782,9 +911,9 @@ function manager_nick($finput){
 		$nick = str_ireplace("\n", "", $nick);
 		if(!array_key_exists(0, $data->object->fwd_messages)){
 			if(mb_strlen($nick) <= 15){
-				if(array_search($nick, $db["bot_manager"]["user_nicknames"]) !== false){
+				if(array_key_exists("user_nicknames", $db["bot_manager"]) && array_search($nick, $db["bot_manager"]["user_nicknames"]) !== false){
 					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Указанный ник занят!", $data->object->from_id);
-					return 0;
+					return;
 				}
 				$db["bot_manager"]["user_nicknames"]["id{$data->object->from_id}"] = $nick;
 				$msg = ", ✅ник установлен.";
@@ -801,14 +930,14 @@ function manager_nick($finput){
 		else{
 			if(mb_strlen($nick) <= 15){
 				$ranksys = new RankSystem($db);
-				if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверика на права
+				if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверка на права
 					$botModule->sendSystemMsg_NoRights($data);
-					return 0;
+					return;
 				}
 
 				if(array_search($nick, $db["bot_manager"]["user_nicknames"]) !== false){
 					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Указанный ник занят!", $data->object->from_id);
-					return 0;
+					return;
 				}
 
 				$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%, ✅ник @id{$data->object->fwd_messages[0]->from_id} (пользователя) изменён!"), JSON_UNESCAPED_UNICODE);
@@ -846,9 +975,9 @@ function manager_remove_nick($data, &$db){
 	}
 	else{
 		$ranksys = new RankSystem($db);
-		if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверика на права
+		if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверка на права
 			$botModule->sendSystemMsg_NoRights($data);
-			return 0;
+			return;
 		}
 
 		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%, ✅ник @id{$data->object->fwd_messages[0]->from_id} (пользователя) убран!"), JSON_UNESCAPED_UNICODE);
@@ -886,7 +1015,7 @@ function manager_show_nicknames($finput){
 		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%, ❗в беседе нет пользователей с никами!"), JSON_UNESCAPED_UNICODE);
 		$request = vk_parse_var($request, "appeal");
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."API.messages.send({$request});");
-		return 0;
+		return;
 	}
 
 	/////////////////////////////////////////////////////
@@ -915,7 +1044,7 @@ function manager_show_nicknames($finput){
 	else{
 		// Сообщение об ошибке
 		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
-		return 0;
+		return;
 	}
 	////////////////////////////////////////////////////
 	////////////////////////////////////////////////////
@@ -941,9 +1070,9 @@ function manager_greeting($finput){
 	$ranksys = new RankSystem($db);
 	$botModule = new BotModule($db);
 
-	if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверика на права
+	if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверка на права
 		$botModule->sendSystemMsg_NoRights($data);
-		return 0;
+		return;
 	}
 
 	mb_internal_encoding("UTF-8");
@@ -1045,14 +1174,14 @@ function manager_rank($finput){
 			if(!$ranksys->checkRank($data->object->from_id, 1)){
 				$rank_name = RankSystem::getRankNameByID(1);
 				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Для использования данной функции, ваш ранг должен быть как минимум {$rank_name} (1).", $data->object->from_id);
-				return 0;
+				return;
 			}
 
 			if(!array_key_exists(2, $words) && !array_key_exists(0, $data->object->fwd_messages)){
 				$msg = ", используйте \"!ранг выдать <ранг> <id/упоминание/перес. сообщение>\".";
 				vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
-				return 0;
+				return;
 			}
 
 			if(array_key_exists(2, $words))
@@ -1064,10 +1193,10 @@ function manager_rank($finput){
 
 			if($rank == 0){
 				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите ранг.", $data->object->from_id);
-				return 0;
+				return;
 			} elseif($rank <= $from_user_rank){
 				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы не можете выдать пользователю такой же ранг, как и у вас или выше.", $data->object->from_id);
-				return 0;
+				return;
 			}
 
 			$member_id = 0;
@@ -1080,13 +1209,13 @@ function manager_rank($finput){
 				$member_id = intval($words[3]);
 			} else {
 				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите пользователя.", $data->object->from_id);
-				return 0;
+				return;
 			}
 
 			$member_rank = $ranksys->getUserRank($member_id);
 			if(RankSystem::cmpRanks($from_user_rank, $member_rank) >= 0){
 				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Пользователь обладает таким же рангом, как и вы, или выше.", $data->object->from_id);
-				return 0;
+				return;
 			}
 
 			if($ranksys->setUserRank($member_id, $rank)){
@@ -1101,14 +1230,14 @@ function manager_rank($finput){
 			if(!$ranksys->checkRank($data->object->from_id, 1)){
 				$rank_name = RankSystem::getRankNameByID(1);
 				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Для использования данной функции, ваш ранг должен быть как минимум {$rank_name} (1).", $data->object->from_id);
-				return 0;
+				return;
 			}
 
 			if(!array_key_exists(2, $words) && !array_key_exists(0, $data->object->fwd_messages)){
 				$msg = ", используйте \"!ранг забрать <id/упоминание/перес. сообщение>\".";
 				vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
-				return 0;
+				return;
 			}
 
 			$member_id = 0;
@@ -1121,7 +1250,7 @@ function manager_rank($finput){
 				$member_id = intval($words[2]);
 			} else {
 				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите пользователя.", $data->object->from_id);
-				return 0;
+				return;
 			}
 
 			$from_user_rank = $ranksys->getUserRank($data->object->from_id);
@@ -1129,7 +1258,7 @@ function manager_rank($finput){
 
 			if(RankSystem::cmpRanks($from_user_rank, $member_rank) >= 0){
 				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Пользователь обладает таким же рангом, как и вы, или выше.", $data->object->from_id);
-				return 0;
+				return;
 			}
 
 			$ranksys->setUserRank($member_id, -1);
@@ -1139,7 +1268,7 @@ function manager_rank($finput){
 			$ranksys = new RankSystem($db);
 			if($ranksys->checkRank($data->object->from_id, 1)){
 				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы уже имеете данный ранг!", $data->object->from_id);
-				return 0;
+				return;
 			}
 
 			$rank_name = RankSystem::getRankNameByID(1);
@@ -1215,7 +1344,7 @@ function manager_show_user_ranks($finput){
 	else{
 		// Сообщение об ошибке
 		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
-		return 0;
+		return;
 	}
 	////////////////////////////////////////////////////
 	////////////////////////////////////////////////////
