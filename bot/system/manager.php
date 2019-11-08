@@ -503,7 +503,7 @@ function manager_ban_user($finput){
 			};
 			i = i + 1;
 		};
-		var msg = appeal+', пользователь @id{$member_id} ('+user.first_name.substr(0, 2)+'. '+user.last_name+') был забанен в этой беседе.\\nПричина: '+ban_info.reason+'.';
+		var msg = appeal+', пользователь @id{$member_id} ('+user.first_name.substr(0, 2)+'. '+user.last_name+') был забанен.\\nПричина: '+ban_info.reason+'.';
 		API.messages.send({'peer_id':peer_id,'message':msg});
 		API.messages.removeChatUser({'chat_id':peer_id-2000000000,'member_id':user_id});
 		return 'ok';
@@ -928,6 +928,11 @@ function manager_nick($finput){
 			}
 		}
 		else{
+			if($data->object->fwd_messages[0]->from_id <= 0){
+				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Ник можно установить только пользователю!", $data->object->from_id);
+				return;
+			}
+
 			if(mb_strlen($nick) <= 15){
 				$ranksys = new RankSystem($db);
 				if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверка на права

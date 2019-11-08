@@ -73,6 +73,7 @@ class Event{
   		unset($this->data);
   		unset($this->db);
   		unset($this->messageCommands);
+  		unset($this->keyboardCommands);
   		unset($this->defaultFunc);
   		unset($this->dbIgnoreCommandList);
   	}
@@ -156,7 +157,6 @@ class Event{
 
 					$finput = (object) array(
 						'data' => $this->data,
-						//'words' => $words,
 						'db' => &$this->db,
 						'event' => &$this
 					);
@@ -269,7 +269,6 @@ function event_handle($data){
 	$event->setDefaultFunction(function ($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		//$words = $finput->words;
 		$db = &$finput->db;
 
 		bot_leave_autokick($data);

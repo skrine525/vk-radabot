@@ -61,10 +61,13 @@ namespace Economy{
 					unset($this->db["money_usd"]);
 				if(array_key_exists('money_btc', $this->db))
 					unset($this->db["money_btc"]);
+				if(array_key_exists('money', $this->db)){
+					$this->setMeta("money", $this->db["money"]);
+					unset($this->db["money"]);
+				}
 			}
 			else{
 				$this->db = array(
-					'money' => 0,
 					'meta' => array(),
 					'items' => array()
 
@@ -73,17 +76,19 @@ namespace Economy{
 			}
 		}
 
+		public function getMoney(){
+			return $this->getMeta("money", 0);
+		}
+
 		public function changeMoney($value){
-			if($this->db["money"] + $value >= 0){
+			$money = $this->getMoney();
+			if($money + $value >= 0){
 				$value = round($value, 2);
-				$this->db["money"] = $this->db["money"] + $value;
+				$money = $money + $value;
+				$this->setMeta("money", $money);
 				return true;
 			}
 			return false;
-		}
-
-		public function getMoney(){
-			return $this->db["money"];
 		}
 
 		public function getItems(){
@@ -197,16 +202,35 @@ namespace Economy{
 				return false;
 		}
 
+		// Работа
 		public function setJob($id){
 			$this->setMeta("job", $id);
 		}
-
 		public function getJob(){
 			return $this->getMeta("job");
 		}
-
 		public function deleteJob(){
 			return $this->deleteMeta("job");
+		}
+
+		// Компании
+		public function getEnterprises(){
+			return $this->getMeta("enterprises", array());
+		}
+		public function addEnterprise($id){
+			$enterprises = $this->getEnterprises();
+			$enterprises[] = $id;
+			$this->setMeta("enterprises", $enterprises);
+			return true;
+		}
+		public function delEnterprise($id){
+			$enterprises = $this->getEnterprises();
+			$index = array_search($id, $enterprises);
+			if($index === false)
+				return false;
+			unset($enterprises[$index]);
+			$enterprises = array_values($enterprises);
+			$this->setMeta("enterprises", $enterprises);
 		}
 	}
 
@@ -272,6 +296,138 @@ namespace Economy{
 		}
 	}
 
+	class EnterpriseEconomyManager{
+		private $db;
+
+		const TIME_UPDATE = 600;
+
+		const PRODUCTION_INCOME = 30;
+		const PRODUCTION_COST = 10;
+		const SERVICE_WORK_COST = 0.2;
+
+		static private function generateRandomString($length = 10) {
+		    $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+		    $charactersLength = strlen($characters);
+		    $randomString = '';
+		    for ($i = 0; $i < $length; $i++) {
+		        $randomString .= $characters[rand(0, $charactersLength - 1)];
+		    }
+		    return $randomString;
+		}
+
+		public static function getNextIncomeStrTime($last_update_time){
+			$current_time = time();
+			if($current_time - $last_update_time >= self::TIME_UPDATE){
+				return "сейчас";
+			}
+			else{
+				$time = self::TIME_UPDATE - ($current_time - $last_update_time);
+				$minutes = intdiv($time, 60);
+				$seconds = $time % 60;
+				$left_time_text = "";
+				if($minutes != 0)
+					$left_time_text = "{$minutes} мин. ";
+				$left_time_text = $left_time_text."{$seconds} сек.";
+				return "через ".$left_time_text;
+			}
+		}
+
+		function __construct(&$db){
+			if(array_key_exists("enterprises", $db)){
+				$this->db = &$db["enterprises"];
+				$this->update();
+			}
+			else{
+				$this->db = array();
+				$db["enterprises"] = &$this->db;
+			}
+		}
+
+		private function update(){
+			$timestamp = time();
+			$enterprises = array();
+
+			foreach ($this->db as $key => $value) {
+				if($timestamp > $value["meta"]["paid_before_time"]){
+					$time = $timestamp - ($timestamp - $value["meta"]["paid_before_time"]);
+					$is_work = false;
+				}
+				else{
+					$time = $timestamp;
+					$is_work = true;
+				}
+				$time_difference = $time - $value["meta"]["last_update_time"];
+
+				if($value["meta"]["is_work"] && $time_difference >= self::TIME_UPDATE){
+					$update_number = intdiv($time_difference, self::TIME_UPDATE);
+
+					for($i = 0; $i < $update_number; $i++){
+						$current_workers = round($value["current_workers"], 0, PHP_ROUND_HALF_DOWN);
+						$income = $current_workers * self::PRODUCTION_INCOME; // Прибыль
+						$cost = ($current_workers * self::PRODUCTION_COST) + ($value["max_jobs"] * self::SERVICE_WORK_COST) + ($income * ($value["workers_salary"] / 100)); // Затраты
+						$value["current_workers"] += $value["current_workers"] * (0.05 + ($value["workers_salary"]/1000));
+						if($value["current_workers"] > $value["max_jobs"])
+							$value["current_workers"] = $value["max_jobs"];
+						$net_income = $income - $cost;
+						$capital = $value["capital"] + $net_income;
+						if($capital >= 0)
+							$value["capital"] += $net_income;
+						else{
+							$is_work = false;
+							break;
+						}
+					}
+					$value["meta"]["last_update_time"] = $time - ($time_difference % self::TIME_UPDATE);
+					$value["meta"]["is_work"] = $is_work;
+				}
+				$enterprises[$key] = $value;
+			}
+			$this->db = $enterprises;
+		}
+
+		public function createEnterprise($name, $owner_id){
+			$id = '';
+			while(true){
+				$id = self::generateRandomString();
+				if(!array_key_exists($id, $this->db))
+					break;
+			}
+
+			if($name == '')
+				$name = $id;
+
+			if(gettype($owner_id) != "integer")
+				return false;
+
+			$time = time();
+
+			$this->db[$id] = array(
+				'id' => $id,
+				'name' => $name,
+				'created_time' => $time,
+				'owner_id' => $owner_id,
+				'max_jobs' => 10,
+				'current_workers' => 1,
+				'capital' => 0,
+				'workers_salary' => 25,
+				'meta' => array(
+					'is_work' => false,
+					'last_update_time' => $time,
+					'paid_before_time' => $time+43200
+				)
+			);
+
+			return $id;
+		}
+
+		public function &getEnterprise($id){
+			if(array_key_exists($id, $this->db))
+				return $this->db[$id];
+			else
+				return false;
+		}
+	}
+
 	class Main{
 		private $db;
 
@@ -295,8 +451,8 @@ namespace Economy{
 			return $this->db["users"];
 		}
 
-		function initCurrencySystem(){
-			return new CurrencySystem($this->db);
+		function initEnterpriseSystem(){
+			return new EnterpriseEconomyManager($this->db);
 		}
 
 		function checkUser($user_id){
@@ -316,10 +472,12 @@ namespace{
 		$event->addMessageCommand("!профессии", "economy_joblist");
 		$event->addMessageCommand("!профессия", "economy_jobinfo");
 		$event->addMessageCommand("!купить", "economy_buy");
+		$event->addMessageCommand("!продать", "economy_sell");
 		$event->addMessageCommand("!имущество", "economy_myprops");
 		$event->addMessageCommand("!банк", "economy_bank");
 		$event->addMessageCommand("!образование", "economy_education");
 		$event->addMessageCommand("!forbes", "economy_most_rich_users");
+		$event->addMessageCommand("!бизнес", "economy_company");
 
 		// Test
 		//$event->addMessageCommand("!invlist", "economy_test1");
@@ -565,7 +723,9 @@ namespace{
 
 		$index = 1;
 		foreach ($jobs as $key => $value) {
-			$msg = $msg . "\n• {$index}. {$value["name"]}";
+			$spm = round($value["salary"] / ($value["rest_time"] / 60), 2); // Зарплата в минуту
+			$msg = $msg . "\n• {$index}. {$value["name"]} — \${$spm}/мин";
+			//$msg = $msg . "\n• {$index}. {$value["name"]}";
 			$index++;
 		}
 
@@ -649,9 +809,14 @@ namespace{
 
 		if($section_id >= 0){
 			$section = $sections[$section_id];
-			$items = Economy\Item::getItemListByType($section["item_type"]);
-			$item_data = array_values($items);
-			$item_ids = array_keys($items);
+			$all_items_by_type = Economy\Item::getItemListByType($section["item_type"]); // Все предметы по по типу
+			$items = array();
+			foreach ($all_items_by_type as $key => $value) {
+				if($value["can_buy"])
+					$items_for_buy[$key] = $value;
+			}
+			$item_data = array_values($items_for_buy);
+			$item_ids = array_keys($items_for_buy);
 
 			$economy = new Economy\Main($db);
 			$user_economy = $economy->getUser($data->object->from_id);
@@ -682,14 +847,23 @@ namespace{
 			}
 			else{
 				$msg = ", используйте \"!купить ".mb_strtolower($sections[$i]["name"])." <номер>\".\n📄Доступно для покупки:";
-				for($i = 0; $i < count($item_data); $i++){
+				$items_count = count($item_data);
+				for($i = 0; $i < $items_count; $i++){
 					$price = $item_data[$i]["price"];
 					if($user_economy->checkItem($section["item_type"], $item_ids[$i]) !== false)
 						$status = "✅";
 					else
 						$status = "⛔";
 					$price_text = "\${$price}";
-					$index = $i + 1;
+					if($items_count >= 10){
+						$index_num = $i + 1;
+						if($index_num < 10)
+							$index = "0".$index_num;
+						else
+							$index = $index_num;
+					}
+					else
+						$index = $i + 1;
 					$msg = $msg . "\n{$index}. {$status}" . $item_data[$i]["name"] . " — {$price_text}";
 				}
 				$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
@@ -701,6 +875,62 @@ namespace{
 				$section_names[] = "!купить ".mb_strtolower($sections[$i]["name"]);
 			}
 			$botModule->sendCommandListFromArray($data, ", используйте: ", $section_names);
+		}
+	}
+
+	function economy_sell($finput){
+		// Инициализация базовых переменных
+		$data = $finput->data; 
+		$words = $finput->words;
+		$db = &$finput->db;
+
+		$botModule = new BotModule($db);
+
+		$argv1 = intval(bot_get_word_argv($words, 1, 0));
+		$argv2 = intval(bot_get_word_argv($words, 2, 1));
+
+
+
+		if($argv1 > 0){
+			$economy = new Economy\Main($db);
+			$user_economy = $economy->getUser($data->object->from_id);
+			$user_items = $user_economy->getItems();
+			$index = $argv1 - 1;
+
+			if(count($user_items) < $argv1){
+				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Собственности под номером {$argv1} у вас нет.", $data->object->from_id);
+				return;
+			}
+
+			if($argv2 <= 0){
+				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Количество не может быть отрицательным числом или быть равным 0.", $data->object->from_id);
+				return;
+			}
+
+			Economy\EconomyFiles::readDataFiles();
+			$items = Economy\EconomyFiles::getEconomyFileData("items");
+
+			$selling_item_info = $items[$user_items[$index]->type][$user_items[$index]->id];
+
+			if(!$selling_item_info["can_sell"]){
+				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Собственность \"{$selling_item_info["name"]}\" невозможно продать.", $data->object->from_id);
+				return;
+			}
+
+			if($user_economy->changeItem($user_items[$index]->type, $user_items[$index]->id, -$argv2)){
+				$value = $selling_item_info["price"] * 0.7 * $argv2;
+				$user_economy->changeMoney($value); // Добавляем к счету пользователя 70% от начальной стоимости товара
+				$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Собственность \"{$selling_item_info["name"]}\" продана в количестве {$argv2} за \${$value}.", $data->object->from_id);
+			}
+			else{
+				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас в наличии только {$user_items[$index]->count} {$selling_item_info["name"]}.", $data->object->from_id);
+			}
+		}
+		else{
+			$botModule->sendCommandListFromArray($data, ", используйте: ", array(
+				'!продать <номер> <кол-во> - Продать имущество',
+				'!имущество <список> - Список имущества'
+			));
 		}
 	}
 
@@ -752,7 +982,8 @@ namespace{
 			$msg = ", Ваше имущество [$list_number/$list_max_number]:";
 			for($i = 0; $i < count($list_out); $i++){
 				$name = Economy\Item::getItemName($list_out[$i]->type, $list_out[$i]->id);
-				$msg = $msg . "\n✅" . $name . " — {$list_out[$i]->count} шт.";
+				$index = ($i + 1) + 10 * ($list_number-1);
+				$msg = $msg . "\n✅ {$index}. " . $name . " — {$list_out[$i]->count} шт.";
 			}
 			$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
 		}
@@ -877,6 +1108,78 @@ namespace{
 				$msg = $msg . "\n{$index}. {$status}" . $edu_data[$i]["name"] . " — \$" . $edu_data[$i]["price"];
 			}
 			$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+		}
+	}
+
+	function economy_company($finput){
+		// Инициализация базовых переменных
+		$data = $finput->data; 
+		$words = $finput->words;
+		$db = &$finput->db;
+
+		$botModule = new BotModule($db);
+		$economy = new Economy\Main($db);
+		$user_economy = $economy->getUser($data->object->from_id);
+
+		$command = mb_strtolower(bot_get_word_argv($words, 1, ""));
+
+		if($command == "купить"){
+			if($user_economy->changeMoney(-250000)){
+				$name = bot_get_word_argv($words, 2, '');
+				$enterpriseSystem = $economy->initEnterpriseSystem();
+				$enterprise_id = $enterpriseSystem->createEnterprise($name, $data->object->from_id);
+				if($enterprise_id === false){
+					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Не удалось купить бизнес.", $data->object->from_id);
+					return;
+				}
+				$user_economy->addEnterprise($enterprise_id);
+				$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Бизнес успешно куплен. Его ID: {$enterprise_id}.", $data->object->from_id);
+			}
+			else{
+				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔На вашем счету нет нужных $250000 для покупки бизнеса.", $data->object->from_id);
+			}
+		}
+		elseif($command == "продать"){
+			
+		}
+		elseif($command == "управлять"){
+			$index = intval(bot_get_word_argv($words, 2, 0));
+			$user_enterprises = $user_economy->getEnterprises();
+			$enterpriseSystem = $economy->initEnterpriseSystem();
+			$user_enterprises_count = count($user_enterprises);
+			if($index > 0 && $user_enterprises_count >= $index){
+				$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$index-1]);
+				$command = mb_strtolower(bot_get_word_argv($words, 3, ""));
+
+				if($command == "информация"){
+					$next_income_strtime = Economy\EnterpriseEconomyManager::getNextIncomeStrTime($enterprise["meta"]["last_update_time"]);
+					$current_workers = round($enterprise["current_workers"], 0, PHP_ROUND_HALF_DOWN);
+					$msg = ", информация о бизнесе:\n📎ID: {$enterprise["id"]}\n📝Название: {$enterprise["name"]}\n💰Бюджет: \${$enterprise["capital"]}\n👥Рабочих мест: {$current_workers}/{$enterprise["max_jobs"]}\n💵Зарплата рабочих: {$enterprise["workers_salary"]}%\n📅Следующий доход: {$next_income_strtime}";
+					$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+				}
+				else{
+					$botModule->sendCommandListFromArray($data, ", используйте:", array(
+						'!бизнес управлять {$index} информация - Информация о бизнесе',
+					));
+				}
+			}
+			else{
+				$msg = ", список ваших бизнесов:";
+				for($i = 0; $i < $user_enterprises_count; $i++){
+					$j = $i + 1;
+					$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$i]);
+					$msg .= "\n{$j}. ".$enterprise["name"];
+				}
+				$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+			}
+		}
+		else{
+			$botModule->sendCommandListFromArray($data, ", используйте:", array(
+				'!бизнес купить <название> - Покупка бизнеса',
+				'!бизнес продать <id> - Продажа бизнеса',
+				'!бизнес управлять <номер> - Управление бизнесом',
+				'!бизнес помощь - Объяснение принципов работы бизнесов'
+			));
 		}
 	}
 

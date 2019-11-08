@@ -1,8 +1,8 @@
 {
 	"janitor": {
 		"name": "Дворник",
-		"rest_time": 600,
-		"salary": 200,
+		"rest_time": 1200,
+		"salary": 600,
 		"message":{
 			"male": "{USERNAME} убрал самолетики после забастовки Телеграма, тем самым заработав {SALARY}.",
 			"female": "{USERNAME} убрала самолетики после забастовки Телеграма, тем самым заработав {SALARY}."
@@ -12,7 +12,7 @@
 	"scavenger": {
 		"name": "Уборщик мусора",
 		"rest_time": 1200,
-		"salary": 400,
+		"salary": 600,
 		"message":{
 			"male": "{USERNAME} убрал территорию от мусора и заработал {SALARY}.",
 			"female": "{USERNAME} убрала территорию от мусора и заработала {SALARY}."
@@ -22,41 +22,81 @@
 	"newspaper_delivery_man": {
 		"name": "Доставщик газет",
 		"rest_time": 1200,
-		"salary": 600,
+		"salary": 800,
 		"message":{
 			"male": "{USERNAME} доставил газету к последнему дому и заработал {SALARY}.",
 			"female": "{USERNAME} доставила газету к последнему дому и заработала {SALARY}."
 		},
-		"item_dependencies": ["vehicle:level_2:1"]
+		"item_dependencies": ["edu:level_1:1", "vehicle:level_2:1", "immovables:level_1:1"]
 	},
 	"sales_assistant": {
 		"name": "Помощник продавца",
 		"rest_time": 1500,
-		"salary": 1000,
+		"salary": 1200,
 		"message":{
 			"male": "{USERNAME} продал очередной рулон туалетной бумаги. Его зарплата — {SALARY}.",
 			"female": "{USERNAME} продала очередной рулон туалетной бумаги. Ее зарплата — {SALARY}."
 		},
-		"item_dependencies": ["edu:level_2:1"]
+		"item_dependencies": ["edu:level_2:1", "immovables:level_1:1"]
+	},
+	"mechanic_turner": {
+		"name": "Токарь-Механик",
+		"rest_time": 900,
+		"salary": 2000,
+		"message":{
+			"male": "{USERNAME} выточил новую деталь. Зарплата — {SALARY}.",
+			"female": "{USERNAME} выточила новую деталь. Зарплата — {SALARY}."
+		},
+		"item_dependencies": ["edu:level_3:1", "immovables:level_2:1"]
+	},
+	"it_specialist": {
+		"name": "IT-специалист",
+		"rest_time": 900,
+		"salary": 2000,
+		"message":{
+			"male": "{USERNAME} написал новую функцию, которая создала новый баг. Зарплата — {SALARY}.",
+			"female": "{USERNAME} написала новую функцию, которая создала новый баг. Зарплата — {SALARY}."
+		},
+		"item_dependencies": ["edu:level_3:1", "immovables:level_2:1"]
+	},
+	"engineer": {
+		"name": "Инженер",
+		"rest_time": 900,
+		"salary": 2400,
+		"message":{
+			"male": "{USERNAME} спроектировал новый механизм. Зарплата — {SALARY}.",
+			"female": "{USERNAME} спроектировала новый механизм. Зарплата — {SALARY}."
+		},
+		"item_dependencies": ["edu:level_4:1", "immovables:level_3:1"]
+	},
+	"pr_manager": {
+		"name": "PR-менеджер",
+		"rest_time": 900,
+		"salary": 2400,
+		"message":{
+			"male": "{USERNAME} составил рекламную стратегию нового продукта. Зарплата — {SALARY}.",
+			"female": "{USERNAME} составила рекламную стратегию нового продукта. Зарплата — {SALARY}."
+		},
+		"item_dependencies": ["edu:level_4:1", "immovables:level_3:1"]
 	},
 	"president_low": {
 		"name": "Президент (Среднее образование)",
-		"rest_time": 3600,
+		"rest_time": 1800,
 		"salary": 5000,
 		"message":{
 			"male": "Подписав новый закон, президент {USERNAME} заработал {SALARY}.",
 			"female": "Подписав новый закон, президент {USERNAME} заработал {SALARY}."
 		},
-		"item_dependencies": ["edu:level_2:1","govdoc:presidential_certificate:1"]
+		"item_dependencies": ["edu:level_2:1","govdoc:presidential_certificate:1", "immovables:level_1:1"]
 	},
 	"president_high": {
 		"name": "Президент (Высшее образование)",
 		"rest_time": 1800,
-		"salary": 15000,
+		"salary": 24000,
 		"message":{
 			"male": "Подписав новый закон, президент {USERNAME} заработал {SALARY}.",
 			"female": "Подписав новый закон, президент {USERNAME} заработал {SALARY}."
 		},
-		"item_dependencies": ["edu:level_5:1","govdoc:presidential_certificate:1"]
+		"item_dependencies": ["edu:level_5:1","govdoc:presidential_certificate:1", "immovables:level_5:1"]
 	}
 }

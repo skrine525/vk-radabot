@@ -1120,7 +1120,7 @@ function fun_show_marriage_list($finput){
 			var msg = appeal+', 🤵👰браки в беседе [$list_number/{$list_max_number}]:';
 			var i = 0; while(i < marriages.length){
 				var days = ((current_date - marriages[i].start_time) - (current_date - marriages[i].start_time) % 86400) / 86400;
-				msg = msg + '\\n❤@id'+marriages[i].partner_1+' ('+partner_1_info[i].first_name.substr(0, 2)+'. '+partner_1_info[i].last_name+') и @id'+marriages[i].partner_2+' ('+partner_2_info[i].first_name.substr(0, 2)+'. '+partner_2_info[i].last_name+') ('+days+' д.)❤';
+				msg = msg + '\\n❤@id'+marriages[i].partner_1+' ('+partner_1_info[i].first_name.substr(0, 2)+'. '+partner_1_info[i].last_name+') и @id'+marriages[i].partner_2+' ('+partner_2_info[i].first_name.substr(0, 2)+'. '+partner_2_info[i].last_name+')❤ ('+days+' д.)';
 				i = i + 1;
 			}
 			API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});

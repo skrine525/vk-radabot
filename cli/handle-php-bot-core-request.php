@@ -1,6 +1,6 @@
 <?php
 
-require(__DIR__."/../bot/core/loader.php");
+require(__DIR__."/../bot/system/loader.php");
 
 $data = json_decode(base64_decode($argv[1]));
 
