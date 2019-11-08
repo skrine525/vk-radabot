@@ -11,7 +11,8 @@ function wordgame_main($data, $words, &$db){
 	$session = wordgame_get_session($data->object->peer_id);
 	if(array_key_exists(1, $words) && mb_strtolower($words[1]) == 'старт'){
 		if(!array_key_exists('word_game', $session)){
-			wordgame_reset_word($session, $data->object->date);
+			$date = time(); // Переменная времени
+			wordgame_reset_word($session, $date);
 			wordgame_set_session($data->object->peer_id, $session);
 			$new_word = wordgame_get_encoded_word($session);
 			$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
@@ -190,6 +191,8 @@ function wordgame_gameplay($data, &$db){
 	mb_internal_encoding("UTF-8");
 	$session = wordgame_get_session($data->object->peer_id);
 
+	$date = time(); // Переменная времени
+
 	$message_text = "";
 	if(property_exists($data->object, "payload")){
 		$payload = json_decode($data->object->payload);
@@ -224,7 +227,8 @@ function wordgame_gameplay($data, &$db){
 	}
 
 	if(array_key_exists('word_game', $session)){
-		if($data->object->date - $session["word_game"]["current_word"]["word_guessing_time"] >= 600 && !$session["word_game"]["current_word"]["can_reset"]){
+		$date = time(); // Переменная времени
+		if($date - $session["word_game"]["current_word"]["word_guessing_time"] >= 600 && !$session["word_game"]["current_word"]["can_reset"]){
 			$empty_keyboard = vk_keyboard(true, array());
 			wordgame_del_session($data->object->peer_id);
 			$msg = "[Слова] Игра остановлена.";
@@ -233,7 +237,7 @@ function wordgame_gameplay($data, &$db){
 				");
 		}
 		elseif ($message_text == "продолжить" && $session["word_game"]["current_word"]["can_reset"]){
-			wordgame_reset_word($session, $data->object->date);
+			wordgame_reset_word($session, $date);
 			wordgame_set_session($data->object->peer_id, $session);
 			$new_word = wordgame_get_encoded_word($session);
 			$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
@@ -268,9 +272,9 @@ function wordgame_gameplay($data, &$db){
 			mb_internal_encoding("UTF-8");
 			$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
 			if($wordlen - $session["word_game"]["current_word"]["used_hints"] > 3){
-				if(($data->object->date - $session["word_game"]["current_word"]["last_using_hints_time"]) >= 20){
+				if(($date - $session["word_game"]["current_word"]["last_using_hints_time"]) >= 20){
 					$session["word_game"]["current_word"]["used_hints"] = $session["word_game"]["current_word"]["used_hints"] + 1;
-					$session["word_game"]["current_word"]["last_using_hints_time"] = $data->object->date;
+					$session["word_game"]["current_word"]["last_using_hints_time"] = $date;
 					while(true){
 						$rnd = mt_rand(0, $wordlen-1);
 						$end = true;
@@ -309,7 +313,7 @@ function wordgame_gameplay($data, &$db){
 							");
 					}
 				} else {
-					$left_time = 20 - ($data->object->date - $session["word_game"]["current_word"]["last_using_hints_time"]);
+					$left_time = 20 - ($date - $session["word_game"]["current_word"]["last_using_hints_time"]);
 					$msg = "[Слова] Подсказку можно использовать повторно через {$left_time} с.";
 					vk_execute("
 						return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});
@@ -324,7 +328,7 @@ function wordgame_gameplay($data, &$db){
 		} elseif($message_text == 'сдаться' && !$session["word_game"]["current_word"]["can_reset"]){
 			$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
 			if($wordlen - $session["word_game"]["current_word"]["used_hints"] <= 3){
-				if(($data->object->date - $session["word_game"]["current_word"]["last_using_hints_time"]) >= 20){
+				if(($date - $session["word_game"]["current_word"]["last_using_hints_time"]) >= 20){
 					$msg = "[Слова] Слово \"{$session["word_game"]["current_word"]["word"]}\" не было откадано!\nЕсли желаете дальше играть, напишите \"Продолжить\".";
 					$session["word_game"]["current_word"]["can_reset"] = true;
 					wordgame_set_session($data->object->peer_id, $session);
@@ -398,7 +402,8 @@ function wordgame_eng_main($data, $words, &$db){
 	$session = wordgame_eng_get_session($data->object->peer_id);
 	if(array_key_exists(1, $words) && mb_strtolower($words[1]) == 'start'){
 		if(!array_key_exists('word_game_eng', $session)){
-			wordgame_eng_reset_word($session, $data->object->date);
+			$date = time(); // Переменная времени
+			wordgame_eng_reset_word($session, $date);
 			wordgame_eng_set_session($data->object->peer_id, $session);
 			$new_word = wordgame_eng_get_encoded_word($session);
 			$wordlen = mb_strlen($session["word_game_eng"]["current_word"]["word"]);
@@ -577,6 +582,8 @@ function wordgame_eng_gameplay($data, &$db){
 	mb_internal_encoding("UTF-8");
 	$session = wordgame_eng_get_session($data->object->peer_id);
 
+	$date = time(); // Переменная времени
+
 	$message_text = "";
 	if(property_exists($data->object, "payload")){
 		$payload = json_decode($data->object->payload);
@@ -611,7 +618,8 @@ function wordgame_eng_gameplay($data, &$db){
 	}
 
 	if(array_key_exists('word_game_eng', $session)){
-		if($data->object->date - $session["word_game_eng"]["current_word"]["word_guessing_time"] >= 600 && !$session["word_game_eng"]["current_word"]["can_reset"]){
+		$date = time(); // Переменная времени
+		if($date - $session["word_game_eng"]["current_word"]["word_guessing_time"] >= 600 && !$session["word_game_eng"]["current_word"]["can_reset"]){
 			$empty_keyboard = vk_keyboard(true, array());
 			wordgame_eng_del_session($data->object->peer_id);
 			$msg = "[Words] Игра остановлена.";
@@ -620,7 +628,7 @@ function wordgame_eng_gameplay($data, &$db){
 				");
 		}
 		elseif ($message_text == "продолжить" && $session["word_game_eng"]["current_word"]["can_reset"]){
-			wordgame_eng_reset_word($session, $data->object->date);
+			wordgame_eng_reset_word($session, $date);
 			wordgame_eng_set_session($data->object->peer_id, $session);
 			$new_word = wordgame_eng_get_encoded_word($session);
 			$wordlen = mb_strlen($session["word_game_eng"]["current_word"]["word"]);
@@ -655,9 +663,9 @@ function wordgame_eng_gameplay($data, &$db){
 			mb_internal_encoding("UTF-8");
 			$wordlen = mb_strlen($session["word_game_eng"]["current_word"]["word"]);
 			if($wordlen - $session["word_game_eng"]["current_word"]["used_hints"] > 3){
-				if(($data->object->date - $session["word_game_eng"]["current_word"]["last_using_hints_time"]) >= 20){
+				if(($date - $session["word_game_eng"]["current_word"]["last_using_hints_time"]) >= 20){
 					$session["word_game_eng"]["current_word"]["used_hints"] = $session["word_game_eng"]["current_word"]["used_hints"] + 1;
-					$session["word_game_eng"]["current_word"]["last_using_hints_time"] = $data->object->date;
+					$session["word_game_eng"]["current_word"]["last_using_hints_time"] = $date;
 					while(true){
 						$rnd = mt_rand(0, $wordlen-1);
 						$end = true;
@@ -696,7 +704,7 @@ function wordgame_eng_gameplay($data, &$db){
 							");
 					}
 				} else {
-					$left_time = 20 - ($data->object->date - $session["word_game_eng"]["current_word"]["last_using_hints_time"]);
+					$left_time = 20 - ($date - $session["word_game_eng"]["current_word"]["last_using_hints_time"]);
 					$msg = "[Words] Подсказку можно использовать повторно через {$left_time} с.";
 					vk_execute("
 						return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});
@@ -711,7 +719,7 @@ function wordgame_eng_gameplay($data, &$db){
 		} elseif($message_text == 'сдаться' && !$session["word_game_eng"]["current_word"]["can_reset"]){
 			$wordlen = mb_strlen($session["word_game_eng"]["current_word"]["word"]);
 			if($wordlen - $session["word_game_eng"]["current_word"]["used_hints"] <= 3){
-				if(($data->object->date - $session["word_game_eng"]["current_word"]["last_using_hints_time"]) >= 20){
+				if(($date - $session["word_game_eng"]["current_word"]["last_using_hints_time"]) >= 20){
 					$msg = "[Words] Слово \"{$session["word_game_eng"]["current_word"]["word"]}\" не было откадано!\nЕсли желаете дальше играть, напишите \"Продолжить\".";
 					$session["word_game_eng"]["current_word"]["can_reset"] = true;
 					wordgame_eng_set_session($data->object->peer_id, $session);

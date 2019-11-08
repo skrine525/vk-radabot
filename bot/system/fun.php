@@ -149,7 +149,7 @@ function fun_memes_control_panel($finput){
 		$fun["memes"][$meme_name] = array(
 			'owner_id' => $data->object->from_id,
 			'content' => $content_attach,
-			'date' => $data->object->date
+			'date' => time()
 		);
 		$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Мем сохранен!", $data->object->from_id);
 	}
@@ -805,7 +805,7 @@ function fun_marriage($finput){
 					$marriages_db["list"][] = array(
 						'partner_1' => $partner_id,
 						'partner_2' => $data->object->from_id,
-						'start_time' => $data->object->date,
+						'start_time' => time(),
 						'end_time' => 0,
 						'terminated' => false
 					);
@@ -854,7 +854,7 @@ function fun_marriage($finput){
 				if(array_key_exists("id{$data->object->from_id}", $marriages_db["user_info"]) && $marriages_db["user_info"]["id{$data->object->from_id}"]["type"] == 1){
 					$marriage_info = &$marriages_db["list"][$marriages_db["user_info"]["id{$data->object->from_id}"]["marriage_id"]];
 					$marriage_info["terminated"] = true;
-					$marriage_info["end_time"] = $data->object->date;
+					$marriage_info["end_time"] = time();
 					unset($marriages_db["user_info"]["id{$marriage_info["partner_1"]}"]);
 					unset($marriages_db["user_info"]["id{$marriage_info["partner_2"]}"]);
 					vk_execute("
@@ -963,10 +963,13 @@ function fun_show_marriage_list($finput){
 
 	$botModule = new BotModule($db);
 
+	$date = time(); // Переменная времени
+
 	if(array_key_exists(1, $words) && !is_numeric($words[1]))
 		$word = mb_strtolower($words[1]);
 	else
 		$word = "";
+
 
 	if($word == "история"){
 		$list = $marriages_db["list"];
@@ -1022,7 +1025,7 @@ function fun_show_marriage_list($finput){
 				unset($list_out[$i]["terminated"]);
 			}
 			else{
-				$days = (($data->object->date - $list_out[$i]["start_time"]) - ($data->object->date - $list_out[$i]["start_time"]) % 86400) / 86400;
+				$days = (($date - $list_out[$i]["start_time"]) - ($date - $list_out[$i]["start_time"]) % 86400) / 86400;
 				$str_info = gmdate("с d.m.Y | {$days} д.", $list_out[$i]["start_time"]+10800);
 				$list_out[$i]["str_info"] = $str_info;
 				unset($list_out[$i]["start_time"]);
@@ -1035,7 +1038,7 @@ function fun_show_marriage_list($finput){
 
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			var marriages = {$marriages_json};
-			var current_date = {$data->object->date};
+			var current_date = {$date};
 			var partner_1_info = API.users.get({'user_ids':marriages@.partner_1});
 			var partner_2_info = API.users.get({'user_ids':marriages@.partner_2});
 			var msg = appeal+', история браков беседы [$list_number/{$list_max_number}]:';
@@ -1114,7 +1117,7 @@ function fun_show_marriage_list($finput){
 
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			var marriages = {$marriages_json};
-			var current_date = {$data->object->date};
+			var current_date = {$date};
 			var partner_1_info = API.users.get({'user_ids':marriages@.partner_1});
 			var partner_2_info = API.users.get({'user_ids':marriages@.partner_2});
 			var msg = appeal+', 🤵👰браки в беседе [$list_number/{$list_max_number}]:';
@@ -1227,7 +1230,7 @@ class SysMemes{
 				$fun["luba"]["happiness"] = 50;
 				$fun["luba"]["isSleeping"] = false;
 				$fun["luba"]["cheerfulness"] = 50;
-				$fun["luba"]["last_db_update_date"] = $data->object->date;
+				$fun["luba"]["last_db_update_date"] = time();
 			}
 			$hungry = $fun["luba"]["hungry"];
 			$thirst = $fun["luba"]["thirst"];

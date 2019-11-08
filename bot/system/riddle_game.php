@@ -144,7 +144,7 @@ function riddlegame_init_session($data, $db){
 		'riddle_game' => array(
 			'current_question' => $question,
 			'answer' => mb_strtolower($answer),
-			'question_start_time' => $data->object->date,
+			'question_start_time' => time(),
 			'is_completed' => false
 		)
 	);
@@ -225,7 +225,8 @@ function riddlegame_gameplay($data, &$db){
 		}
 		elseif($text_message == "сдаться" && !$session["riddle_game"]["is_completed"]){
 			$botModule = new BotModule($db);
-			if($data->object->date - $session["riddle_game"]["question_start_time"] >= 30){
+			$date = time(); // Переменная времени
+			if($date - $session["riddle_game"]["question_start_time"] >= 30){
 				$session = riddlegame_init_session($data, $db);
 
 				$session["riddle_game"]["is_completed"] = true;

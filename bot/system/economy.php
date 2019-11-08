@@ -589,6 +589,8 @@ namespace{
 		$botModule = new BotModule($db);
 		$economy = new Economy\Main($db);
 
+		$date = time(); // Переменная времени
+
 		$user_economy = $economy->getUser($data->object->from_id);
 
 		if(array_key_exists(1, $words)){
@@ -604,8 +606,8 @@ namespace{
 				if($user_job !== false && Economy\Job::jobExists($user_job)){
 					$current_job = Economy\Job::getJobArray()[$user_economy->getJob()];
 					$last_working_time = $user_economy->getMeta("last_working_time", 0);
-					if($data->object->date - $last_working_time < $current_job["rest_time"]){
-						$time = $current_job["rest_time"] - ($data->object->date - $last_working_time);
+					if($date - $last_working_time < $current_job["rest_time"]){
+						$time = $current_job["rest_time"] - ($date - $last_working_time);
 						$minutes = intdiv($time, 60);
 						$seconds = $time % 60;
 						$left_time_text = "";
@@ -659,8 +661,8 @@ namespace{
 				if($last_working_time === false)
 					$last_working_time = 0;
 
-				if($data->object->date - $last_working_time >= $job["rest_time"]){
-					$user_economy->setMeta("last_working_time", $data->object->date);
+				if($date - $last_working_time >= $job["rest_time"]){
+					$user_economy->setMeta("last_working_time", $date);
 					$salary = $job["salary"];
 					$user_economy->changeMoney($salary);
 					$salary_text = "\${$salary}";
@@ -691,7 +693,7 @@ namespace{
 						");
 				}
 				else{
-					$time = $job["rest_time"] - ($data->object->date - $last_working_time);
+					$time = $job["rest_time"] - ($date - $last_working_time);
 					$minutes = intdiv($time, 60);
 					$seconds = $time % 60;
 					$left_time_text = "";

@@ -228,7 +228,7 @@ class AntiFlood{
 	}
 
 	public function checkMember($data){
-		$time = $data->object->date;
+		$time = time();
 		$member_id = $data->object->from_id;
 		$text = $data->object->text;
 
@@ -509,7 +509,7 @@ function manager_ban_user($finput){
 		return 'ok';
 		"), false);
 	if($res->response == 'ok')
-		BanSystem::banUser($db, $member_id, $reason, $data->object->from_id, $data->object->date);
+		BanSystem::banUser($db, $member_id, $reason, $data->object->from_id, time());
 }
 
 function manager_unban_user($finput){
