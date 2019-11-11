@@ -262,6 +262,25 @@ function bot_test_rights_exe($chat_id, $user_id, $check_owner = false, $msgInval
 	return $code;
 }
 
+function bot_int_to_emoji_str($number){
+	$array = array();
+	while ($number > 0) {
+	    $array[] = $number % 10;
+	    $number = intval($number / 10); 
+	}
+	$array = array_reverse($array);
+
+	$emoji = array('0&#8419;', '1&#8419;', '2&#8419;', '3&#8419;', '4&#8419;', '5&#8419;', '6&#8419;', '7&#8419;', '8&#8419;', '9&#8419;');
+
+	$string = "";
+
+	for($i = 0; $i < count($array); $i++){
+		$string .= $emoji[$array[$i]];
+	}
+
+	return $string;
+}
+
 function bot_test_initcmd($event){
 	$event->addMessageCommand("тестовая-клава", function($finput){
 		// Инициализация базовых переменных

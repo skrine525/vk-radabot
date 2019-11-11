@@ -293,5 +293,39 @@
 			"name": "Телефон",
 			"item_type": "phone"
 		}
-	]
+	],
+
+	"enterprise_types": {
+	    "shop": {
+	      "name": "Магазин",
+	      "price": 250000,
+	      "initial_workers": 5,
+	      "contracts": [
+		        {
+		          "name": "Реализация хлебобулочных изделий",
+		          "duration": 5400,
+		          "cost": 3600,
+		          "income": 9000,
+		          "workers_required": 5,
+		          "exp": 15
+		        },
+		        {
+		          "name": "Продажа продуктов питания",
+		          "duration": 10800,
+		          "cost": 7000,
+		          "income": 25000,
+		          "workers_required": 15,
+		          "exp": 45
+		        },
+		        {
+		          "name": "Реализация хоз. товаров",
+		          "duration": 28800,
+		          "cost": 23500,
+		          "income": 138500,
+		          "workers_required": 65,
+		          "exp": 90
+		        }
+	        ]
+	    }
+  	}
 }

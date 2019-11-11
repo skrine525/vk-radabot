@@ -1,7 +1,7 @@
 import requests
 import json
 import base64
-import os
+import subprocess
 
 VK_VERSION = 5.84
 
@@ -37,5 +37,5 @@ while True:
 		ts = longpoll_data["ts"]
 	else:
 		base64_updates = base64.b64encode(bytes(json.dumps(data["updates"]).encode('utf-8')))
-		os.system("/usr/bin/php handle-php-bot-core-request.php "+base64_updates)
+		subprocess.call(["/usr/bin/php", "handle-php-bot-core-request.php", base64_updates])
 		ts = data["ts"]
