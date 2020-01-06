@@ -13,26 +13,17 @@ class Event{
 		$this->messageCommands = array();
 		$this->keyboardCommands = array();
 		$this->dbIgnoreCommandList = array();
+
+		$chat_id = $this->data->object->peer_id - 2000000000;
+		$this->db = new Database(BOT_DBDIR."/chat{$chat_id}.json");
 	}
 
 	public function getData(){
 		return $this->data;
 	}
 
-  	public function loadDB(){
-  		$peer_id = $this->data->object->peer_id - 2000000000;
-   		$this->db = db_get("chat{$peer_id}");
-  	}
-
   	public function &getDB(){
   		return $this->db;
-  	}
-
-  	public function saveDB(){
-  		if(bot_check_reg($this->db)){
-  			$peer_id = $this->data->object->peer_id - 2000000000;
-   			db_set("chat{$peer_id}", $this->db);
-  		}
   	}
 
   	public function addMessageCommand($command, $method){
@@ -118,11 +109,11 @@ class Event{
 				);
 		
 				$method = $this->messageCommands[$command]; // Получение значения Callback'а
-				$method($finput); // Выполнение Callback'а
+				call_user_func_array($method, array($finput)); // Выполнение Callback'а
 
 				return true;
 			}
-			elseif(isset($payload) && property_exists($payload, "command") && property_exists($payload, "params") && gettype($payload->params) == "object" && array_key_exists($payload->command, $this->keyboardCommands)){
+			elseif(isset($payload) && property_exists($payload, "command") && /*property_exists($payload, "params") && gettype($payload->params) == "object" &&*/ array_key_exists($payload->command, $this->keyboardCommands)){
 				if(!bot_check_reg($this->db)){ // Проверка на регистрацию в системе
 					bot_message_not_reg($this->data);
 					return false;
@@ -136,7 +127,7 @@ class Event{
 				);
 		
 				$method = $this->keyboardCommands[$payload->command]; // Получение значения Callback'а
-				$method($finput); // Выполнение Callback'а
+				call_user_func_array($method, array($finput)); // Выполнение Callback'а
 
 				return true;
 			}
@@ -161,7 +152,7 @@ class Event{
 						'event' => &$this
 					);
 					$method = $this->defaultFunc; // Получение значения Callback'а
-					$method($finput); // Выполнение Callback'а
+					call_user_func_array($method, array($finput)); // Выполнение Callback'а
 
 					return true;
 				}
@@ -176,7 +167,6 @@ class Event{
 
 function event_handle($data){
 	$event = new Event($data); // Инициализирует класс
-	$event->loadDB(); // Подключаем базу данных
 
 	bot_pre_handle_function($event); // Функция предварительной обработки
 
@@ -188,82 +178,87 @@ function event_handle($data){
 	// Template - $event->addMessageCommand("command", "callback");
 
 	// Основное
-	$event->addMessageCommand("!cmdlist", 'bot_cmdlist');
-	$event->addMessageCommand("!reg", 'bot_register');
-	$event->addMessageCommand("!help", 'bot_help');
+	$event->addMessageCommand("!cmdlist", 'bot_cmdlist'); // +
+	$event->addMessageCommand("!reg", 'bot_register'); // +
+	$event->addMessageCommand("!help", 'bot_help'); // +
 
 	// Правительство
-	$event->addMessageCommand("!конституция", 'goverment_constitution');
-	$event->addMessageCommand("!президент", 'goverment_president');
-	$event->addMessageCommand("!строй", 'goverment_socorder');
-	$event->addMessageCommand("!стройлист", 'goverment_socorderlist');
-	$event->addMessageCommand("!законы", 'goverment_show_laws');
-	$event->addMessageCommand("!закон", 'goverment_laws_cpanel');
-	$event->addMessageCommand("!партия", 'goverment_batch');
-	$event->addMessageCommand("!столица", 'goverment_capital');
-	$event->addMessageCommand("!гимн", 'goverment_anthem');
-	$event->addMessageCommand("!флаг", 'goverment_flag');
+	$event->addMessageCommand("!конституция", 'goverment_constitution'); // +
+	$event->addMessageCommand("!президент", 'goverment_president'); // +
+	$event->addMessageCommand("!строй", 'goverment_socorder'); // +
+	$event->addMessageCommand("!стройлист", 'goverment_socorderlist'); // +
+	$event->addMessageCommand("!законы", 'goverment_show_laws'); // +
+	$event->addMessageCommand("!закон", 'goverment_laws_cpanel'); // +
+	$event->addMessageCommand("!партия", 'goverment_batch'); // +
+	$event->addMessageCommand("!столица", 'goverment_capital'); // +
+	$event->addMessageCommand("!гимн", 'goverment_anthem'); // +
+	$event->addMessageCommand("!флаг", 'goverment_flag'); // +
 
 	// Система выборов
-	$event->addMessageCommand("!votestart", 'goverment_referendum_start');
-	$event->addMessageCommand("!votestop", 'goverment_referendum_stop');
-	$event->addMessageCommand("!candidate", 'goverment_referendum_candidate');
-	$event->addMessageCommand("!vote", 'goverment_referendum_vote');
+	$event->addMessageCommand("!votestart", 'goverment_referendum_start'); // +
+	$event->addMessageCommand("!votestop", 'goverment_referendum_stop'); // +
+	$event->addMessageCommand("!candidate", 'goverment_referendum_candidate'); // +
+	$event->addMessageCommand("!vote", 'goverment_referendum_vote_cmd'); // +
+	$event->addKeyboardCommand("referendum_vote", "goverment_referendum_vote"); // +
 
 	// Система управления беседой
-	$event->addMessageCommand("онлайн", 'manager_online_list');
-	$event->addMessageCommand("!ban", 'manager_ban_user');
-	$event->addMessageCommand("!unban", 'manager_unban_user');
-	$event->addMessageCommand("!baninfo", 'manager_baninfo_user');
-	$event->addMessageCommand("!banlist", 'manager_banlist_user');
-	$event->addMessageCommand("!kick", 'manager_kick_user');
-	$event->addMessageCommand("!ник", 'manager_nick');
-	$event->addMessageCommand("!ранг", 'manager_rank');
-	$event->addMessageCommand("!ранглист", 'manager_rank_list');
-	$event->addMessageCommand("!ранги", 'manager_show_user_ranks');
-	$event->addMessageCommand("!приветствие", 'manager_greeting');
-	$event->addMessageCommand("!stats", 'stats_cmd_handler');
-	$event->addMessageCommand("!modes", "manager_mode_list");
-	$event->addMessageCommand("!mode", "manager_mode_cpanel");
+	$event->addMessageCommand("онлайн", 'manager_online_list'); // +
+	$event->addMessageCommand("!ban", 'manager_ban_user'); // +
+	$event->addMessageCommand("!unban", 'manager_unban_user'); // +
+	$event->addMessageCommand("!baninfo", 'manager_baninfo_user'); // +
+	$event->addMessageCommand("!banlist", 'manager_banlist_user'); // +
+	$event->addMessageCommand("!kick", 'manager_kick_user'); // +
+	$event->addMessageCommand("!ник", 'manager_nick'); // +
+	$event->addMessageCommand("!ранг", 'manager_rank'); // +
+	$event->addMessageCommand("!ранглист", 'manager_rank_list'); // +
+	$event->addMessageCommand("!ранги", 'manager_show_user_ranks'); // +
+	$event->addMessageCommand("!приветствие", 'manager_greeting'); // +
+	//$event->addMessageCommand("!stats", 'stats_cmd_handler');
+	$event->addMessageCommand("!modes", "manager_mode_list"); // +
+	$event->addMessageCommand("!mode", "manager_mode_cpanel"); // +
 
 	// RP-команды
 	roleplay_cmdinit($event);
 
 	// Fun
-	$event->addMessageCommand("выбери", 'fun_choose');
-	$event->addMessageCommand("сколько", 'fun_howmuch');
-	$event->addMessageCommand("инфа", "fun_info");
-	$event->addMessageCommand("!бузова", 'fun_buzova');
-	$event->addMessageCommand("!карина", 'fun_karina_cmd');
-	$event->addMessageCommand("!амина", 'fun_amina_cmd');
-	$event->addMessageCommand("!memes", 'fun_memes_control_panel');
-	$event->addMessageCommand("!чулки", 'fun_stockings_cmd');
-	$event->addMessageCommand("бутылочка", 'fun_bottle');
+	$event->addMessageCommand("выбери", 'fun_choose'); // +
+	$event->addMessageCommand("сколько", 'fun_howmuch'); // +
+	$event->addMessageCommand("кто", 'fun_whois');
+	$event->addMessageCommand("инфа", "fun_info"); // +
+	$event->addMessageCommand("!бузова", 'fun_buzova'); // +
+	$event->addMessageCommand("!карина", 'fun_karina_cmd'); // +
+	$event->addMessageCommand("!амина", 'fun_amina_cmd'); // +
+	$event->addMessageCommand("!memes", 'fun_memes_control_panel'); // +
+	$event->addMessageCommand("!чулки", 'fun_stockings_cmd'); // +
+	$event->addMessageCommand("бутылочка", 'fun_bottle'); // +
 	//$event->addMessageCommand("!tts", 'fun_tts');
-	$event->addMessageCommand("!say", "fun_say");
-	$event->addMessageCommand("брак", "fun_marriage");
-	$event->addMessageCommand("браки", "fun_show_marriage_list");
+	$event->addMessageCommand("!say", "fun_say"); // +
+	$event->addMessageCommand("брак", "fun_marriage"); // +
+	$event->addMessageCommand("браки", "fun_show_marriage_list"); // +
 
 	// Прочее
-	$event->addMessageCommand("лайк", 'bot_like_handler');
-	$event->addMessageCommand("убрать", 'bot_remove_handler');
-	$event->addMessageCommand("!id", 'bot_getid');
-	$event->addMessageCommand("!ники", 'manager_show_nicknames');
-	$event->addMessageCommand("!base64", 'bot_base64');
-	$event->addMessageCommand("!shrug", 'fun_shrug');
-	$event->addMessageCommand("!tableflip", 'fun_tableflip');
-	$event->addMessageCommand("!unflip", 'fun_unflip');
-	$event->addMessageCommand("!giphy", 'giphy_handler');
-	$event->addMessageCommand("!зов", 'bot_call_all');
-	$event->addMessageCommand("слова", 'wordgame_cmd');
-	$event->addMessageCommand("words", 'wordgame_eng_cmd');
-	$event->addMessageCommand("загадки", "riddlegame_cmd");
+	$event->addMessageCommand("лайк", 'bot_like_handler'); // +
+	$event->addMessageCommand("убрать", 'bot_remove_handler'); // +
+	$event->addMessageCommand("!id", 'bot_getid'); // +
+	$event->addMessageCommand("!ники", 'manager_show_nicknames'); // +
+	$event->addMessageCommand("!base64", 'bot_base64'); // +
+	$event->addMessageCommand("!shrug", 'fun_shrug'); // +
+	$event->addMessageCommand("!tableflip", 'fun_tableflip'); // +
+	$event->addMessageCommand("!unflip", 'fun_unflip'); // +
+	$event->addMessageCommand("!giphy", 'giphy_handler'); // +
+	$event->addMessageCommand("!зов", 'bot_call_all'); // +
+	$event->addMessageCommand("слова", 'wordgame_cmd'); // +
+	//$event->addMessageCommand("words", 'wordgame_eng_cmd');
+	//$event->addMessageCommand("загадки", "riddlegame_cmd");
 
 	// Economy
 	economy_initcmd($event);
 
+	// Команды особых событий
+	FunSpecialEvent::initcmd($event);
+
 	// Для тестирование плюшек
-	bot_test_initcmd($event);
+	//bot_test_initcmd($event);
 
 	// Функция обработки событий вне командной среды
 	$event->setDefaultFunction(function ($finput){
@@ -276,15 +271,17 @@ function event_handle($data){
 			manager_show_invited_greetings($data, $db); // Обработчик приветствия для новый пользователей в беседе
 		goverment_referendum_system($data, $db); // Обработчик выборов президента в беседе
 
+		// Обработчик особых событий
+		FunSpecialEvent::notCommandHandler($finput);
+
 		fun_handler($data, $db);
-		stats_update($data, $db); // Ведение статистики в беседе
+		//stats_update($data, $db); // Ведение статистики в беседе
 		wordgame_gameplay($data, $db); // Освновной обработчик игры Слова
-		wordgame_eng_gameplay($data, $db); // Освновной обработчик игры Words
-		riddlegame_gameplay($data, $db); // Основной обработчик игры Загадки
+		//wordgame_eng_gameplay($data, $db); // Освновной обработчик игры Words
+		//riddlegame_gameplay($data, $db); // Основной обработчик игры Загадки
 	});
 
 	$event->handle(); // Обработка
-	$event->saveDB(); // Сохранение базы данных
 	$event->exit(); // Очищение памяти
 }
 

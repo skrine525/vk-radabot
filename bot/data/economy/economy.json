@@ -2,10 +2,39 @@
 	"items":{
 		"special": {
 			"best_girl": {
-				"name": "Удостоверение самой лучшей девочки",
+				"name": "⭐Сертификат Самая лучшая девочка⭐",
 				"price": 0,
 				"can_sell": false,
-				"can_buy": false
+				"can_buy": false,
+				"hidden": false
+			},
+			"new_year_2020_1": {
+				"name": "⭐Календарь 2020⭐",
+				"price": 1000000,
+				"can_sell": true,
+				"can_buy": false,
+				"hidden": false
+			},
+			"new_year_2020_2": {
+				"name": "⭐Магнитик 2020⭐",
+				"price": 1000000,
+				"can_sell": true,
+				"can_buy": false,
+				"hidden": false
+			},
+			"new_year_2020_3": {
+				"name": "⭐Оливьешка 2020⭐",
+				"price": 1000000,
+				"can_sell": true,
+				"can_buy": false,
+				"hidden": false
+			},
+			"new_year_2020_tangerine": {
+				"name": "⭐Мандаринка 2020⭐",
+				"price": 3000000,
+				"can_sell": true,
+				"can_buy": false,
+				"hidden": false
 			}
 		},
 
@@ -14,103 +43,109 @@
 				"name": "Удостоверение президента",
 				"price": 0,
 				"can_sell": false,
-				"can_buy": false
+				"can_buy": false,
+				"hidden": false
 			}
 		},
 
-		"doc": {
-			"prostitution_permit": {
-				"name": "Разрешение на проституцию",
-				"price": 0,
-				"can_sell": false,
-				"can_buy": false
-			}
-		},
-
-		"vehicle":{
+		"car":{
 			"level_1": {
 				"name": "Самокат",
 				"price": 2000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_2": {
 				"name": "Велосипед",
 				"price": 4000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_3": {
 				"name": "Гироскутер",
 				"price": 10000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_4": {
 				"name": "Мопед Honda Tact",
 				"price": 25000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_5": {
 				"name": "ВАЗ-2105",
 				"price": 35000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_6": {
 				"name": "ВАЗ-2106",
 				"price": 45000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_7": {
 				"name": "ВАЗ-2107",
 				"price": 65000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_8": {
 				"name": "ВАЗ-2107 (Вишнёвая семёрка)",
 				"price": 150000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_9": {
 				"name": "Lada Priora",
 				"price": 250000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_10": {
 				"name": "Lada Granta",
 				"price": 400000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_11": {
 				"name": "Toyota Alteza",
 				"price": 650000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_12": {
 				"name": "Nissan Primera",
 				"price": 780000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_13": {
 				"name": "Subaru Impreza WRX",
 				"price": 965000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_14": {
 				"name": "Infinity G35",
 				"price": 1247000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			}
 		},
 
@@ -119,55 +154,64 @@
 				"name": "Номер в мотеле",
 				"price": 5000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_2": {
 				"name": "Комната в гетто-районе",
 				"price": 25000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_3": {
 				"name": "Двухкомнатная квартира в городе",
 				"price": 175000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_4": {
 				"name": "Трёхкомнатная квартира в столице",
 				"price": 900000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_5": {
 				"name": "Шестикомнатная квартира в столице",
 				"price": 3500000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_6": {
 				"name": "Вилла в Комо",
 				"price": 54000000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_7": {
 				"name": "Аппартаменты во Франции",
 				"price": 186500000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_8": {
 				"name": "Жилой комплекс в Лос Анжелесе",
 				"price": 436000000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_80": {
 				"name": "Дом Олега",
 				"price": 10000000000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			}
 		},
 
@@ -176,67 +220,78 @@
 				"name": "Nokia 3310",
 				"price": 2500,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_2": {
 				"name": "Samsung X510",
 				"price": 5000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_3": {
 				"name": "Sony Ericsson K750i",
 				"price": 8500,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_4": {
 				"name": "Apple iPhone 2G",
 				"price": 14999,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_5": {
 				"name": "Apple iPhone 5s",
 				"price": 24999,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_6": {
 				"name": "Apple iPhone 6s",
 				"price": 39999,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_7": {
 				"name": "Apple iPhone 8 Plus",
 				"price": 74999,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_8": {
 				"name": "Apple iPhone 10 XS Max",
 				"price": 119999,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_9": {
 				"name": "Apple iPhone 11 Pro Max",
 				"price": 239999,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_10": {
 				"name": "Apple iPhone 12 XS Ultra Pro Max Edition",
 				"price": 889999,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_11": {
-				"name": "Apple iPhone 2G (Запечатанная коробка)",
+				"name": "Apple iPhone 13 Pro Mega",
 				"price": 5000000,
 				"can_sell": true,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": false
 			}
 		},
 
@@ -245,53 +300,118 @@
 				"name": "Начальное образование",
 				"price": 10000,
 				"can_sell": false,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": true
 			},
 			"level_2": {
 				"name": "Полное среднее образование",
 				"price": 30000,
 				"can_sell": false,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": true
 			},
 			"level_3": {
 				"name": "Профессиональное среднее образование",
 				"price": 100000,
 				"can_sell": false,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": true
 			},
 			"level_4": {
 				"name": "Бакалавриат высшего образования",
 				"price": 250000,
 				"can_sell": false,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": true
 			},
 			"level_5": {
 				"name": "Магистр высшего образования",
 				"price": 700000,
 				"can_sell": false,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": true
 			},
 			"level_6": {
 				"name": "Доктор высшего образования",
 				"price": 1500000,
 				"can_sell": false,
-				"can_buy": true
+				"can_buy": true,
+				"hidden": true
+			}
+		},
+
+		"new_year_2020": {
+			"tangerine": {
+				"name": "Мандаринка",
+				"price": 50,
+				"can_sell": true,
+				"can_buy": false,
+				"hidden": false
+			},
+			"tangerine_package": {
+				"name": "Упаковка мандаринок (5 шт.)",
+				"price": 250,
+				"can_sell": true,
+				"can_buy": true,
+				"hidden": false
+			},
+			"tree_decorations": {
+				"name": "Ёлочные украшения",
+				"price": 500,
+				"can_sell": true,
+				"can_buy": true,
+				"hidden": false
+			},
+			"gerland": {
+				"name": "Гирлянда",
+				"price": 1000,
+				"can_sell": true,
+				"can_buy": true,
+				"hidden": false
+			},
+			"gift_wrap": {
+				"name": "Подарочная упаковка",
+				"price": 1500,
+				"can_sell": true,
+				"can_buy": true,
+				"hidden": false
+			},
+			"tree": {
+				"name": "Новогодняя ёлка",
+				"price": 5000,
+				"can_sell": true,
+				"can_buy": true,
+				"hidden": false
+			},
+			"decorated_tree": {
+				"name": "Наряженная Новогодняя ёлка",
+				"price": 6500,
+				"can_sell": true,
+				"can_buy": false,
+				"hidden": false
+			},
+			"fireworks": {
+				"name": "Фейерверк",
+				"price": 10000,
+				"can_sell": true,
+				"can_buy": true,
+				"hidden": false
 			}
 		}
 	},
 
 	"shop_sections":[
 		{
-			"name": "Транспорт",
-			"item_type": "vehicle"
+			"name": "Автомобиль",
+			"items": "car"
 		},
 		{
 			"name": "Недвижимость",
-			"item_type": "immovables"
+			"items": "immovables"
 		},
 		{
 			"name": "Телефон",
-			"item_type": "phone"
+			"items": "phone"
 		}
 	],
 
@@ -300,30 +420,106 @@
 	      "name": "Магазин",
 	      "price": 250000,
 	      "initial_workers": 5,
+	      "improvment":{
+	      	"workers": [
+	      		{
+	      			"name": "Улучшение условий рабочих 1",
+		          	"duration": 7200,
+		          	"workers_required": 5,
+		          	"exp_required": 150,
+		          	"cost": 20000,
+		          	"new_workers": 5
+	      		},
+	      		{
+	      			"name": "Улучшение условий рабочих 2",
+		          	"duration": 14400,
+		          	"workers_required": 10,
+		          	"exp_required": 300,
+		          	"cost": 40000,
+		          	"new_workers": 10
+	      		},
+	      		{
+	      			"name": "Улучшение условий рабочих 3",
+		          	"duration": 28800,
+		          	"workers_required": 20,
+		          	"exp_required": 800,
+		          	"cost": 80000,
+		          	"new_workers": 30
+	      		},
+	      		{
+	      			"name": "Улучшение условий рабочих 4",
+		          	"duration": 43200,
+		          	"workers_required": 30,
+		          	"exp_required": 1600,
+		          	"cost": 160000,
+		          	"new_workers": 30
+	      		},
+	      		{
+	      			"name": "Улучшение условий рабочих 5",
+		          	"duration": 57600,
+		          	"workers_required": 60,
+		          	"exp_required": 3600,
+		          	"cost": 320000,
+		          	"new_workers": 60
+	      		}
+	      	],
+	      	"contracts": [
+	      		{
+	      			"name": "Расширение торговой сети 1",
+		          	"duration": 21600,
+		          	"workers_required": 20,
+		          	"exp_required": 300,
+		          	"cost": 100000
+	      		},
+	      		{
+	      			"name": "Расширение торговой сети 2",
+		          	"duration": 21600,
+		          	"workers_required": 20,
+		          	"exp_required": 300,
+		          	"cost": 100000
+	      		}
+	      	]
+	      },
 	      "contracts": [
 		        {
-		          "name": "Реализация хлебобулочных изделий",
-		          "duration": 5400,
-		          "cost": 3600,
-		          "income": 9000,
-		          "workers_required": 5,
-		          "exp": 15
+		          	"name": "Продажа хлеба",
+		          	"duration": 5400,
+		          	"workers_required": 5,
+		          	"cost": 3600,
+		          	"income": 9000,
+		          	"exp": 15
 		        },
 		        {
-		          "name": "Продажа продуктов питания",
-		          "duration": 10800,
-		          "cost": 7000,
-		          "income": 25000,
-		          "workers_required": 15,
-		          "exp": 45
+		          	"name": "Продажа хоз. товаров",
+		          	"duration": 10800,
+		          	"workers_required": 15,
+		          	"cost": 7000,
+		          	"income": 25000,
+		          	"exp": 45
 		        },
 		        {
-		          "name": "Реализация хоз. товаров",
-		          "duration": 28800,
-		          "cost": 23500,
-		          "income": 138500,
-		          "workers_required": 65,
-		          "exp": 90
+		          	"name": "Продажа мясной продукции",
+		          	"duration": 28800,
+		          	"workers_required": 25,
+		          	"cost": 15500,
+		          	"income": 87200,
+		          	"exp": 90
+		        },
+		        {
+		          	"name": "Продажа алкоголя",
+		          	"duration": 28800,
+		          	"workers_required": 65,
+		          	"cost": 32800,
+		          	"income": 143600,
+		          	"exp": 90
+		        },
+		        {
+		          	"name": "Продажа дошираков",
+		          	"duration": 36000,
+		          	"workers_required": 90,
+		          	"cost": 48500,
+		          	"income": 230000,
+		          	"exp": 90
 		        }
 	        ]
 	    }

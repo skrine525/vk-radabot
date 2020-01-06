@@ -2,6 +2,8 @@ import requests
 import json
 import base64
 import subprocess
+import threading
+import time
 
 VK_VERSION = 5.84
 
@@ -23,8 +25,34 @@ def vk_longpoll(data, ts, wait = 25):
 	r = requests.post(data["server"], data=parametres)
 	return r.text
 
+Processes = {}
+Queue = []
+
+def queue_handler():
+	while True:
+		for i in Processes.copy():
+			if Processes[i].poll() != None:
+				Processes.pop(i)
+
+		for update in Queue:
+			if update["type"] == "message_new":
+				peer_id = update["object"]["peer_id"]
+				process_name = "message_new{peer_id}".format(peer_id=peer_id)
+				process = Processes.get(process_name)
+				if process == None:
+					base64_update = base64.b64encode(bytes(json.dumps(update).encode('utf-8')))
+					Processes[process_name] = subprocess.Popen(["/usr/bin/php", "php-handler.php", base64_update])
+					Queue.remove(update)
+			else:
+				Queue.remove(update)
+		time.sleep(0.05)
+
+
 longpoll_data = json.loads(vk_call('groups.getLongPollServer', {'group_id': config_get('VK_GROUP_ID')}))["response"]
 ts = longpoll_data["ts"]
+
+queue_thread = threading.Thread(target=queue_handler)
+queue_thread.start()
 
 while True:
 	data = json.loads(vk_longpoll(longpoll_data, ts))
@@ -36,6 +64,6 @@ while True:
 		longpoll_data = json.loads(vk_call('groups.getLongPollServer', {'group_id': config_get('VK_GROUP_ID')}))["response"]
 		ts = longpoll_data["ts"]
 	else:
-		base64_updates = base64.b64encode(bytes(json.dumps(data["updates"]).encode('utf-8')))
-		subprocess.call(["/usr/bin/php", "handle-php-bot-core-request.php", base64_updates])
+		for update in data["updates"]:
+			Queue.append(update)
 		ts = data["ts"]

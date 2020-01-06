@@ -27,7 +27,7 @@
 			"male": "{USERNAME} доставил газету к последнему дому и заработал {SALARY}.",
 			"female": "{USERNAME} доставила газету к последнему дому и заработала {SALARY}."
 		},
-		"item_dependencies": ["edu:level_1:1", "vehicle:level_2:1", "immovables:level_1:1"]
+		"item_dependencies": ["edu:level_1:1", "car:level_2:1", "immovables:level_1:1"]
 	},
 	"sales_assistant": {
 		"name": "Помощник продавца",
@@ -79,24 +79,34 @@
 		},
 		"item_dependencies": ["edu:level_4:1", "immovables:level_3:1"]
 	},
-	"president_low": {
-		"name": "Президент (Среднее образование)",
+	"politician": {
+		"name": "Политик",
+		"rest_time": 900,
+		"salary": 2400,
+		"message":{
+			"male": "{USERNAME} делает все для процветания государства. Зарплата — {SALARY}.",
+			"female": "{USERNAME} делает все для процветания государства. Зарплата — {SALARY}."
+		},
+		"item_dependencies": ["edu:level_4:1", "immovables:level_3:1"]
+	},
+	"president": {
+		"name": "Президент",
 		"rest_time": 1800,
 		"salary": 5000,
 		"message":{
 			"male": "Подписав новый закон, президент {USERNAME} заработал {SALARY}.",
 			"female": "Подписав новый закон, президент {USERNAME} заработал {SALARY}."
 		},
-		"item_dependencies": ["edu:level_2:1","govdoc:presidential_certificate:1", "immovables:level_1:1"]
+		"item_dependencies": ["edu:level_3:1","govdoc:presidential_certificate:1", "immovables:level_3:1"]
 	},
-	"president_high": {
-		"name": "Президент (Высшее образование)",
+	"ceo": {
+		"name": "CEO",
 		"rest_time": 1800,
-		"salary": 24000,
+		"salary": 7500,
 		"message":{
-			"male": "Подписав новый закон, президент {USERNAME} заработал {SALARY}.",
-			"female": "Подписав новый закон, президент {USERNAME} заработал {SALARY}."
+			"male": "{USERNAME} утверил стратегию развития компании. Зарплата - {SALARY}.",
+			"female": "{USERNAME} утверила стратегию развития компании. Зарплата - {SALARY}."
 		},
-		"item_dependencies": ["edu:level_5:1","govdoc:presidential_certificate:1", "immovables:level_5:1"]
+		"item_dependencies": ["edu:level_5:1", "immovables:level_4:1"]
 	}
 }

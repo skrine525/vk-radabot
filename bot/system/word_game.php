@@ -12,7 +12,7 @@ function wordgame_main($data, $words, &$db){
 	if(array_key_exists(1, $words) && mb_strtolower($words[1]) == 'старт'){
 		if(!array_key_exists('word_game', $session)){
 			$date = time(); // Переменная времени
-			wordgame_reset_word($session, $date);
+			wordgame_reset_word($session, $date, $data->object->from_id);
 			wordgame_set_session($data->object->peer_id, $session);
 			$new_word = wordgame_get_encoded_word($session);
 			$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
@@ -40,6 +40,14 @@ function wordgame_main($data, $words, &$db){
 		}
 	} elseif (mb_strtolower($words[1]) == 'стоп') {
 		if(array_key_exists('word_game', $session)){
+			if($session["word_game"]["started_by"] != $data->object->from_id){
+				$ranksys = new RankSystem($db);
+				if(!$ranksys->checkRank($data->object->from_id, 1)){
+					$botModule = new BotModule($db);
+					$botModule->sendSimpleMessage($data->object->peer_id, "[Слова] Вы не имеете права останавливать игру, запущенную другим пользователем.");
+					return;
+				}
+			}
 			$empty_keyboard = vk_keyboard(true, array());
 			wordgame_del_session($data->object->peer_id);
 			$msg = "";
@@ -58,10 +66,7 @@ function wordgame_main($data, $words, &$db){
 			$botModule->sendSimpleMessage($data->object->peer_id, "[Слова] Игра не запущена.");
 		}
 	} elseif (mb_strtolower($words[1]) == 'рейтинг') {
-		if(array_key_exists("games", $db) && array_key_exists("word_game_rating", $db["games"]))
-				$array = $db["games"]["word_game_rating"];
-			else
-				$array = array();
+		$array = $db->getValue(array("games", "word_game_rating"), array());
 
 		if(count($array) > 0){
 			$stats = array();
@@ -165,7 +170,7 @@ function wordgame_get_encoded_word($db){
 	return $en_word;
 }
 
-function wordgame_reset_word(&$db, $date){
+function wordgame_reset_word(&$db, $date, $user_id){
 	mb_internal_encoding("UTF-8");
 	while (true){
 		$database = json_decode(file_get_contents("https://engine.lifeis.porn/api/words.php?rus=true"), true);
@@ -180,6 +185,7 @@ function wordgame_reset_word(&$db, $date){
 			$db["word_game"]["current_word"]["can_reset"] = false;
 			$db["word_game"]["current_word"]["used_hints"] = 0;
 			$db["word_game"]["current_word"]["last_using_hints_time"] = 0;
+			$db["word_game"]["started_by"] = $user_id;
 
 			if (mb_strlen($db["word_game"]["current_word"]["word"]) > 3)
 				break;
@@ -237,7 +243,7 @@ function wordgame_gameplay($data, &$db){
 				");
 		}
 		elseif ($message_text == "продолжить" && $session["word_game"]["current_word"]["can_reset"]){
-			wordgame_reset_word($session, $date);
+			wordgame_reset_word($session, $date, $session["word_game"]["started_by"]);
 			wordgame_set_session($data->object->peer_id, $session);
 			$new_word = wordgame_get_encoded_word($session);
 			$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
@@ -362,10 +368,9 @@ function wordgame_gameplay($data, &$db){
 			$session["word_game"]["current_word"]["can_reset"] = true;
 			mb_internal_encoding("UTF-8");
 			$score = mb_strlen($word) - $session["word_game"]["current_word"]["used_hints"] - 2;
-			if(array_key_exists("games", $db) && array_key_exists("word_game_rating", $db["games"]))
-				$db["games"]["word_game_rating"]["id{$data->object->from_id}"] = $db["games"]["word_game_rating"]["id{$data->object->from_id}"] + $score;
-			else
-				$db["games"]["word_game_rating"]["id{$data->object->from_id}"] = $score;
+			$user_score = $db->getValue(array("games", "word_game_rating", "id{$data->object->from_id}"), 0);
+			$db->setValue(array("games", "word_game_rating", "id{$data->object->from_id}"), $user_score+$score);
+			$db->save();
 			wordgame_set_session($data->object->peer_id, $session);
 			$keyboard = vk_keyboard(false, array(
 				array(

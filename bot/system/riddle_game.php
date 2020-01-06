@@ -128,7 +128,7 @@ function riddlegame_init_session($data, $db){
 
 	$riddles = json_decode(file_get_contents("https://engine.lifeis.porn/api/riddles.php"), true);
 	if($riddles["ok"]){
-		$rnd = mt_rand(0, 65500);
+		$rnd = mt_rand(0, 65535);
 		$riddle = $riddles["data"][$rnd%count($riddles["data"])];
 	}
 	else{

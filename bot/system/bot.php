@@ -8,9 +8,12 @@ class BotModule{
 	}
 
 	public function makeExeAppeal($user_id, $varname = "appeal"){ // Создание переменной appeal с обращением к пользователю, посредством VKScript и vk_execute()
-		if(isset($this->db) && array_key_exists('user_nicknames', $this->db["bot_manager"]) && array_key_exists("id{$user_id}", $this->db["bot_manager"]["user_nicknames"])){
-			$user_nick = $this->db["bot_manager"]["user_nicknames"]["id{$user_id}"];
+		if(isset($this->db))
+			$user_nick = $this->db->getValue(array("bot_manager", "user_nicknames", "id{$user_id}"), false);
+		else
+			$user_nick = false;
 
+		if($user_nick !== false){
 			return "var user = API.users.get({'user_ids':[{$user_id}],'fields':'screen_name'})[0]; var {$varname} = '@'+user.screen_name+' ({$user_nick})'; user = null;";
 		}
 		else{
@@ -108,17 +111,20 @@ function bot_register($finput){ // Регистрация чата
 			"))->response;
 		if ($response->result == 1){
 			$gov_data = array('soc_order' => 1,
-			'president_id' => 0,
+			'president_id' => $data->object->from_id,
 			'parliament_id' => $data->object->from_id,
 			'batch_name' => "Нет данных",
 			'laws' => array(),
 			'anthem' => "nil",
 			'flag' => "nil",
 			'capital' => 'г. Мда');
-			$db["goverment"] = $gov_data;
-			$db["bot_manager"] = array(
-				'user_ranks' => array("id{$data->object->from_id}" => 0)
+			$chat_id = $data->object->peer_id - 2000000000;
+			$db->setValues(
+				db_query_set(array("chat_id"), $chat_id),
+				db_query_set(array("goverment"), $gov_data),
+				db_query_set(array("bot_manager"), array('user_ranks' => array("id{$data->object->from_id}" => 0)))
 			);
+			$db->save();
 		}	
 	} else {
 		$msg = ", данная беседа уже зарегистрирована.";
@@ -198,6 +204,7 @@ function bot_banned_kick($data, &$db){ // Кик забаненных польз
 							API.messages.send({'peer_id':{$data->object->peer_id},'message':'@id{$data->object->action->member_id} (Пользователь) был приглашен @id{$data->object->from_id} (администратором) беседы и автоматически разбанен.'});
 							");
 						BanSystem::unbanUser($db, $data->object->action->member_id);
+						$db->save();
 					}
 					else{
 						$ban_info = BanSystem::getUserBanInfo($db, $data->object->action->member_id);
@@ -313,30 +320,6 @@ function bot_test_initcmd($event){
 		$botModule = new BotModule($db);
 		$botModule->sendSimpleMessage($data->object->peer_id, ", Число внутри полезной нагрузки кнопки: {$payload->params->num}.", $data->object->from_id);
 	});
-
-	$event->addMessageCommand("!testtime", function ($finput){
-		// Инициализация базовых переменных
-		$data = $finput->data; 
-		$words = $finput->words;
-		$db = &$finput->db;
-
-		$msg = "VK Time: {$data->object->date}\nPHP Time: ".time();
-		$botModule = new BotModule($db);
-		$botModule->sendSimpleMessage($data->object->peer_id, $msg);
-	});
-
-	$event->addMessageCommand("!test-appeals", function($finput){
-		// Инициализация базовых переменных
-		$data = $finput->data; 
-		$words = $finput->words;
-		$db = &$finput->db;
-
-		$botModule = new BotModule($db);
-
-		$result = vk_execute($botModule->makeExeAppeals(array(1, 2, 558226012))." return appeals;");
-
-		$botModule->sendSimpleMessage($data->object->peer_id, $result);
-	});
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -344,10 +327,7 @@ function bot_test_initcmd($event){
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 function bot_check_reg($db){ // Проверка на регистрацию
-	if(is_null($db)){
-		return false;
-	}
-	return true;
+	return $db->isExists();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -424,13 +404,13 @@ function bot_remove_handler($finput){
 		$command = mb_strtolower($words[1]);
 	else
 		$command = "";
-	if($command == "клавиатуру")
+	if($command == "кнопки")
 		bot_keyboard_remove($data);
 	elseif($command == "ник")
 		manager_remove_nick($data, $db);
 	else{
 		$commands = array(
-			'Убрать клавиатуру - Убирает клавиатуру',
+			'Убрать кнопки - Убирает кнопки',
 			'Убрать ник - Убирает ник пользователя'
 		);
 
@@ -679,6 +659,7 @@ function bot_help($finput){
 				'!say <params> - Отправляет сообщение в текущую беседу с указанными параметрами',
 				'Выбери <v1> или <v2> или <v3>... - Случайный выбор одного из вариантов',
 				'Сколько <ед. измерения> <дополнение> - Сколько чего-то там что-то там',
+				'Кто <текст> - Выбирает случайного человека беседы',
 				'Инфа <выражение> - Вероятность выражения',
 				'Бутылочка - Мини-игра "Бутылочка"',
 				'Лайк <что-то> - Ставит лайк на что-то',

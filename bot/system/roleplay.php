@@ -78,7 +78,7 @@ function roleplay_api_act_with($db, $data, $command, $user_info = "", $params){
 		$messagesJson = json_encode(array('male' => $msgMale, 'female' => $msgFemale, 'myselfMale' => $msgMyselfMale, 'myselfFemale' => $msgMyselfFemale, 'sexErrorMsg' => $sexErrorMsg), JSON_UNESCAPED_UNICODE);
 		$messagesJson = vk_parse_vars($messagesJson, array("FROM_USERNAME", "MEMBER_USERNAME", "MEMBER_USERNAME_GEN", "MEMBER_USERNAME_DAT", "MEMBER_USERNAME_ACC", "MEMBER_USERNAME_INS", "MEMBER_USERNAME_ABL", "appeal"));
 
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		$res = json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			var users = API.users.get({'user_ids':[{$member_id},{$data->object->from_id}],'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});
 			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id}});
 			var from_user = users[1];
@@ -93,7 +93,8 @@ function roleplay_api_act_with($db, $data, $command, $user_info = "", $params){
 				i = i + 1;
 			}
 			if(!isContinue){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
+				API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
+				return {'result':false};
 			}
 
 			var FROM_USERNAME = '@'+from_user.screen_name+' ('+from_user.first_name.substr(0, 2)+'. '+from_user.last_name+')';
@@ -109,7 +110,8 @@ function roleplay_api_act_with($db, $data, $command, $user_info = "", $params){
 
 			if({$sexOnly} != 0){
 				if(member.sex != {$sexOnly}){
-					return API.messages.send({'peer_id':{$data->object->peer_id},'message':messages.sexErrorMsg});
+					API.messages.send({'peer_id':{$data->object->peer_id},'message':messages.sexErrorMsg});
+					return {'result':false};
 				}
 			}
 
@@ -129,28 +131,31 @@ function roleplay_api_act_with($db, $data, $command, $user_info = "", $params){
 				};
 			};
 
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
+			API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
+			return {'result':true,'member_id':member.id};
+			"))->response;
+		return (object) $res;
 
 	} else {
 		if(isset($msgToAll) && array_search(mb_strtolower($user_info), array('всем', 'всех', 'у всех', 'со всеми', 'на всех')) !== false){ // Выполнение действия над всеми
 			$msgToAllMale = vk_parse_var($msgToAll["male"], "FROM_USERNAME");
 			$msgToAllFemale = vk_parse_var($msgToAll["female"], "FROM_USERNAME");
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			var from_user = API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
+			$res = json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+				var from_user = API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
 
-			var FROM_USERNAME = '@'+from_user.screen_name+' ('+from_user.first_name.substr(0, 2)+'. '+from_user.last_name+')';
+				var FROM_USERNAME = '@'+from_user.screen_name+' ('+from_user.first_name.substr(0, 2)+'. '+from_user.last_name+')';
 
-			var msg = '';
-			if(from_user.sex == 1){
-				msg = \"{$msgToAllFemale}\";
-			} else {
-				msg = \"{$msgToAllMale}\";
-			};
+				var msg = '';
+				if(from_user.sex == 1){
+					msg = \"{$msgToAllFemale}\";
+				} else {
+					msg = \"{$msgToAllMale}\";
+				};
 
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
-			return;
+				API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
+				return {'result':true,'member_id':0};
+			"))->response;
+			return (object) $res;
 		}
 
 		$messagesJson = json_encode(array('male' => $msgMale, 'female' => $msgFemale, 'myselfMale' => $msgMyselfMale, 'myselfFemale' => $msgMyselfFemale, 'sexErrorMsg' => $sexErrorMsg), JSON_UNESCAPED_UNICODE);
@@ -170,7 +175,7 @@ function roleplay_api_act_with($db, $data, $command, $user_info = "", $params){
 		}
 		else
 			$word2 = "";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		$res = json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});
 			var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
 			var word1 = '{$word1}';
@@ -193,7 +198,8 @@ function roleplay_api_act_with($db, $data, $command, $user_info = "", $params){
 				i = i + 1;
 			};
 			if(member_index == -1){
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
+				API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
+				return {'result':false};
 			}
 
 			var member = members.profiles[member_index];
@@ -211,7 +217,8 @@ function roleplay_api_act_with($db, $data, $command, $user_info = "", $params){
 
 			if({$sexOnly} != 0){
 				if(member.sex != {$sexOnly}){
-					return API.messages.send({'peer_id':{$data->object->peer_id},'message':messages.sexErrorMsg});
+					API.messages.send({'peer_id':{$data->object->peer_id},'message':messages.sexErrorMsg});
+					return {'result':false};
 				}
 			}
 
@@ -231,8 +238,10 @@ function roleplay_api_act_with($db, $data, $command, $user_info = "", $params){
 				};
 			};
 
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-			");
+			API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
+			return {'result':true,'member_id':member.id};
+			"))->response;
+		return (object) $res;
 	}
 }
 
