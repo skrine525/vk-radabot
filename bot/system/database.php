@@ -176,7 +176,7 @@ class Database{
 					return false;
 			}
 			else{
-				if(gettype($requiredValue[$key]) == "array" && array_key_exists($key, $requiredValue))
+				if(array_key_exists($key, $requiredValue) && gettype($requiredValue[$key]) == "array")
 					$requiredValue = &$requiredValue[$key];
 				else
 					return false;

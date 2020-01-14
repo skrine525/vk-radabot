@@ -249,22 +249,22 @@ function roleplay_api_act_with($db, $data, $command, $user_info = "", $params){
 /// CMD init
 
 function roleplay_cmdinit(&$event){
-	$event->addMessageCommand("!me", 'roleplay_me');
-	$event->addMessageCommand("!do", 'roleplay_do');
-	$event->addMessageCommand("!try", 'roleplay_try');
-	$event->addMessageCommand("!s", 'roleplay_shout');
-	$event->addMessageCommand("секс", 'roleplay_sex');
-	$event->addMessageCommand("обнять", 'roleplay_hug');
-	$event->addMessageCommand("уебать", 'roleplay_bump');
-	$event->addMessageCommand("обоссать", 'roleplay_pissof');
-	$event->addMessageCommand("поцеловать", 'roleplay_kiss');
-	$event->addMessageCommand("харкнуть", 'roleplay_hark');
-	$event->addMessageCommand("отсосать", 'roleplay_suck');
-	$event->addMessageCommand("отлизать", 'roleplay_lick');
-	$event->addMessageCommand("послать", 'roleplay_gofuck');
-	$event->addMessageCommand("кастрировать", 'roleplay_castrate');
-	$event->addMessageCommand("посадить", "roleplay_sit");
-	$event->addMessageCommand("пожать", "roleplay_shake");
+	$event->addTextCommand("!me", 'roleplay_me');
+	$event->addTextCommand("!do", 'roleplay_do');
+	$event->addTextCommand("!try", 'roleplay_try');
+	$event->addTextCommand("!s", 'roleplay_shout');
+	$event->addTextCommand("секс", 'roleplay_sex');
+	$event->addTextCommand("обнять", 'roleplay_hug');
+	$event->addTextCommand("уебать", 'roleplay_bump');
+	$event->addTextCommand("обоссать", 'roleplay_pissof');
+	$event->addTextCommand("поцеловать", 'roleplay_kiss');
+	$event->addTextCommand("харкнуть", 'roleplay_hark');
+	$event->addTextCommand("отсосать", 'roleplay_suck');
+	$event->addTextCommand("отлизать", 'roleplay_lick');
+	$event->addTextCommand("послать", 'roleplay_gofuck');
+	$event->addTextCommand("кастрировать", 'roleplay_castrate');
+	$event->addTextCommand("посадить", "roleplay_sit");
+	$event->addTextCommand("пожать", "roleplay_shake");
 }
 
 ///////////////////////////////////////////////////////////

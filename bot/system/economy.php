@@ -58,7 +58,7 @@ namespace Economy{
 		public function changeMoney($value){
 			$money = $this->getMoney();
 			if($money + $value >= 0){
-				$value = round($value, 2);
+				$value = round($value, 0);
 				$money = $money + $value;
 				$this->setMeta("money", $money);
 				return true;
@@ -219,21 +219,31 @@ namespace Economy{
 
 	class Item{
 		public static function getItemName($type, $id){
-			EconomyFiles::readDataFiles();
-			$items = EconomyFiles::getEconomyFileData("items");
-			if(array_key_exists($type, $items) && array_key_exists($id, $items[$type])){
-				return $items[$type][$id]["name"];
-			}
-			return false;
+			$item = self::getItemInfo($type, $id);
+			return $item->name;
 		}
 
 		public static function isHidden($type, $id){
+			$item = self::getItemInfo($type, $id);
+			return $item->hidden;
+		}
+
+		public static function getItemInfo($type, $id){
 			EconomyFiles::readDataFiles();
 			$items = EconomyFiles::getEconomyFileData("items");
 			if(array_key_exists($type, $items) && array_key_exists($id, $items[$type])){
-				return $items[$type][$id]["hidden"];
+				return (object) $items[$type][$id];
 			}
-			return false;
+			else{
+				$item = array(
+					'name' => 'Неизвестный предмет',
+					'price' => 0,
+					'can_sell' => true,
+					'can_buy' => false,
+					'hidden' => true
+				);
+				return (object) $item;
+			}
 		}
 
 		public static function getShopSectionsArray(){
@@ -253,6 +263,12 @@ namespace Economy{
 		public static function getItemObjectFromString($str){
 			if(gettype($str) == "string"){
 				$a = explode(":", $str);
+				if(!array_key_exists(0, $a))
+					$a[0] = null;
+				if(!array_key_exists(1, $a))
+					$a[1] = null;
+				if(!array_key_exists(2, $a))
+					$a[2] = null;
 				if(count($a) == 3){
 					return (object) array(
 						'type' => $a[0],
@@ -460,15 +476,8 @@ namespace Economy{
 		/// Статические методы
 
 		function getFormatedMoney($money){
-			$a = $money - floor($money);
-			if($a != 0) {
-				if(($a*100 % 10) == 0)
-			    	return number_format($money, 1, '.', ',');
-			    else
-			    	return number_format($money, 2, '.', ',');
-			} else {
-			    return number_format($money, 0, '.', ',');
-			}
+			$money = round($money, 2);
+			return number_format($money, 0, '.', ',');
 		}
 	}
 }
@@ -476,28 +485,29 @@ namespace Economy{
 namespace{
 
 	function economy_initcmd(&$event){ // Инициализация тексовых комманд модуля экономики
-		$event->addMessageCommand("!счет", "economy_show_user_stats");
-		$event->addMessageCommand("!счёт", "economy_show_user_stats");
-		$event->addMessageCommand("!работать", "economy_work");
-		$event->addMessageCommand("!профессии", "economy_joblist");
-		$event->addMessageCommand("!профессия", "economy_jobinfo");
-		$event->addMessageCommand("!купить", "economy_buy");
-		$event->addMessageCommand("!продать", "economy_sell");
-		$event->addMessageCommand("!имущество", "economy_myprops");
-		$event->addMessageCommand("!награды", "economy_mypawards");
-		$event->addMessageCommand("!банк", "economy_bank");
-		$event->addMessageCommand("!образование", "economy_education");
-		$event->addMessageCommand("!forbes", "economy_most_rich_users");
-		$event->addMessageCommand("!бизнес", "economy_company");
+		$event->addTextCommand("!счет", "economy_show_user_stats");
+		$event->addTextCommand("!счёт", "economy_show_user_stats");
+		$event->addTextCommand("!работать", "economy_work");
+		$event->addTextCommand("!профессии", "economy_joblist");
+		$event->addTextCommand("!профессия", "economy_jobinfo");
+		$event->addTextCommand("!купить", "economy_buy");
+		$event->addTextCommand("!продать", "economy_sell");
+		$event->addTextCommand("!имущество", "economy_myprops");
+		$event->addTextCommand("!награды", "economy_mypawards");
+		$event->addTextCommand("!банк", "economy_bank");
+		$event->addTextCommand("!образование", "economy_education");
+		$event->addTextCommand("!forbes", "economy_most_rich_users");
+		$event->addTextCommand("!бизнес", "economy_company");
+		$event->addTextCommand("подарить", "economy_give");
 
 		$event->addKeyboardCommand("economy_contract", "economy_keyboard_contract_handler");
 		$event->addKeyboardCommand("economy_getjob", "economy_keyboard_getjob");
 		$event->addKeyboardCommand("economy_improve", "economy_keyboard_improve_handler");
 
 		// Test
-		//$event->addMessageCommand("!invlist", "economy_test1");
-		//$event->addMessageCommand("!invadd", "economy_test2");
-		//$event->addMessageCommand("!invtype", "economy_test3");
+		//$event->addTextCommand("!invlist", "economy_test1");
+		//$event->addTextCommand("!invadd", "economy_test2");
+		//$event->addTextCommand("!invtype", "economy_test3");
 	}
 
 	function economy_show_user_stats($finput){
@@ -522,9 +532,18 @@ namespace{
 		else
 			$other_user = true;
 
-		if($other_user && !$economy->checkUser($member_id)){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", пользователь еще не зарегистрирован.", $data->object->from_id);
-			return;
+		if(!$economy->checkUser($member_id)){
+			if(!$other_user){
+				$db->setValue(array("economy", "users", "id{$member_id}"), array(
+					'meta' => array(),
+					'items' => array()
+				));
+				$db->save();
+			}
+			else{
+				$botModule->sendSimpleMessage($data->object->peer_id, ", пользователь еще не зарегистрирован.", $data->object->from_id);
+				return;
+			}
 		}
 
 		$user_economy = $economy->getUser($member_id);
@@ -590,9 +609,30 @@ namespace{
 		else
 			$pre_msg = "Ваш счет";
 
-		$msg = ", {$pre_msg}:\n💰Деньги: \${$money}\n\n👥Профессия: {$job_name}\n📚Образование: {$edu_text}\n\n🚗Автомобиль: {$car_text}\n🏡Недвижимость: {$immovables_text}\n📱Телефон: {$phone_text}";
+		$user_enterprises = $user_economy->getEnterprises();
+		if(count($user_enterprises) > 0){
+			$enterprise_info = "\n🏭Предприятия:";
+			$enterpriseSystem = $economy->initEnterpriseSystem();
+			$number = 1;
+			foreach ($user_enterprises as $enterprise_id) {
+				$enterprise = $enterpriseSystem->getEnterprise($enterprise_id);
+				$emoji = bot_int_to_emoji_str($number);
+				$number++;
+				$enterprise_info .= "\n&#12288;{$emoji} {$enterprise["name"]}";
+			}
+		}
+		else
+			$enterprise_info = "";
 
-		$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+		$msg = ", {$pre_msg}:\n💰Деньги: \${$money}\n\n👥Профессия: {$job_name}\n📚Образование: {$edu_text}\n\n🚗Транспорт: {$car_text}\n🏡Недвижимость: {$immovables_text}\n📱Телефон: {$phone_text}{$enterprise_info}";
+
+		$keyboard = vk_keyboard_inline(array(
+			array(
+				vk_text_button("Работать", array("command" => "bot_run_text_command", "text_command" => "!работать"), "positive")
+			)
+		));
+
+		$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
 	}
 
 	function economy_work($finput){
@@ -611,7 +651,7 @@ namespace{
 		if(array_key_exists(1, $words)){
 			$job_index = intval(bot_get_word_argv($words, 1, 0));
 			if($job_index <= 0){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", Номер профессии не может быть меньше или равен 0.", $data->object->from_id);
+				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите номер профессии.", $data->object->from_id);
 				return;
 			}
 			$job_id = Economy\Job::getIDByIndex($job_index-1);
@@ -648,8 +688,13 @@ namespace{
 				$user_economy->setJob($job_id);
 				$db->save();
 				$job_name = Economy\Job::getNameByID($job_id);
-				$botModule->sendSimpleMessage($data->object->peer_id, ", Вы устроились на работу {$job_name}.", $data->object->from_id);
-			}
+				$keyboard = vk_keyboard_inline(array(
+					array(
+						vk_text_button("Работать", array("command" => "bot_run_text_command", "text_command" => "!работать"), "positive")
+					)
+				));
+				$botModule->sendSimpleMessage($data->object->peer_id, ", Вы устроились на работу {$job_name}.", $data->object->from_id, array('keyboard' => $keyboard));
+				}
 			else{
 				$botModule->sendSimpleMessage($data->object->peer_id, ", Такой профессии не существует.", $data->object->from_id);
 			}
@@ -722,7 +767,12 @@ namespace{
 				}
 			}
 			else{
-				$botModule->sendSimpleMessage($data->object->peer_id, ", вы нигде не работаете. !работать <профессия> - устройство на работу, !профессии - список профессий.", $data->object->from_id);
+				$keyboard = vk_keyboard_inline(array(
+					array(
+						vk_text_button("Профессии", array("command" => "bot_run_text_command", "text_command" => "!профессии"), "primary")
+					)
+				));
+				$botModule->sendSimpleMessage($data->object->peer_id, ", вы нигде не работаете. !работать <профессия> - устройство на работу, !профессии - список профессий.", $data->object->from_id, array("keyboard" => $keyboard));
 			}
 		}
 	}
@@ -774,7 +824,7 @@ namespace{
 					$left_time_text = "{$minutes} мин. ";
 				$left_time_text = $left_time_text."{$seconds} сек.";
 				$item_dependencies = $jobs[$job_id]["item_dependencies"];
-				$item_dependencies_text = "Ничего";
+				$item_dependencies_text = "";
 				if(count($item_dependencies) > 0){
 					$economy = new Economy\Main($db);
 					$user_economy = $economy->getUser($data->object->from_id);
@@ -782,21 +832,48 @@ namespace{
 					$status_char = "⛔";
 					if($user_economy->checkItem($item->type, $item->id) !== false)
 						$status_char = "✅";
-					$item_dependencies_text = "{$status_char}".Economy\Item::getItemName($item->type, $item->id).'';
-					for($i = 1; $i < count($item_dependencies); $i++){
+					for($i = 0; $i < count($item_dependencies); $i++){
 						$item = Economy\Item::getItemObjectFromString($item_dependencies[$i]);
 						$status_char = "⛔";
 						if($user_economy->checkItem($item->type, $item->id) !== false)
 							$status_char = "✅";
-						$item_dependencies_text = $item_dependencies_text.", {$status_char}".Economy\Item::getItemName($item->type, $item->id);
+						$item_dependencies_text .= "\n&#12288;{$status_char}".Economy\Item::getItemName($item->type, $item->id);
 					}
 				}
+				if(!isset($item_dependencies_text))
+					$item_dependencies_text = "Ничего";
 				$salary = Economy\Main::getFormatedMoney($jobs[$job_id]["salary"]);
 				$msg = ",\n✏Название: {$jobs[$job_id]["name"]}\n💰Зарплата: \${$salary}\n📅Время отдыха: {$left_time_text}\n💼Необходимо: {$item_dependencies_text}";
+				$jobs_count = count($jobs);
+				if($jobs_count > 1){
+					if($job_index <= 1){
+						$next_index = $job_index + 1;
+						$controlButtons = array(
+							vk_text_button(bot_int_to_emoji_str($next_index)." ➡", array('command' => "bot_run_text_command", 'text_command' => "!профессия {$next_index}"), "secondary")
+						);
+					}
+					elseif($job_index >= $jobs_count){
+						$previous_index = $job_index - 1;
+						$controlButtons = array(
+							vk_text_button(bot_int_to_emoji_str($previous_index)." ⬅", array('command' => "bot_run_text_command", 'text_command' => "!профессия {$previous_index}"), "secondary")
+						);
+					}
+					else{
+						$previous_index = $job_index - 1;
+						$next_index = $job_index + 1;
+						$controlButtons = array(
+							vk_text_button(bot_int_to_emoji_str($previous_index)." ⬅", array('command' => "bot_run_text_command", 'text_command' => "!профессия {$previous_index}"), "secondary"),
+							vk_text_button(bot_int_to_emoji_str($next_index)." ➡", array('command' => "bot_run_text_command", 'text_command' => "!профессия {$next_index}"), "secondary")
+						);
+					}
+				}
+				else
+					$controlButtons = array();
 				$keyboard = vk_keyboard_inline(array(
 					array(
 						vk_text_button("Устроиться", array('command' => "economy_getjob", 'params' => array('job_id' => $job_id)), "positive")
-					)
+					),
+					$controlButtons
 				));
 				$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id, array('keyboard' => $keyboard));
 			}
@@ -856,7 +933,12 @@ namespace{
 			}
 			$user_economy->setJob($job_id);
 			$job_name = Economy\Job::getNameByID($job_id);
-			$botModule->sendSimpleMessage($data->object->peer_id, ", Вы устроились на работу {$job_name}.", $data->object->from_id);
+			$keyboard = vk_keyboard_inline(array(
+				array(
+					vk_text_button("Работать", array("command" => "bot_run_text_command", "text_command" => "!работать"), "positive")
+				)
+			));
+			$botModule->sendSimpleMessage($data->object->peer_id, ", Вы устроились на работу {$job_name}.", $data->object->from_id, array('keyboard' => $keyboard));
 			$db->save();
 		}
 		else{
@@ -1018,25 +1100,22 @@ namespace{
 				return;
 			}
 
-			Economy\EconomyFiles::readDataFiles();
-			$all_items = Economy\EconomyFiles::getEconomyFileData("items");
+			$selling_item_info = Economy\Item::getItemInfo($items[$index]->type, $items[$index]->id);
 
-			$selling_item_info = $all_items[$items[$index]->type][$items[$index]->id];
-
-			if(!$selling_item_info["can_sell"]){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Собственность \"{$selling_item_info["name"]}\" невозможно продать.", $data->object->from_id);
+			if(!$selling_item_info->can_sell){
+				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Собственность \"{$selling_item_info->name}\" невозможно продать.", $data->object->from_id);
 				return;
 			}
 
 			if($user_economy->changeItem($items[$index]->type, $items[$index]->id, -$argv2)){
-				$value = $selling_item_info["price"] * 0.7 * $argv2;
+				$value = $selling_item_info->price * 0.7 * $argv2;
 				$user_economy->changeMoney($value); // Добавляем к счету пользователя 70% от начальной стоимости товара
 				$db->save();
 				$value = Economy\Main::getFormatedMoney($value);
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Собственность \"{$selling_item_info["name"]}\" продана в количестве {$argv2} за \${$value}.", $data->object->from_id);
+				$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Собственность \"{$selling_item_info->name}\" продана в количестве {$argv2} за \${$value}.", $data->object->from_id);
 			}
 			else{
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас в наличии только {$items[$index]->count} {$selling_item_info["name"]}.", $data->object->from_id);
+				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас в наличии только {$items[$index]->count} {$selling_item_info->name}.", $data->object->from_id);
 			}
 		}
 		else{
@@ -1130,50 +1209,76 @@ namespace{
 				$items[] = $user_items[$i];
 		}
 
-		if(count($items) > 0){
-			$list_number_from_word = intval(bot_get_word_argv($words, 1, 1));
+		$items_count = count($items);
+		if($items_count > 0){
+			$argv1 = bot_get_word_argv($words, 1, 1);
+			if(is_numeric($argv1)){
+				$list_number_from_word = intval($argv1);
 
-			/////////////////////////////////////////////////////
-			////////////////////////////////////////////////////
-			$list_in = &$items; // Входной список
-			$list_out = array(); // Выходной список
+				/////////////////////////////////////////////////////
+				////////////////////////////////////////////////////
+				$list_in = &$items; // Входной список
+				$list_out = array(); // Выходной список
 
-			$list_number = $list_number_from_word; // Номер текущего списка
-			$list_size = 10; // Размер списка
-			////////////////////////////////////////////////////
-			if(count($list_in) % $list_size == 0)
-				$list_max_number = intdiv(count($list_in), $list_size);
-			else
-				$list_max_number = intdiv(count($list_in), $list_size)+1;
-			$list_min_index = ($list_size*$list_number)-$list_size;
-			if($list_size*$list_number >= count($list_in))	
-				$list_max_index = count($list_in)-1;
-			else
-				$list_max_index = $list_size*$list_number-1;
-			if($list_number <= $list_max_number && $list_number > 0){
-				// Обработчик списка
-				for($i = $list_min_index; $i <= $list_max_index; $i++){
-					$list_out[] = $list_in[$i];
+				$list_number = $list_number_from_word; // Номер текущего списка
+				$list_size = 10; // Размер списка
+				////////////////////////////////////////////////////
+				if(count($list_in) % $list_size == 0)
+					$list_max_number = intdiv(count($list_in), $list_size);
+				else
+					$list_max_number = intdiv(count($list_in), $list_size)+1;
+				$list_min_index = ($list_size*$list_number)-$list_size;
+				if($list_size*$list_number >= count($list_in))	
+					$list_max_index = count($list_in)-1;
+				else
+					$list_max_index = $list_size*$list_number-1;
+				if($list_number <= $list_max_number && $list_number > 0){
+					// Обработчик списка
+					for($i = $list_min_index; $i <= $list_max_index; $i++){
+						$list_out[] = $list_in[$i];
+					}
 				}
-			}
-			else{
-				// Сообщение об ошибке
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
-				return;
-			}
-			////////////////////////////////////////////////////
-			////////////////////////////////////////////////////
+				else{
+					// Сообщение об ошибке
+					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
+					return;
+				}
+				////////////////////////////////////////////////////
+				////////////////////////////////////////////////////
 
-			$msg = ", Ваше имущество [$list_number/$list_max_number]:";
-			for($i = 0; $i < count($list_out); $i++){
-				$name = Economy\Item::getItemName($list_out[$i]->type, $list_out[$i]->id);
-				$index = ($i + 1) + 10 * ($list_number-1);
-				$msg = $msg . "\n✅ {$index}. " . $name . " — {$list_out[$i]->count} шт.";
+				$msg = ", Ваше имущество [$list_number/$list_max_number]:";
+				for($i = 0; $i < count($list_out); $i++){
+					$name = Economy\Item::getItemName($list_out[$i]->type, $list_out[$i]->id);
+					$index = ($i + 1) + 10 * ($list_number-1);
+					$msg = $msg . "\n✅ {$index}. " . $name . " — {$list_out[$i]->count} шт.";
+				}
+				$keyboard = vk_keyboard_inline(array(array(vk_text_button("Купить", array("command" => "bot_run_text_command", "text_command" => "!купить"), "positive")),array(vk_text_button("Продать", array("command" => "bot_run_text_command", "text_command" => "!продать"), "negative")),array(vk_text_button("Подарить", array("command" => "bot_run_text_command", "text_command" => "Подарить"), "primary"))));
+				$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
 			}
-			$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+			elseif(mb_strtolower($argv1) == "инфа"){
+				$argv2 = intval(bot_get_word_argv($words, 2, 0));
+				if($argv2 <= 0){
+					$botModule->sendSimpleMessage($data->object->peer_id, ", используйте !имущество инфа <номер>.", $data->object->from_id);
+					return;
+				}
+				if($argv2 > $items_count){
+					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет имущества под номером {$argv2}.", $data->object->from_id);
+					return;
+				}
+				$index = $argv2-1;
+				$item = Economy\Item::getItemInfo($items[$index]->type, $items[$index]->id);
+
+				$buying_price = Economy\Main::getFormatedMoney($item->price);
+				$selling_price = Economy\Main::getFormatedMoney($item->price*0.7);
+				$can_buy = ($item->can_buy ? "Да ✅" : "Нет ⛔");
+				$can_sell = ($item->can_sell ? "Да ✅" : "Нет ⛔");
+				$msg = ", информация о имуществе:\n📝Название: {$item->name}\n🛒Можно купить: {$can_buy}\n💳Можно продать: {$can_sell}\n💰Цена: \${$buying_price}\n📈Цена продажи: \${$selling_price}";
+				$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
+			}
 		}
 		else{
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет имущества.", $data->object->from_id);
+			$keyboard = vk_keyboard_inline(array(array(vk_text_button("Купить", array("command" => "bot_run_text_command", "text_command" => "!купить"), "positive")),array(vk_text_button("Продать", array("command" => "bot_run_text_command", "text_command" => "!продать"), "negative")),array(vk_text_button("Подарить", array("command" => "bot_run_text_command", "text_command" => "Подарить"), "primary"))));
+			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет имущества.", $data->object->from_id, array("keyboard" => $keyboard));
 		}
 	}
 
@@ -1192,7 +1297,7 @@ namespace{
 		$argv1 = bot_get_word_argv($words, 1, "");
 
 		if($argv1 == "перевод"){
-			$argv2 = floatval(bot_get_word_argv($words, 2, 0));
+			$argv2 = intval(bot_get_word_argv($words, 2, 0));
 			$argv3 = bot_get_word_argv($words, 3, "");
 
 			if($argv2 <= 0){
@@ -1315,8 +1420,17 @@ namespace{
 		$command = mb_strtolower(bot_get_word_argv($words, 1, ""));
 
 		if($command == "купить"){
-			$type_index = bot_get_word_argv($words, 2, 0);
 			Economy\EconomyFiles::readDataFiles();
+			if($user_economy->checkItem("edu", "level_4") === false){
+				$edu_name = Economy\Item::getItemName("edu", "level_4");
+				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы не можете купить бизнес. У вас должно быть {$edu_name}.", $data->object->from_id);
+				return;
+			}
+			if(count($user_economy->getEnterprises()) >= 3){
+				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔вы уже имеете максимальное количество бизнесов (3).", $data->object->from_id);
+				return;
+			}
+			$type_index = bot_get_word_argv($words, 2, 0);
 			$enterprise_types = Economy\EconomyFiles::getEconomyFileData("enterprise_types");
 			$types = array_keys($enterprise_types);
 				if($type_index > 0 && count($types) >= $type_index){
@@ -1341,7 +1455,8 @@ namespace{
 					$msg = ", доступные типы бизнесов: ";
 					for($i = 0; $i < count($types); $i++){
 						$index = $i + 1;
-						$msg .= "\n{$index}. {$enterprise_types[$types[$i]]["name"]} — \${$enterprise_types[$types[$i]]["price"]}";
+						$price = Economy\Main::getFormatedMoney($enterprise_types[$types[$i]]["price"]);
+						$msg .= "\n{$index}. {$enterprise_types[$types[$i]]["name"]} — \${$price}";
 					}
 					$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
 				}
@@ -1351,7 +1466,7 @@ namespace{
 		}
 		elseif($command == "выбрать"){
 			$argv = bot_get_word_argv($words, 2, "");
-			if($argv == "*"){
+			if($argv == "0"){
 				$user_economy->deleteMeta("selected_enterprise_index");
 				$db->save();
 				$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Информация о выбранном бизнесе очищена.", $data->object->from_id);
@@ -1364,12 +1479,27 @@ namespace{
 					$query[] = db_query_get(array("economy", "enterprises", $user_enterprises[$i]));
 				}
 				$enterprises = call_user_func_array(array($db, "getValues"), $query);
-				$msg = ", список ваших бизнесов:";
+				$msg = ", Используйте:\n• !бизнес выбрать <номер> - Выбрать бизнес\n• !бизнес выбрать 0 - Убрать выбранный бизнес\n\nСписок ваших бизнесов:";
+				$selected_enterprise_index = $user_economy->getMeta("selected_enterprise_index", 0) - 1;
+				$enterprise_buttons = array();
 				for($i = 0; $i < count($enterprises); $i++){
 					$j = $i + 1;
-					$msg .= "\n{$j}. ".$enterprises[$i]["name"];
+					if($i == $selected_enterprise_index){
+						$msg .= "\n➡{$j}. {$enterprises[$i]["name"]}";
+						$enterprise_buttons[] = vk_text_button($j, array("command" => "bot_run_text_command", "text_command" => "!бизнес выбрать {$j}"), "primary");
+					}
+					else{
+						$msg .= "\n{$j}. {$enterprises[$i]["name"]}";
+						$enterprise_buttons[] = vk_text_button($j, array("command" => "bot_run_text_command", "text_command" => "!бизнес выбрать {$j}"), "secondary");
+					}
 				}
-				$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+				$keyboard = vk_keyboard_inline(array(
+					$enterprise_buttons,
+					array(
+						vk_text_button("Убрать", array("command" => "bot_run_text_command", "text_command" => "!бизнес выбрать 0"), "negative")
+					)
+				));
+				$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
 			}
 			elseif(is_numeric($argv)){
 				$index = intval($argv);
@@ -1386,7 +1516,7 @@ namespace{
 				}
 			}
 		}
-		elseif($command == "информация"){
+		elseif($command == "инфа"){
 			$index = $user_economy->getMeta("selected_enterprise_index", 0);
 			$user_enterprises = $user_economy->getEnterprises();
 			$enterpriseSystem = $economy->initEnterpriseSystem();
@@ -1418,7 +1548,7 @@ namespace{
 				$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$index-1]);
 
 				$command = mb_strtolower(bot_get_word_argv($words, 2, ""));
-				$value = round(abs(floatval(bot_get_word_argv($words, 3, 0))), 2);
+				$value = round(abs(intval(bot_get_word_argv($words, 3, 0))), 2);
 
 				if($command == "пополнить"){
 					if($value == 0){
@@ -1455,10 +1585,22 @@ namespace{
 					}
 				}
 				else{
+					$keyboard = vk_keyboard_inline(array(
+						array(
+							vk_text_button("Внести 1К", array('command' => 'bot_run_text_command', 'text_command' => "!бизнес бюджет пополнить 1000"), "primary"),
+							vk_text_button("Внести 10К", array('command' => 'bot_run_text_command', 'text_command' => "!бизнес бюджет пополнить 10000"), "primary"),
+							vk_text_button("Внести 100К", array('command' => 'bot_run_text_command', 'text_command' => "!бизнес бюджет пополнить 100000"), "primary")
+						),
+						array(
+							vk_text_button("Снять 1К", array('command' => 'bot_run_text_command', 'text_command' => "!бизнес бюджет снять 1000"), "primary"),
+							vk_text_button("Снять 10К", array('command' => 'bot_run_text_command', 'text_command' => "!бизнес бюджет снять 10000"), "primary"),
+							vk_text_button("Снять 100К", array('command' => 'bot_run_text_command', 'text_command' => "!бизнес бюджет снять 100000"), "primary")
+						)
+					));
 					$botModule->sendCommandListFromArray($data, ", используйте:", array(
 						"!бизнес бюджет пополнить <сумма> - Попоплнение бюджета",
 						"!бизнес бюджет снять <сумма> - Снятие средств с бюджета"
-					));
+					), $keyboard);
 				}
 			}
 			else{
@@ -1479,6 +1621,10 @@ namespace{
 				$name = mb_substr($data->object->text, 17);
 				if($name == ""){
 					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите название.", $data->object->from_id);
+					return;
+				}
+				if(mb_strlen($name) > 20){
+					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Название не может быть больше 20 символов.", $data->object->from_id);
 					return;
 				}
 				$enterprise["name"] = $name;
@@ -1526,7 +1672,7 @@ namespace{
 					$cost = Economy\Main::getFormatedMoney($contract["cost"]);
 					$income = Economy\Main::getFormatedMoney($contract["income"]);
 					$net_income = Economy\Main::getFormatedMoney($contract["income"] - $contract["cost"]);
-					$msg = ", информация о контракте:\n📝Название: {$contract["name"]}\n📅Продолжительность: {$duration}\n📉Стоимость: \${$cost}\n📈Доход: \${$income}\n💰Чистый доход: \${$net_income}\n👥Необходимо рабочих: {$contract["workers_required"]}";
+					$msg = ", информация о контракте:\n📝Название: {$contract["name"]}\n📅Продолжительность: {$duration}\n📉Стоимость: \${$cost}\n📈Доход: \${$income}\n💰Чистый доход: \${$net_income}\n📊Получаемый опыт: {$contract["exp"]}\n👥Необходимо рабочих: {$contract["workers_required"]}";
 
 					$contracts_count = count($contracts);
 					if($contracts_count > 1){
@@ -1569,21 +1715,29 @@ namespace{
 					$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
 				}
 				elseif($argv == 0){
+					$elements = array(array());
+					$current_element_index = 0;
 					$msg = ", список контрактов для вашего бизнеса:";
 					for($i = 0; $i < count($contracts); $i++){
 						$j = $i + 1;
 						$contract = $contracts[$i];
 						$cps = round(($contract["income"] - $contract["cost"]) / ($contract["duration"] / 60), 2);
 						$msg .= "\n{$j}. ".$contract["name"]."  — \${$cps}/мин";
+						if(count($elements[$current_element_index]) >= 5){
+							$elements[] = array();
+							$current_element_index++;
+						}
+						$elements[$current_element_index][] = vk_text_button(bot_int_to_emoji_str($j), array('command' => "economy_contract", 'params' => array("action" => 4, "enterprise_id" => $enterprise["id"], "contract_id" => $i, "user_id" => $data->object->from_id)), "secondary");
 					}
-					$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+					$keyboard = vk_keyboard_inline($elements);
+					$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id, array('keyboard' => $keyboard));
 				}
 				else{
 					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Контракта под номером {$argv} не существует.", $data->object->from_id);
 				}
 			}
 			else{
-				$botModule->sendCommandListFromArray($data, ", используйте:", array(
+				$botModule->sendCommandListFromArray($data, ", ⛔Бизнес не выбран. Используйте:", array(
 					"!бизнес выбрать - Список бизнесов",
 					"!бизнес выбрать <номер> - Выбирает управляемый бизнес"
 				));
@@ -1599,18 +1753,15 @@ namespace{
 				$contracts = $enterprise["contracts"];
 				$argv = intval(bot_get_word_argv($words, 2, 0));
 
-				if($argv > 0 && count($contracts) >= $argv){
-					$contract = $contracts[$argv];
-				}
-				else{
-					if(count($contracts) == 0){
-						$botModule->sendSimpleMessage($data->object->peer_id, ", В данный момент нет активных контрактов.", $data->object->from_id);
-						return;
-					}
-					$time = time();
-					$msg = ", активные контракты:";
-					for($i = 0; $i < count($contracts); $i++){
-						$j = $i + 1;
+				/*if(count($contracts) == 0){
+					$botModule->sendSimpleMessage($data->object->peer_id, ", В данный момент нет активных контрактов.", $data->object->from_id);
+					return;
+				}*/
+				$time = time();
+				$msg = ", активные контракты:";
+				for($i = 0; $i < count($contracts) || $i < $enterprise["max_contracts"]; $i++){
+					$j = $i + 1;
+					if(array_key_exists($i, $contracts)){
 						$contract = $contracts[$i];
 						$left_time = $contract["contract_info"]["duration"] - ($time - $contract["start_time"]);
 						$hours = intdiv($left_time, 3600);
@@ -1628,11 +1779,13 @@ namespace{
 						$left_info .= "{$seconds}";
 						$msg .= "\n{$j}. ".$contract["contract_info"]["name"]." ({$left_info})";
 					}
-					$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+					else
+						$msg .= "\n{$j}. Свободный слот";
 				}
+				$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
 			}
 			else{
-				$botModule->sendCommandListFromArray($data, ", используйте:", array(
+				$botModule->sendCommandListFromArray($data, ", ⛔Бизнес не выбран. Используйте:", array(
 					"!бизнес выбрать - Список бизнесов",
 					"!бизнес выбрать <номер> - Выбирает управляемый бизнес"
 				));
@@ -1714,7 +1867,7 @@ namespace{
 				$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Контракт \"{$contract["name"]}\" успешно подписан.", $data->object->from_id);
 			}
 			else{
-				$botModule->sendCommandListFromArray($data, ", используйте:", array(
+				$botModule->sendCommandListFromArray($data, ", ⛔Бизнес не выбран. Используйте:", array(
 					"!бизнес выбрать - Список бизнесов",
 					"!бизнес выбрать <номер> - Выбирает управляемый бизнес"
 				));
@@ -1734,10 +1887,18 @@ namespace{
 
 				$argv = intval(bot_get_word_argv($words, 2, 0));
 				if($argv <= 0 || $argv > 2){
+					$keyboard = vk_keyboard_inline(array(
+						array(
+							vk_text_button("Улучшение рабочих", array("command" => "bot_run_text_command", "text_command" => "!бизнес улучшение 1"), "primary")
+						),
+						array(
+							vk_text_button("Улучшение слотов", array("command" => "bot_run_text_command", "text_command" => "!бизнес улучшение 2"), "primary")
+						)
+					));
 					$botModule->sendCommandListFromArray($data, ", используйте:", array(
 						'!бизнес улучшение 1 - Описание улучшения рабочих',
 						'!бизнес улучшение 2 - Описание улучшения слотов'
-					));
+					), $keyboard);
 					return;
 				}
 
@@ -1782,6 +1943,19 @@ namespace{
 				else{
 					if(array_key_exists($enterprise["improvment"]["contracts"], $improvment["contracts"])){
 						$contract = $improvment["contracts"][$enterprise["improvment"]["contracts"]];
+
+						$time = $contract["duration"];
+						$hours = intdiv($time, 3600);
+						$minutes = intdiv($time-3600*$hours, 60);
+						$seconds = $time % 60;
+						$duration = "";
+						if($hours != 0)
+							$duration = "{$hours} ч. ";
+						if($minutes != 0)
+							$duration .= "{$minutes} мин. ";
+						if($seconds != 0)
+							$duration .= "{$seconds} сек.";
+
 						$improvment_text = "+1 слот контрактов";
 						$keyboard = vk_keyboard_inline(array(
 							array(
@@ -1796,11 +1970,11 @@ namespace{
 				}
 
 				$cost = Economy\Main::getFormatedMoney($contract["cost"]);
-				$msg = ", информация о улучшении:\n📝Название: {$contract["name"]}\n📅Продолжительность: {$duration}\n💰Стоимость: \${$cost}\n📊Необходимо Опыта: {$contract["exp_required"]}\n🔓Результат: {$improvment_text}";
+				$msg = ", информация о улучшении:\n📝Название: {$contract["name"]}\n📅Продолжительность: {$duration}\n💰Стоимость: \${$cost}\n📊Необходимо Опыта: {$contract["exp_required"]}\n👥Необходимо рабочих: {$contract["workers_required"]}\n🔓Результат: {$improvment_text}";
 				$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id, array('keyboard' => $keyboard));
 			}
 			else{
-				$botModule->sendCommandListFromArray($data, ", используйте:", array(
+				$botModule->sendCommandListFromArray($data, ", ⛔Бизнес не выбран. Используйте:", array(
 					"!бизнес выбрать - Список бизнесов",
 					"!бизнес выбрать <номер> - Выбирает управляемый бизнес"
 				));
@@ -1853,25 +2027,43 @@ namespace{
 				$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Контракт \"{$contract["name"]}\" успешно подписан.", $data->object->from_id);
 			}
 			else{
-				$botModule->sendCommandListFromArray($data, ", используйте:", array(
+				$botModule->sendCommandListFromArray($data, ", ⛔Бизнес не выбран. Используйте:", array(
 					"!бизнес выбрать - Список бизнесов",
 					"!бизнес выбрать <номер> - Выбирает управляемый бизнес"
 				));
 			}
 		}
 		else{
+			$keyboard = vk_keyboard_inline(array(
+				array(
+					vk_text_button("Купить", array("command" => "bot_run_text_command", "text_command" => "!бизнес купить"), "positive")
+				),
+				array(
+					vk_text_button("Выбрать", array("command" => "bot_run_text_command", "text_command" => "!бизнес выбрать"), "primary"),
+					vk_text_button("Информация", array("command" => "bot_run_text_command", "text_command" => "!бизнес инфа"), "primary")
+				),
+				array(
+					vk_text_button("Контракты", array("command" => "bot_run_text_command", "text_command" => "!бизнес контракты"), "primary"),
+					vk_text_button("Очередь", array("command" => "bot_run_text_command", "text_command" => "!бизнес очередь"), "primary"),
+				),
+				array(
+					vk_text_button("Бюджет", array("command" => "bot_run_text_command", "text_command" => "!бизнес бюджет"), "primary"),
+					vk_text_button("Улучшение", array("command" => "bot_run_text_command", "text_command" => "!бизнес улучшение"), "primary")
+				)
+			));
 			$botModule->sendCommandListFromArray($data, ", используйте:", array(
 				'!бизнес купить <тип> - Покупка бизнеса',
 				//'!бизнес продать <id> - Продажа бизнеса',
 				'!бизнес выбрать - Список бизнесов/Выбирает управляемый бизнес',
-				'!бизнес информация - Информация о выбранном бизнесе',
+				'!бизнес инфа - Информация о выбранном бизнесе',
 				'!бизнес название <название> - Изменение названия бизнеса',
 				'!бизнес бюджет - Управление бюджетом бизнеса',
-				'!бизнес контракты <id> - Управление доступными контрактами',
+				'!бизнес контракты - Список доступных контрактов',
+				'!бизнес контракты <номер> - Детальная информация по контракту',
 				'!бизнес очередь - Управление активными контрактами',
 				'!бизнес улучшение - Информация о улучшениях бизнеса',
 				'!бизнес улучшить - Улучшение бизнеса'
-			));
+			), $keyboard);
 		}
 	}
 
@@ -1934,7 +2126,7 @@ namespace{
 			$db->save();
 			$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Контракт \"{$contract["name"]}\" успешно подписан.", $data->object->from_id);
 		}
-		elseif($payload->params->action == 2 || $payload->params->action == 3){
+		elseif($payload->params->action === 2 || $payload->params->action === 3 || $payload->params->action === 4){
 			$contract_id = $payload->params->contract_id;
 			switch ($payload->params->action) {
 				case 2:
@@ -1966,7 +2158,7 @@ namespace{
 			$cost = Economy\Main::getFormatedMoney($contract["cost"]);
 			$income = Economy\Main::getFormatedMoney($contract["income"]);
 			$net_income = Economy\Main::getFormatedMoney($contract["income"] - $contract["cost"]);
-			$msg = ", информация о контракте:\n📝Название: {$contract["name"]}\n📅Продолжительность: {$duration}\n📉Стоимость: \${$cost}\n📈Доход: \${$income}\n💰Чистый доход: \${$net_income}\n👥Необходимо рабочих: {$contract["workers_required"]}";
+			$msg = ", информация о контракте:\n📝Название: {$contract["name"]}\n📅Продолжительность: {$duration}\n📉Стоимость: \${$cost}\n📈Доход: \${$income}\n💰Чистый доход: \${$net_income}\n📊Получаемый опыт: {$contract["exp"]}\n👥Необходимо рабочих: {$contract["workers_required"]}";
 
 			$contracts_count = count($contracts);
 			if($contracts_count > 1){
@@ -2167,6 +2359,105 @@ namespace{
 		}
 		else{
 			$botModule->sendSimpleMessage($data->object->peer_id, ", ни один пользователь беседы не попал в этот список.", $data->object->from_id);
+		}
+	}
+
+	function economy_give($finput){
+		// Инициализация базовых переменных
+		$data = $finput->data; 
+		$words = $finput->words;
+		$db = &$finput->db;
+
+		$botModule = new BotModule($db);
+
+		$argv1 = intval(bot_get_word_argv($words, 1, 0));
+		$argv2 = intval(bot_get_word_argv($words, 2, 0));
+		$argv3 = bot_get_word_argv($words, 3, "");
+		if(array_key_exists(0, $data->object->fwd_messages)){
+			$member_id = $data->object->fwd_messages[0]->from_id;
+		} elseif(bot_is_mention($argv3)){
+			$member_id = bot_get_id_from_mention($argv3);
+		} elseif(is_numeric($argv3)) {
+			$member_id = intval($argv3);
+		} else{
+			$keyboard = vk_keyboard_inline(array(
+				array(
+					vk_text_button("Имущество", array("command" => "bot_run_text_command", "text_command" => "!имущество"), "primary")
+				)
+			));
+			$botModule->sendCommandListFromArray($data, ", используйте: ", array(
+				'Подарить <номер> <количество> <пользователь> - Дарит пользователю подарок',
+				'!имущество - Список доступного для подарка имущества'
+			), $keyboard);
+			return;
+		}
+
+		if($argv1 > 0 && $argv2 > 0){
+			$economy = new Economy\Main($db);
+
+			if($economy->checkUser($member_id))
+				$member_economy = $economy->getUser($member_id);
+			else{
+				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У @id{$member_id} (пользователя) нет счета в беседе.", $data->object->from_id);
+				return;
+			}
+
+			$user_economy = $economy->getUser($data->object->from_id);
+			$user_items = $user_economy->getItems();
+
+			// Скрываем предметы с истиным параметром hidden
+			$items = array();
+			for($i = 0; $i < count($user_items); $i++){
+				if(!Economy\Item::isHidden($user_items[$i]->type, $user_items[$i]->id))
+					$items[] = $user_items[$i];
+			}
+
+			$index = $argv1 - 1;
+
+			if(count($items) < $argv1){
+				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Собственности под номером {$argv1} у вас нет.", $data->object->from_id);
+				return;
+			}
+
+			$giving_item_info = Economy\Item::getItemInfo($items[$index]->type, $items[$index]->id);
+
+			if(!$giving_item_info->can_sell){
+				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Собственность \"{$giving_item_info->name}\" невозможно подарить.", $data->object->from_id);
+				return;
+			}
+
+			if($user_economy->changeItem($items[$index]->type, $items[$index]->id, -$argv2)){
+				$member_economy->changeItem($items[$index]->type, $items[$index]->id, $argv2);
+				$db->save();
+				vk_execute("
+					var users = API.users.get({'user_ids':[{$member_id},{$data->object->from_id}],'fields':'first_name_dat,last_name_dat,sex'});
+					var member = users[0];
+					var from = users[1];
+
+					var msg = '';
+					if(from.sex == 1){
+						msg = '@id{$data->object->from_id} ('+from.first_name+' '+from.last_name+') подарила {$giving_item_info->name} x{$argv2} @id{$member_id} ('+member.first_name_dat+' '+member.last_name_dat+')';
+					}
+					else{
+						msg = '@id{$data->object->from_id} ('+from.first_name+' '+from.last_name+') подарил одну {$giving_item_info->name} x{$argv2} @id{$member_id} ('+member.first_name_dat+' '+member.last_name_dat+')';
+					}
+					API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
+					");
+			}
+			else{
+				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет столько {$giving_item_info->name}.", $data->object->from_id);
+			}
+		}
+		else{
+			$keyboard = vk_keyboard_inline(array(
+				array(
+					vk_text_button("Имущество", array("command" => "bot_run_text_command", "text_command" => "!имущество"), "primary")
+				)
+			));
+			$botModule->sendCommandListFromArray($data, ", используйте: ", array(
+				'Подарить <номер> <количество> <пользователь> - Дарит пользователю подарок',
+				'!имущество - Список доступного для подарка имущества'
+			), $keyboard);
 		}
 	}
 }

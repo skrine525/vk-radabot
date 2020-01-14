@@ -81,12 +81,15 @@ class BotModule{
 		$this->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет прав для использования этой команды.", $data->object->from_id);
 	}
 
-	function sendCommandListFromArray($data, $message = "", $commands = array()){ // Legacy
+	function sendCommandListFromArray($data, $message = "", $commands = array(), $keyboard = null){ // Legacy
 		$msg = $message;
 		for($i = 0; $i < count($commands); $i++){
 			$msg = $msg . "\n• " . $commands[$i];
 		}
+		if(is_null($keyboard))
 			$this->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+		else
+			$this->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
 	}
 }
 
@@ -138,14 +141,11 @@ function bot_pre_handle_function($event){
 	$db = &$event->getDB();
 	$data = $event->getData();
 
-	if($data->type != "message_new" || $data->object->peer_id < 2000000000)
+	if($data->type != "message_new" || $data->object->peer_id < 2000000000 || !bot_check_reg($db)){
 		return;
-
-	if(!bot_check_reg($db))
-		return;
+	}
 
 	if(AntiFlood::handler($data, $db)){
-		$event->saveDB();
 		$event->exit();
 		exit;
 	}
@@ -169,21 +169,6 @@ function bot_get_id_from_mention($msg){ // Получение ID из упоми
 	return null;
 }
 
-function bot_leave_autokick($data){ // Автокик пользователя, вышедшего из беседы
-	if(property_exists($data->object, 'action')){
-		if ($data->object->action->type == "chat_kick_user" && $data->object->action->member_id == $data->object->from_id){
-			$chat_id = $data->object->peer_id - 2000000000;
-			vk_execute("
-				var user = API.users.get({'user_ids':[{$data->object->from_id}]})[0];
-				var msg = 'Пока, @id{$data->object->from_id} ('+user.first_name+' '+user.last_name+'). Больше ты сюда не вернешься!';
-				API.messages.send({'peer_id':{$data->object->peer_id}, 'message':msg});
-				API.messages.removeChatUser({'chat_id':{$chat_id},'user_id':{$data->object->action->member_id}});
-				return 'ok';
-				");
-		}
-	}
-}
-
 function bot_debug($str){ // Debug function
 	$botModule = new BotModule();
 	$botModule->sendSimpleMessage(219011658, "DEBUG: {$str}");
@@ -204,7 +189,6 @@ function bot_banned_kick($data, &$db){ // Кик забаненных польз
 							API.messages.send({'peer_id':{$data->object->peer_id},'message':'@id{$data->object->action->member_id} (Пользователь) был приглашен @id{$data->object->from_id} (администратором) беседы и автоматически разбанен.'});
 							");
 						BanSystem::unbanUser($db, $data->object->action->member_id);
-						$db->save();
 					}
 					else{
 						$ban_info = BanSystem::getUserBanInfo($db, $data->object->action->member_id);
@@ -289,37 +273,7 @@ function bot_int_to_emoji_str($number){
 }
 
 function bot_test_initcmd($event){
-	$event->addMessageCommand("тестовая-клава", function($finput){
-		// Инициализация базовых переменных
-		$data = $finput->data; 
-		$words = $finput->words;
-		$db = &$finput->db;
 
-		$rnd = mt_rand(0, 256);
-		$buttons = array(
-			array(
-				vk_text_button("Кнопка", array(
-					'command' => 'test_button',
-					'params' => array(
-						'num' => $rnd
-					)
-				), "positive")
-			)
-		);
-		$keyboard = vk_keyboard_inline($buttons);
-		$botModule = new BotModule($db);
-		$botModule->sendSimpleMessage($data->object->peer_id, ", Тестовая кнопка создана. Число внутри полезной нагрузки: {$rnd}.", $data->object->from_id, array("keyboard" => $keyboard));
-	});
-
-	$event->addKeyboardCommand("test_button", function($finput){
-		// Инициализация базовых переменных
-		$data = $finput->data; 
-		$payload = $finput->payload;
-		$db = &$finput->db;
-
-		$botModule = new BotModule($db);
-		$botModule->sendSimpleMessage($data->object->peer_id, ", Число внутри полезной нагрузки кнопки: {$payload->params->num}.", $data->object->from_id);
-	});
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -554,6 +508,87 @@ function bot_call_all($finput){
 		");
 }
 
+function bot_keyboard_run_message_command_handler($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$payload = $finput->payload;
+	$db = &$finput->db;
+
+	if(property_exists($payload, "text_command") && gettype($payload->text_command) == "string"){
+		$modified_data = $data;
+		$modified_data->object->text = $payload->text_command;
+		unset($modified_data->object->payload);
+		$finput->event->runTextCommand($modified_data);
+	}
+}
+
+function bot_message_action_handler($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$db = &$finput->db;
+
+	if(property_exists($data->object, 'action')){
+		if($data->object->action->type == "chat_kick_user"){
+			if($data->object->action->member_id == $data->object->from_id){
+				$chat_id = $data->object->peer_id - 2000000000;
+				vk_execute("
+					var user = API.users.get({'user_ids':[{$data->object->from_id}]})[0];
+					var msg = 'Пока, @id{$data->object->from_id} ('+user.first_name+' '+user.last_name+'). Больше ты сюда не вернешься!';
+					API.messages.send({'peer_id':{$data->object->peer_id}, 'message':msg});
+					API.messages.removeChatUser({'chat_id':{$chat_id},'user_id':{$data->object->action->member_id}});
+					return 'ok';
+					");
+			}
+			else{
+				vk_execute("
+					var user = API.users.get({'user_ids':[{$data->object->action->member_id}],'fields':'sex'})[0];
+					var msg = '';
+					if(user.sex == 1){
+						msg = 'Правильно, она мне никогда не нравилась.';
+					}
+					else{
+						msg = 'Правильно, он мне никогда не нравилась.';
+					}
+					API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
+					");
+			}
+		}
+		elseif($data->object->action->type == "chat_invite_user") {
+			if($data->object->action->member_id == -bot_getconfig('VK_GROUP_ID')){
+				$botModule = new BotModule($db);
+				$botModule->sendSimpleMessage($data->object->peer_id, "О, привет!");
+			}
+			else{
+				$banned_users = BanSystem::getBanList($db);
+				$botModule = new BotModule($db);
+				$isBanned = false;
+				for($i = 0; $i < sizeof($banned_users); $i++){
+					if($banned_users[$i]["user_id"] == $data->object->action->member_id){
+						$chat_id = $data->object->peer_id - 2000000000;
+						$ranksys = new RankSystem($db);
+						if($ranksys->checkRank($data->object->from_id, 1)){
+							vk_execute("
+								API.messages.send({'peer_id':{$data->object->peer_id},'message':'@id{$data->object->action->member_id} (Пользователь) был приглашен @id{$data->object->from_id} (администратором) беседы и автоматически разбанен.'});
+								");
+							BanSystem::unbanUser($db, $data->object->action->member_id);
+						}
+						else{
+							$ban_info = BanSystem::getUserBanInfo($db, $data->object->action->member_id);
+							json_decode(vk_execute($botModule->makeExeAppeal($data->object->action->member_id)."
+								API.messages.send({'peer_id':{$data->object->peer_id}, 'message':appeal+', вы забанены в этой беседе!\\nПричина: {$ban_info["reason"]}.'});
+								API.messages.removeChatUser({'chat_id':{$chat_id},'user_id':{$data->object->action->member_id}});
+								"));
+							$isBanned = true;
+						}
+					}
+				}
+				if(!$isBanned)
+					manager_show_invited_greetings($data, $db);
+			}
+		}
+	}
+}
+
 function bot_help($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
@@ -637,6 +672,8 @@ function bot_help($finput){
 				'!stats - Управление статистикой беседы',
 				'!modes - Список всех Режимов беседы',
 				'!mode <name> <value> - Управление Режимом беседы',
+				'!панель - Управление персональной панелью',
+				'Панель - Отобразить персональную панель'
 			);
 
 			$botModule->sendCommandListFromArray($data, ', 📰Команды управления беседой:', $commands);

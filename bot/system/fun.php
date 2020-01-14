@@ -227,7 +227,12 @@ function fun_memes_control_panel($finput){
 		if(!is_null($memes[$meme_name])){
 			$added_time = gmdate("d.m.Y H:i:s", $memes[$meme_name]["date"]+10800)." по МСК";
 			$msg = "%__APPEAL__%, информация о меме:\n✏Имя: {$meme_name}\n🤵Владелец: %__OWNERNAME__%\n📅Добавлен: {$added_time}\n📂Содержимое: ⬇️⬇️⬇️";
-			$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'attachment' => $memes[$meme_name]["content"]), JSON_UNESCAPED_UNICODE);
+			$keyboard = vk_keyboard_inline(array(
+				array(
+					vk_text_button("Удалить мем", array("command" => "bot_run_text_command", "text_command" => "!memes del {$meme_name}"), "negative")
+				)
+			));
+			$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'attachment' => $memes[$meme_name]["content"], "keyboard" => $keyboard), JSON_UNESCAPED_UNICODE);
 			$request = vk_parse_vars($request, array("__OWNERNAME__", "__APPEAL__"));
 			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 				var owner = API.users.get({'user_ids':[{$memes[$meme_name]["owner_id"]}]})[0];
@@ -1657,14 +1662,14 @@ class FunSpecialEvent{
 		if($special_event === false)
 			return;
 
-		$event->addMessageCommand("!квест", "FunSpecialEvent::quest");
-		$event->addMessageCommand("поздравить", "FunSpecialEvent::congratulate");
-		$event->addMessageCommand("мандаринки", "FunSpecialEvent::tangerines");
-		$event->addMessageCommand("подарить", "FunSpecialEvent::give");
-		$event->addMessageCommand("фейерверк", "FunSpecialEvent::fireworks");
-		$event->addMessageCommand("приз", "FunSpecialEvent::prize");
-		$event->addMessageCommand("конкурс", 'FunSpecialEvent::rating');
-		$event->addMessageCommand("скушать", function($finput){
+		$event->addTextCommand("!квест", "FunSpecialEvent::quest");
+		$event->addTextCommand("поздравить", "FunSpecialEvent::congratulate");
+		$event->addTextCommand("мандаринки", "FunSpecialEvent::tangerines");
+		$event->addTextCommand("подарить", "FunSpecialEvent::give");
+		$event->addTextCommand("фейерверк", "FunSpecialEvent::fireworks");
+		$event->addTextCommand("приз", "FunSpecialEvent::prize");
+		$event->addTextCommand("конкурс", 'FunSpecialEvent::rating');
+		$event->addTextCommand("скушать", function($finput){
 			// Инициализация базовых переменных
 			$data = $finput->data;
 			$words = $finput->words;
@@ -1681,7 +1686,7 @@ class FunSpecialEvent{
 				));
 			}
 		});
-		$event->addMessageCommand("нарядить", function($finput){
+		$event->addTextCommand("нарядить", function($finput){
 			// Инициализация базовых переменных
 			$data = $finput->data;
 			$words = $finput->words;

@@ -4,7 +4,7 @@ require(__DIR__."/../bot/system/loader.php");
 
 function main(){
 	set_time_limit(0);
-	$longpoll = json_decode(vk_call("groups.getLongPollServer", array("group_id" => config_get("GROUP_ID"))))->response;
+	$longpoll = json_decode(vk_call("groups.getLongPollServer", array("group_id" => bot_getconfig("GROUP_ID"))))->response;
 	$ts = $longpoll->ts;
 
 	while(true){
@@ -14,7 +14,7 @@ function main(){
 
 			if(property_exists($data, 'failed')){
 				if($data->failed == 2 || $data->failed == 3)
-					$longpoll = json_decode(vk_call("groups.getLongPollServer", array("group_id" => config_get("GROUP_ID"))))->response;
+					$longpoll = json_decode(vk_call("groups.getLongPollServer", array("group_id" => bot_getconfig("GROUP_ID"))))->response;
 					$ts = $longpoll->ts;
 			}
 			else{
@@ -24,7 +24,7 @@ function main(){
 				$ts = $data->ts;
 			}	
 		}else{
-			$longpoll = json_decode(vk_call("groups.getLongPollServer", array("group_id" => config_get("GROUP_ID"))))->response;
+			$longpoll = json_decode(vk_call("groups.getLongPollServer", array("group_id" => bot_getconfig("GROUP_ID"))))->response;
 			$ts = $longpoll->ts;
 		}
 		unset($data);

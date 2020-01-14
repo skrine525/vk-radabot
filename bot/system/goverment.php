@@ -749,7 +749,6 @@ function goverment_referendum_system($data, &$db){
 		$date = time(); // Переменная времени
 		if($date - $referendum["last_notification_time"] >= 600){
 			$db->setValue(array("goverment", "referendum", "last_notification_time"), $date);
-			$db->save();
 			if($referendum["candidate1"]["id"] == 0 || $referendum["candidate2"]["id"] == 0){
 				$msg = "Начались выборы в президенты беседы. Чтобы зарегистрироваться, как кандидат, используйте команду \\\"!candidate\\\".";
 				vk_execute("
@@ -762,7 +761,6 @@ function goverment_referendum_system($data, &$db){
 		} elseif($date - $referendum["start_time"] >= 18000) {
 			if($referendum["candidate1"]["id"] == 0 || $referendum["candidate2"]["id"] == 0){
 				$db->unsetValue(array("goverment", "referendum"));
-				$db->save();
 				$msg = "❗Выборы прерваны. Причина: не набрано нужно количество кандидатов.";
 				vk_execute("
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});");
@@ -793,7 +791,6 @@ function goverment_referendum_system($data, &$db){
 					$gov["batch_name"] = "Полит. партия ".$res->response->first_name_gen." ".$res->response->last_name_gen;
 					unset($gov["referendum"]);
 					$db->setValue(array("goverment"), $gov);
-					$db->save();
 				} elseif($candidate1_voters_count < $candidate2_voters_count) {
 					$candidate_id = $referendum["candidate2"]["id"];
 					$candidate_percent = round($candidate2_voters_count/$all_voters_count*100, 1);
@@ -817,13 +814,11 @@ function goverment_referendum_system($data, &$db){
 					$gov["batch_name"] = "Полит. партия ".$res->response->first_name_gen." ".$res->response->last_name_gen;
 					unset($gov["referendum"]);
 					$db->setValue(array("goverment"), $gov);
-					$db->save();
 				} else {
 				$msg = "❗Выборы прерваны. Причина: оба кандидата набрали одинаковое количество голосов.";
 				vk_execute("
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});");
 				$db->unsetValue(array("goverment", "referendum"));
-				$db->save();
 				}
 			}
 		}

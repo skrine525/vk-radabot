@@ -72,7 +72,6 @@ class ChatModes{
 	const MODES = array( // Константа всех Режимов
 		// Template - array('name' => name, 'default_state' => state)
 		array('name' => 'allow_memes', 'default_state' => true),
-		array('name' => 'stats_enabled', 'default_state' => false),
 		array('name' => 'antiflood_enabled', 'default_state' => true)
 	);
 
@@ -196,7 +195,7 @@ class AntiFlood{
 	}
 
 	public function checkMember($data){
-		$time = time();
+		$time = $data->object->date;
 		$member_id = $data->object->from_id;
 		$text = $data->object->text;
 
@@ -237,7 +236,6 @@ class AntiFlood{
 		}
 
 		$returnValue = false;
-
 		$floodSystem = new AntiFlood($data->object->peer_id);
 		if($floodSystem->checkMember($data)){
 			$botModule = new BotModule($db);
@@ -273,6 +271,7 @@ class AntiFlood{
 			if($response == true)
 				$returnValue = true;
 		}
+		$floodSystem->save();
 		return $returnValue;
 	}
 }
@@ -1113,7 +1112,7 @@ function manager_greeting($finput){
 
 function manager_show_invited_greetings($data, $db){
 	$greetings_text = $db->getValue(array("bot_manager", "invited_greeting"), false);
-	if(property_exists($data->object, 'action') && $data->object->action->type == "chat_invite_user" && $greetings_text !== false){
+	if($greetings_text !== false && $data->object->action->member_id > 0){
 		$parsing_vars = array('USERID', 'USERNAME', 'USERNAME_GEN', 'USERNAME_DAT', 'USERNAME_ACC', 'USERNAME_INS', 'USERNAME_ABL');
 
 		$system_code = "
@@ -1361,6 +1360,247 @@ function manager_rank_list($finput){
 	$min_rank = RankSystem::getMinRankValue();
 	$msg = $msg . "\n• rank_{$min_rank} - ".RankSystem::getRankNameByID(RankSystem::getMinRankValue());
 	$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+}
+
+function manager_panel_show($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$words = $finput->words;
+	$db = &$finput->db;
+
+	$botModule = new BotModule($db);
+
+	$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
+
+	if(array_key_exists('elements', $user_panel))
+		$element_count = count($user_panel["elements"]);
+	else
+		$element_count = 0;
+
+	if($element_count > 0){
+		$elements = array(array());
+		$current_element_index = 0;
+		$last_change_time = $user_panel["last_change_time"];
+		for($i = 0; $i < $element_count; $i++){
+			switch ($user_panel["elements"][$i]["color"]) {
+				case 1:
+					$color = "secondary";
+					break;
+
+				case 2:
+					$color = "primary";
+					break;
+
+				case 3:
+					$color = "positive";
+					break;
+
+				case 4:
+					$color = "negative";
+					break;
+			}
+			if(count($elements[$current_element_index]) >= 2){
+				$elements[] = array();
+				$current_element_index++;
+			}
+			$elements[$current_element_index][] = vk_text_button($user_panel["elements"][$i]["name"], array("command" => "manager_panel", "last_change_time" => $last_change_time, 'user_id' => $data->object->from_id, 'element_id' => $i), $color);
+		}
+		$keyboard = vk_keyboard_inline($elements);
+		$botModule->sendSimpleMessage($data->object->peer_id, ", Ваша персональная панель. Используйте [!панель] для управления панелью.", $data->object->from_id, array('keyboard' => $keyboard));
+	}
+	else{
+		$keyboard = vk_keyboard_inline(array(
+			array(
+				vk_text_button("Помощь", array("command" => "bot_run_text_command", "text_command" => "!панель"), "positive")
+			)
+		));
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет элементов в персональной панели.", $data->object->from_id, array('keyboard' => $keyboard));
+	}
+}
+
+function manager_panel_control($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$words = $finput->words;
+	$db = &$finput->db;
+
+	$botModule = new BotModule($db);
+
+	$command = mb_strtolower(bot_get_word_argv($words, 1, ""));
+
+	if($command == "создать"){
+		$text_command = mb_substr($data->object->text, 16);
+		if($text_command == ""){
+			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Используйте [!панель создать <команда>], чтобы создать новый элемент.", $data->object->from_id);
+			return;
+		}
+		if(mb_strlen($text_command) > 32){
+			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Команда не может быть больше 32 символов.", $data->object->from_id);
+			return;
+		}
+		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
+		if(array_key_exists('elements', $user_panel))
+			$element_count = count($user_panel["elements"]);
+		else
+			$element_count = 0;
+		if($element_count >= 10){
+			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы достили лимита элементов в панели.", $data->object->from_id);
+			return;
+		}
+		$panel_id = $element_count+1;
+		if(!array_key_exists('user_id', $user_panel))
+			$user_panel['user_id'] = $data->object->from_id;
+		$user_panel["last_change_time"] = time();
+		$user_panel["elements"][] = array(
+			'name' => $panel_id,
+			'command' => $text_command,
+			'color' => 1
+		);
+		$db->setValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), $user_panel);
+		$db->save();
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Панель с командой [{$text_command}] успешно создана. Её номер: {$panel_id}.", $data->object->from_id);
+	}
+	elseif($command == "список"){
+		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
+		if(count($user_panel["elements"]) > 0){
+			$msg = ', список ваших элементов:';
+			$id = 1; foreach ($user_panel["elements"] as $element) {
+				$msg .= "\n{$id}. {$element["name"]}: [{$element["command"]}]"; $id++;
+			}
+			$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+		}
+		else
+			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Ваша панель пуста.", $data->object->from_id);
+	}
+	elseif($command == "название"){
+		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
+		$argv = bot_get_word_argv($words, 2, 0);
+		$name = mb_substr($data->object->text, 18+mb_strlen($argv));
+		if($argv == "" || !is_numeric($argv) || $name == ""){
+			$botModule->sendSimpleMessage($data->object->peer_id, ", Используйте [!панель название <номер> <название>], чтобы изменить название элемента.", $data->object->from_id);
+			return;
+		}
+		if(mb_strlen($name) > 15){
+			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Название не может быть больше 15 символов.", $data->object->from_id);
+			return;
+		}
+		$id = intval($argv) - 1;
+		if(!array_key_exists($id, $user_panel["elements"])){
+			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Элемента под номером {$argv} не существует.", $data->object->from_id);
+			return;
+		}
+		$user_panel["elements"][$id]["name"] = $name;
+		$user_panel["last_change_time"] = time();
+		$db->setValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), $user_panel);
+		$db->save();
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Название элемента №{$argv} успешно изменено.", $data->object->from_id);
+	}
+	elseif($command == "цвет"){
+		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
+		$argv1 = intval(bot_get_word_argv($words, 2, 0));
+		$argv2 = intval(bot_get_word_argv($words, 3, 0));
+		if($argv1 == 0 || $argv2 == 0){
+			$botModule->sendSimpleMessage($data->object->peer_id, ", Используйте [!панель цвет <номер> <цвет>], чтобы изменить название элемента.\nДоступные цвета: 1 — белый, 2 - синий, 3- зелёный, 4 - красный.", $data->object->from_id);
+			return;
+		}
+		if($argv2 < 1 || $argv2 > 4){
+			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Цвета под номером {$argv2} не существует.\nДоступные цвета: 1 — белый, 2 - синий, 3- зелёный, 4 - красный.", $data->object->from_id);
+			return;
+		}
+		$id = $argv1 - 1;
+		if(!array_key_exists($id, $user_panel["elements"])){
+			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Элемента под номером {$argv1} не существует.", $data->object->from_id);
+			return;
+		}
+		$user_panel["elements"][$id]["color"] = $argv2;
+		$user_panel["last_change_time"] = time();
+		$db->setValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), $user_panel);
+		$db->save();
+		switch ($argv2) {
+			case 1:
+				$color_name = "Белый";
+				break;
+
+			case 2:
+				$color_name = "Синий";
+				break;
+
+			case 3:
+				$color_name = "Зелёный";
+				break;
+
+			case 4:
+				$color_name = "Красный";
+				break;
+		}
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Название элемента номер {$argv1} успешно изменено. Установлен цвет: {$color_name}.", $data->object->from_id);
+	}
+	elseif($command == "удалить"){
+		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
+		$argv = intval(bot_get_word_argv($words, 2, 0));
+		if($argv == 0){
+			$botModule->sendSimpleMessage($data->object->peer_id, ", Используйте [!панель удалить <номер>], чтобы удалить элемент.", $data->object->from_id);
+			return;
+		}
+		$id = $argv - 1;
+		if(!array_key_exists($id, $user_panel["elements"])){
+			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Элемента под номером {$argv} не существует.", $data->object->from_id);
+			return;
+		}
+		unset($user_panel["elements"][$id]);
+		$user_panel["elements"] = array_values($user_panel["elements"]);
+		$user_panel["last_change_time"] = time();
+		$db->setValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), $user_panel);
+		$db->save();
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Элемент под номером {$argv} успешно удален.", $data->object->from_id);
+	}
+	else{
+		$botModule->sendCommandListFromArray($data, ", используйте:", array(
+			'Панель - Вызов персональной панели',
+			"!панель - Управление панелью",
+			"!панель помощь - Помощь по управлению панелью",
+			"!панель создать - Создает новый элемент в панели",
+			"!панель название - Изменение названия элемента панели",
+			"!панель цвет - Управление цветом элемента панели",
+			"!панель список - Список элементов панели",
+			"!панель удалить - Удаляет элемент панели"
+		));
+	}
+}
+
+function manager_panel_keyboard_handler($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$payload = $finput->payload;
+	$db = &$finput->db;
+
+	if(!property_exists($payload, 'user_id') || !property_exists($payload, 'last_change_time') || !property_exists($payload, 'element_id'))
+		return;
+	$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$payload->user_id}"), false);
+	if($user_panel === false)
+		return;
+	$botModule = new BotModule($db);
+	if($user_panel["user_id"] !== $data->object->from_id){
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы не можете использовать панель другого пользователя.", $data->object->from_id);
+		return;
+	}
+	if($user_panel["last_change_time"] !== $payload->last_change_time){
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Данная панель является устаревшей.", $data->object->from_id);
+		return;
+	}
+	if(array_key_exists($payload->element_id, $user_panel["elements"])){
+		$modified_data = $data;
+		$modified_data->object->text = $user_panel["elements"][$payload->element_id]["command"];
+		unset($modified_data->object->payload);
+		$result = $finput->event->runTextCommand($modified_data);
+		if($result == 1){
+			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Ошибка. Данной команды не существует.", $data->object->from_id);
+		}
+	}
+	else{
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Данного элемента не существует.", $data->object->from_id);
+		return;
+	}
 }
 
 ?>

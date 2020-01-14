@@ -370,7 +370,6 @@ function wordgame_gameplay($data, &$db){
 			$score = mb_strlen($word) - $session["word_game"]["current_word"]["used_hints"] - 2;
 			$user_score = $db->getValue(array("games", "word_game_rating", "id{$data->object->from_id}"), 0);
 			$db->setValue(array("games", "word_game_rating", "id{$data->object->from_id}"), $user_score+$score);
-			$db->save();
 			wordgame_set_session($data->object->peer_id, $session);
 			$keyboard = vk_keyboard(false, array(
 				array(

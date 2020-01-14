@@ -332,77 +332,25 @@
 				"hidden": true
 			},
 			"level_6": {
-				"name": "Доктор высшего образования",
+				"name": "Кандидат наук",
 				"price": 1500000,
 				"can_sell": false,
 				"can_buy": true,
 				"hidden": true
-			}
-		},
-
-		"new_year_2020": {
-			"tangerine": {
-				"name": "Мандаринка",
-				"price": 50,
-				"can_sell": true,
-				"can_buy": false,
-				"hidden": false
 			},
-			"tangerine_package": {
-				"name": "Упаковка мандаринок (5 шт.)",
-				"price": 250,
-				"can_sell": true,
+			"level_7": {
+				"name": "Доктор наук",
+				"price": 9000000,
+				"can_sell": false,
 				"can_buy": true,
-				"hidden": false
-			},
-			"tree_decorations": {
-				"name": "Ёлочные украшения",
-				"price": 500,
-				"can_sell": true,
-				"can_buy": true,
-				"hidden": false
-			},
-			"gerland": {
-				"name": "Гирлянда",
-				"price": 1000,
-				"can_sell": true,
-				"can_buy": true,
-				"hidden": false
-			},
-			"gift_wrap": {
-				"name": "Подарочная упаковка",
-				"price": 1500,
-				"can_sell": true,
-				"can_buy": true,
-				"hidden": false
-			},
-			"tree": {
-				"name": "Новогодняя ёлка",
-				"price": 5000,
-				"can_sell": true,
-				"can_buy": true,
-				"hidden": false
-			},
-			"decorated_tree": {
-				"name": "Наряженная Новогодняя ёлка",
-				"price": 6500,
-				"can_sell": true,
-				"can_buy": false,
-				"hidden": false
-			},
-			"fireworks": {
-				"name": "Фейерверк",
-				"price": 10000,
-				"can_sell": true,
-				"can_buy": true,
-				"hidden": false
+				"hidden": true
 			}
 		}
 	},
 
 	"shop_sections":[
 		{
-			"name": "Автомобиль",
+			"name": "Транспорт",
 			"items": "car"
 		},
 		{
@@ -423,7 +371,7 @@
 	      "improvment":{
 	      	"workers": [
 	      		{
-	      			"name": "Улучшение условий рабочих 1",
+	      			"name": "Улучшение условий рабочих I",
 		          	"duration": 7200,
 		          	"workers_required": 5,
 		          	"exp_required": 150,
@@ -431,7 +379,7 @@
 		          	"new_workers": 5
 	      		},
 	      		{
-	      			"name": "Улучшение условий рабочих 2",
+	      			"name": "Улучшение условий рабочих II",
 		          	"duration": 14400,
 		          	"workers_required": 10,
 		          	"exp_required": 300,
@@ -439,7 +387,7 @@
 		          	"new_workers": 10
 	      		},
 	      		{
-	      			"name": "Улучшение условий рабочих 3",
+	      			"name": "Улучшение условий рабочих III",
 		          	"duration": 28800,
 		          	"workers_required": 20,
 		          	"exp_required": 800,
@@ -447,7 +395,7 @@
 		          	"new_workers": 30
 	      		},
 	      		{
-	      			"name": "Улучшение условий рабочих 4",
+	      			"name": "Улучшение условий рабочих IV",
 		          	"duration": 43200,
 		          	"workers_required": 30,
 		          	"exp_required": 1600,
@@ -455,7 +403,7 @@
 		          	"new_workers": 30
 	      		},
 	      		{
-	      			"name": "Улучшение условий рабочих 5",
+	      			"name": "Улучшение условий рабочих V",
 		          	"duration": 57600,
 		          	"workers_required": 60,
 		          	"exp_required": 3600,
@@ -465,24 +413,24 @@
 	      	],
 	      	"contracts": [
 	      		{
-	      			"name": "Расширение торговой сети 1",
+	      			"name": "Расширение торговой сети I",
 		          	"duration": 21600,
 		          	"workers_required": 20,
 		          	"exp_required": 300,
 		          	"cost": 100000
 	      		},
 	      		{
-	      			"name": "Расширение торговой сети 2",
-		          	"duration": 21600,
+	      			"name": "Расширение торговой сети II",
+		          	"duration": 64800,
 		          	"workers_required": 20,
-		          	"exp_required": 300,
-		          	"cost": 100000
+		          	"exp_required": 4500,
+		          	"cost": 735000
 	      		}
 	      	]
 	      },
 	      "contracts": [
 		        {
-		          	"name": "Продажа хлеба",
+		          	"name": "Продажа товаров I",
 		          	"duration": 5400,
 		          	"workers_required": 5,
 		          	"cost": 3600,
@@ -490,36 +438,36 @@
 		          	"exp": 15
 		        },
 		        {
-		          	"name": "Продажа хоз. товаров",
+		          	"name": "Продажа товаров II",
 		          	"duration": 10800,
 		          	"workers_required": 15,
 		          	"cost": 7000,
 		          	"income": 25000,
-		          	"exp": 45
+		          	"exp": 30
 		        },
 		        {
-		          	"name": "Продажа мясной продукции",
+		          	"name": "Продажа товаров III",
 		          	"duration": 28800,
 		          	"workers_required": 25,
 		          	"cost": 15500,
 		          	"income": 87200,
-		          	"exp": 90
+		          	"exp": 45
 		        },
 		        {
-		          	"name": "Продажа алкоголя",
+		          	"name": "Продажа товаров IV",
 		          	"duration": 28800,
 		          	"workers_required": 65,
 		          	"cost": 32800,
 		          	"income": 143600,
-		          	"exp": 90
+		          	"exp": 80
 		        },
 		        {
-		          	"name": "Продажа дошираков",
+		          	"name": "Продажа товаров V",
 		          	"duration": 36000,
 		          	"workers_required": 90,
 		          	"cost": 48500,
 		          	"income": 230000,
-		          	"exp": 90
+		          	"exp": 120
 		        }
 	        ]
 	    }
