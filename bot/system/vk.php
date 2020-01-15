@@ -64,7 +64,6 @@ function vk_keyboard_inline($buttons = array()){
 }
 
 function vk_parse_var($data, $varname){
-	mb_internal_encoding("UTF-8");
 	return mb_ereg_replace("%{$varname}%", "\"+{$varname}+\"", $data); // Если будут проблемы, поменять на mb_eregi_replace
 }
 

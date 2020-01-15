@@ -58,8 +58,6 @@ function fun_memes_control_panel($finput){
 		return;
 	}
 
-	mb_internal_encoding("UTF-8");
-
 	if(array_key_exists(1, $words))
 		$command = mb_strtolower($words[1]);
 	else
@@ -261,7 +259,6 @@ function fun_memes_handler($data, $db){
 	if(!$chatModes->getModeValue("allow_memes"))
 		return;
 
-	mb_internal_encoding("UTF-8");
 	$meme_name = mb_strtolower($data->object->text);
 	$meme = $db->getValue(array("fun", "memes", $meme_name), false);
 	if($meme !== false){
@@ -335,7 +332,6 @@ function fun_handler($data, &$db){
 }
 
 function fun_random_ban($data, $words){
-	mb_internal_encoding("UTF-8");
 	for($i = 0; $i < sizeof($words); $i++){
 		if(mb_strtolower($words[$i]) == "бан"){
 			$random_number = mt_rand(0, 65535);
@@ -516,7 +512,6 @@ function fun_choose($finput){
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	mb_internal_encoding("UTF-8");
 	$botModule = new BotModule($db);
 	$options = array();
 	$new_str = "";
@@ -556,7 +551,6 @@ function fun_howmuch($finput){
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	mb_internal_encoding("UTF-8");
 	$botModule = new BotModule($db);
 	$rnd = mt_rand(0, 100);
 
@@ -601,7 +595,6 @@ function fun_bottle($finput){
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	mb_internal_encoding("UTF-8");
 	$botModule = new BotModule($db);
 	if(array_key_exists(1, $words))
 		$command = mb_strtolower($words[1]);
@@ -681,7 +674,6 @@ function fun_tts($finput){
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	mb_internal_encoding("UTF-8");
 	$message = mb_substr($data->object->text, 4);
 	$botModule = new BotModule($db);
 
@@ -754,8 +746,6 @@ function fun_info($finput){
 
 	$botModule = new BotModule($db);
 
-	mb_internal_encoding("UTF-8");
-
 	$expression = mb_substr($data->object->text, 5);
 
 	if($expression == ""){
@@ -776,7 +766,6 @@ function fun_say($finput){
 
 	$botModule = new BotModule($db);
 
-	mb_internal_encoding("UTF-8");
 	$params = mb_substr($data->object->text, 4);
 
 	parse_str($params, $vars);

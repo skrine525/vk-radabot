@@ -283,7 +283,6 @@ function roleplay_me($finput){
 			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 			");
 	} else {
-		mb_internal_encoding("UTF-8");
 		$act = mb_substr($data->object->text, 4, mb_strlen($data->object->text)-1);
 		if(mb_substr($act, mb_strlen($act)-1, mb_strlen($act)-1) != "."){
 			$act = $act . ".";
@@ -309,7 +308,6 @@ function roleplay_try($finput){
 			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 			");
 	} else {
-		mb_internal_encoding("UTF-8");
 		$act = mb_substr($data->object->text, 5, mb_strlen($data->object->text)-1);
 		if(mb_substr($act, mb_strlen($act)-1, mb_strlen($act)-1) != "."){
 			$act = $act . ".";
@@ -341,7 +339,6 @@ function roleplay_do($finput){
 			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 			");
 	} else {
-		mb_internal_encoding("UTF-8");
 		$act = mb_substr($data->object->text, 4, mb_strlen($data->object->text)-1);
 		$act = mb_strtoupper(mb_substr($act, 0, 1)) . mb_substr($act, 1, mb_strlen($act)-1);
 		if(mb_substr($act, mb_strlen($act)-1, mb_strlen($act)-1) != "."){
@@ -368,7 +365,6 @@ function roleplay_shout($finput){
 			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 			");
 	} else {
-		mb_internal_encoding("UTF-8");
 		$text = mb_substr($data->object->text, 3, mb_strlen($data->object->text)-1);
 		$vowels_letters = array('а', 'о', 'и', 'е', 'ё', 'э', 'ы', 'у', 'ю', 'я'/*, 'a', 'e', 'i', 'o', 'u'*/);
 		$new_text = "";

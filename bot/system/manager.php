@@ -344,8 +344,6 @@ function manager_mode_cpanel($finput){
 	$ranksys = new RankSystem($db);
 	$chatModes = new ChatModes($db);
 
-	mb_internal_encoding("UTF-8");
-
 	if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверка на права
 		$botModule->sendSystemMsg_NoRights($data);
 		return;
@@ -877,7 +875,6 @@ function manager_nick($finput){
 	$botModule = new BotModule($db);
 
 	if(array_key_exists(1, $words)){
-		mb_internal_encoding("UTF-8");
 		$nick = mb_substr($data->object->text, 5);
 		$nick = str_ireplace("\n", "", $nick);
 		if(!array_key_exists(0, $data->object->fwd_messages)){
@@ -1054,8 +1051,6 @@ function manager_greeting($finput){
 		return;
 	}
 
-	mb_internal_encoding("UTF-8");
-
 	if(array_key_exists(1, $words))
 		$command = mb_strtolower($words[1]);
 	else
@@ -1144,7 +1139,6 @@ function manager_rank($finput){
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	mb_internal_encoding("UTF-8");
 	$botModule = new BotModule($db);
 
 	if(array_key_exists(1, $words)){
@@ -1495,6 +1489,29 @@ function manager_panel_control($finput){
 		$db->save();
 		$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Название элемента №{$argv} успешно изменено.", $data->object->from_id);
 	}
+	elseif($command == "команда"){
+		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
+		$argv = bot_get_word_argv($words, 2, 0);
+		$text_command = mb_substr($data->object->text, 17+mb_strlen($argv));
+		if($argv == "" || !is_numeric($argv) || $text_command == ""){
+			$botModule->sendSimpleMessage($data->object->peer_id, ", Используйте [!панель команда <номер> <команда>], чтобы изменить команду элемента.", $data->object->from_id);
+			return;
+		}
+		if(mb_strlen($text_command) > 32){
+			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Команда не может быть больше 32 символов.", $data->object->from_id);
+			return;
+		}
+		$id = intval($argv) - 1;
+		if(!array_key_exists($id, $user_panel["elements"])){
+			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Элемента под номером {$argv} не существует.", $data->object->from_id);
+			return;
+		}
+		$user_panel["elements"][$id]["command"] = $text_command;
+		$user_panel["last_change_time"] = time();
+		$db->setValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), $user_panel);
+		$db->save();
+		$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Команда элемента №{$argv} успешно изменено.", $data->object->from_id);
+	}
 	elseif($command == "цвет"){
 		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
 		$argv1 = intval(bot_get_word_argv($words, 2, 0));
@@ -1561,6 +1578,7 @@ function manager_panel_control($finput){
 			"!панель помощь - Помощь по управлению панелью",
 			"!панель создать - Создает новый элемент в панели",
 			"!панель название - Изменение названия элемента панели",
+			"!панель команда - Изменение команды элемента панели",
 			"!панель цвет - Управление цветом элемента панели",
 			"!панель список - Список элементов панели",
 			"!панель удалить - Удаляет элемент панели"

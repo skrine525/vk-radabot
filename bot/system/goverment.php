@@ -13,7 +13,6 @@ class SocOrderClass{ // Класс данных социальных строё�
 	);
 
 	public static function socOrderEncode($id){
-		mb_internal_encoding("UTF-8");
 		$array = self::TYPES;
 		for($i = 0; $i < count($array); $i++){
 			if(mb_strtoupper($array[$i]) == mb_strtoupper($id)){
@@ -138,7 +137,6 @@ function goverment_laws_cpanel($finput){
 	$botModule = new BotModule($db);
 	$gov = $db->getValue(array("goverment"));
 
-	mb_internal_encoding("UTF-8");
 	if(array_key_exists(1, $words))
 		$command = mb_strtolower($words[1]);
 	else
@@ -374,7 +372,6 @@ function goverment_batch($finput){
 		$botModule->sendSimpleMessage($data->object->peer_id, ", &#128214;Действующая партия: ".$gov["batch_name"].".", $data->object->from_id);
 	} else {
 		if($data->object->from_id == $gov["president_id"]){
-			mb_internal_encoding("UTF-8");
 			$batch_name = mb_substr($data->object->text, 8, mb_strlen($data->object->text));
 			$db->setValue(array("goverment", "batch_name"), $batch_name);
 			$db->save();
@@ -398,14 +395,12 @@ function goverment_capital($finput){
 		$botModule->sendSimpleMessage($data->object->peer_id, ", &#127970;Текущая столица: ".$gov["capital"].".", $data->object->from_id);
 	} else {
 		if($data->object->from_id == $gov["president_id"]){
-			mb_internal_encoding("UTF-8");
 			$capital = mb_substr($data->object->text, 9, mb_strlen($data->object->text));
 			$db->setValue(array("goverment", "capital"), $capital);
 			$db->save();
 			$msg = "@id".$gov["president_id"]." (Президент) изменил столицу государства.";
 			$botModule->sendSimpleMessage($data->object->peer_id, $msg);
 		} elseif($data->object->from_id == $gov["parliament_id"]){
-			mb_internal_encoding("UTF-8");
 			$capital = mb_substr($data->object->text, 9, mb_strlen($data->object->text));
 			$db->setValue(array("goverment", "capital"), $capital);
 			$db->save();

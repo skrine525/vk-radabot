@@ -28,7 +28,6 @@ function giphy_handler($finput){
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	mb_internal_encoding("UTF-8");
 	$name = mb_substr($data->object->text, 7, mb_strlen($data->object->text));
 	$gif = json_decode(giphy_translate(array('s' => $name)));
 	$botModule = new BotModule($db);

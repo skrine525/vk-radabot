@@ -351,69 +351,84 @@
 	"shop_sections":[
 		{
 			"name": "Транспорт",
+			"type": "item",
 			"items": "car"
 		},
 		{
 			"name": "Недвижимость",
+			"type": "item",
 			"items": "immovables"
 		},
 		{
 			"name": "Телефон",
+			"type": "item",
 			"items": "phone"
+		},
+		{
+			"name": "Бизнес",
+			"type": "enterprise"
 		}
 	],
 
 	"enterprise_types": {
 	    "shop": {
 	      "name": "Магазин",
-	      "price": 250000,
+	      "price": 700000,
 	      "initial_workers": 5,
 	      "improvment":{
 	      	"workers": [
 	      		{
-	      			"name": "Улучшение условий рабочих I",
+	      			"name": "Улучшение условий рабочих Ⅰ",
 		          	"duration": 7200,
 		          	"workers_required": 5,
-		          	"exp_required": 150,
+		          	"exp_required": 60,
 		          	"cost": 20000,
 		          	"new_workers": 5
 	      		},
 	      		{
-	      			"name": "Улучшение условий рабочих II",
+	      			"name": "Улучшение условий рабочих Ⅱ",
 		          	"duration": 14400,
 		          	"workers_required": 10,
-		          	"exp_required": 300,
+		          	"exp_required": 100,
 		          	"cost": 40000,
 		          	"new_workers": 10
 	      		},
 	      		{
-	      			"name": "Улучшение условий рабочих III",
+	      			"name": "Улучшение условий рабочих Ⅲ",
 		          	"duration": 28800,
 		          	"workers_required": 20,
-		          	"exp_required": 800,
+		          	"exp_required": 260,
 		          	"cost": 80000,
 		          	"new_workers": 30
 	      		},
 	      		{
-	      			"name": "Улучшение условий рабочих IV",
+	      			"name": "Улучшение условий рабочих Ⅳ",
 		          	"duration": 43200,
-		          	"workers_required": 30,
-		          	"exp_required": 1600,
+		          	"workers_required": 50,
+		          	"exp_required": 400,
 		          	"cost": 160000,
 		          	"new_workers": 30
 	      		},
 	      		{
-	      			"name": "Улучшение условий рабочих V",
+	      			"name": "Улучшение условий рабочих Ⅴ",
 		          	"duration": 57600,
-		          	"workers_required": 60,
-		          	"exp_required": 3600,
+		          	"workers_required": 80,
+		          	"exp_required": 930,
 		          	"cost": 320000,
-		          	"new_workers": 60
+		          	"new_workers": 30
+	      		},
+	      		{
+	      			"name": "Улучшение условий рабочих Ⅵ",
+		          	"duration": 72000,
+		          	"workers_required": 110,
+		          	"exp_required": 1590,
+		          	"cost": 640000,
+		          	"new_workers": 55
 	      		}
 	      	],
 	      	"contracts": [
 	      		{
-	      			"name": "Расширение торговой сети I",
+	      			"name": "Расширение торговой сети Ⅰ",
 		          	"duration": 21600,
 		          	"workers_required": 20,
 		          	"exp_required": 300,
@@ -422,52 +437,52 @@
 	      		{
 	      			"name": "Расширение торговой сети II",
 		          	"duration": 64800,
-		          	"workers_required": 20,
-		          	"exp_required": 4500,
+		          	"workers_required": 165,
+		          	"exp_required": 2960,
 		          	"cost": 735000
 	      		}
 	      	]
 	      },
 	      "contracts": [
 		        {
-		          	"name": "Продажа товаров I",
+		          	"name": "Продажа товаров Ⅰ",
 		          	"duration": 5400,
 		          	"workers_required": 5,
-		          	"cost": 3600,
-		          	"income": 9000,
-		          	"exp": 15
+		          	"cost": 2500,
+		          	"income": 3850,
+		          	"exp": 10
 		        },
 		        {
-		          	"name": "Продажа товаров II",
-		          	"duration": 10800,
+		          	"name": "Продажа товаров Ⅱ",
+		          	"duration": 7200,
 		          	"workers_required": 15,
-		          	"cost": 7000,
-		          	"income": 25000,
+		          	"cost": 6950,
+		          	"income": 9650,
 		          	"exp": 30
 		        },
 		        {
-		          	"name": "Продажа товаров III",
-		          	"duration": 28800,
+		          	"name": "Продажа товаров Ⅲ",
+		          	"duration": 12600,
 		          	"workers_required": 25,
 		          	"cost": 15500,
-		          	"income": 87200,
-		          	"exp": 45
+		          	"income": 24005,
+		          	"exp": 50
 		        },
 		        {
-		          	"name": "Продажа товаров IV",
-		          	"duration": 28800,
-		          	"workers_required": 65,
-		          	"cost": 32800,
-		          	"income": 143600,
-		          	"exp": 80
+		          	"name": "Продажа товаров Ⅳ",
+		          	"duration": 25200,
+		          	"workers_required": 50,
+		          	"cost": 44750,
+		          	"income": 75410,
+		          	"exp": 210
 		        },
 		        {
-		          	"name": "Продажа товаров V",
-		          	"duration": 36000,
+		          	"name": "Продажа товаров Ⅴ",
+		          	"duration": 50400,
 		          	"workers_required": 90,
-		          	"cost": 48500,
-		          	"income": 230000,
-		          	"exp": 120
+		          	"cost": 185400,
+		          	"income": 307200,
+		          	"exp": 320
 		        }
 	        ]
 	    }

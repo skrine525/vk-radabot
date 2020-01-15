@@ -968,92 +968,140 @@ namespace{
 		}
 
 		if($section_id >= 0){
-			$all_items = Economy\EconomyFiles::getEconomyFileData("items");
-
 			$section = $sections[$section_id];
-			$items_for_buy = array(); // Предметы на продажу
-			
-			if(gettype($section["items"]) == "string"){
-				$all_items_by_type = Economy\Item::getItemListByType($section["items"]); // Все предметы по по типу
-				foreach ($all_items_by_type as $key => $value) {
-					if($value["can_buy"])
-						$items_for_buy[] = array(
-							'type' => $section["items"],
-							'id' => $key
-						);
-				}
-				unset($all_items_by_type);
-			}
-			elseif(gettype($section["items"]) == "array"){
-				foreach ($section["items"] as $value) {
-				$item_data = explode(":", $value);
-				$item = $all_items[$item_data[0]][$item_data[1]];
-				if($item["can_buy"])
-					$items_for_buy[] = array(
-						'type' => $item_data[0],
-						'id' => $item_data[1]
-					);
-				}
-			}
-
-			$economy = new Economy\Main($db);
-			$user_economy = $economy->getUser($data->object->from_id);
-
-			$argv2 = intval(bot_get_word_argv($words, 2));
-			if($argv2 >= 1){
-				$index = $argv2-1;
-				if(count($items_for_buy) <= $index){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Товара под номером {$argv2} не существует.", $data->object->from_id);
-					return;
-				}
-
-				$item_for_buy = $items_for_buy[$index];
-
-				if($user_economy->checkItem($item_for_buy["type"], $item_for_buy["id"]) !== false){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас уже есть товар под номером {$argv2}.", $data->object->from_id);
-					return;
-				}
-
-				$price = $all_items[$item_for_buy["type"]][$item_for_buy["id"]]["price"];
-				$transaction_result = $user_economy->changeMoney(-$price);
-
-				if($transaction_result){
-					$user_economy->changeItem($item_for_buy["type"], $item_for_buy["id"], 1);
-					$db->save();
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Вы приобрели {$all_items[$item_for_buy["type"]][$item_for_buy["id"]]["name"]}.", $data->object->from_id);
-				}
-				else{
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас недостаточно ".mb_strtoupper($price["currency"])." на счету.", $data->object->from_id);
-				}
-			}
-			else{
-				$msg = ", используйте \"!купить ".mb_strtolower($sections[$i]["name"])." <номер>\".\n📄Доступно для покупки:";
-				$items_for_buy_count = count($items_for_buy);
-				$user_items = $db->getValue(array("economy", "users", "id{$data->object->from_id}", "items"), array());
-				for($i = 0; $i < $items_for_buy_count; $i++){
-					$price = $all_items[$items_for_buy[$i]["type"]][$items_for_buy[$i]["id"]]["price"];
-					
-					$status = "⛔";
-					for($j = 0; $j < count($user_items); $j++){
-						$r = explode(":", $user_items[$j]);
-						if($r[0] == $items_for_buy[$i]["type"] && $r[1] == $items_for_buy[$i]["id"]){
-							$status = "✅";
+			switch ($section["type"]) {
+				case 'item':
+					$all_items = Economy\EconomyFiles::getEconomyFileData("items");
+					$items_for_buy = array(); // Предметы на продажу
+					if(gettype($section["items"]) == "string"){
+						$all_items_by_type = Economy\Item::getItemListByType($section["items"]); // Все предметы по по типу
+						foreach ($all_items_by_type as $key => $value) {
+							if($value["can_buy"])
+								$items_for_buy[] = array(
+									'type' => $section["items"],
+									'id' => $key
+								);
+						}
+						unset($all_items_by_type);
+					}
+					elseif(gettype($section["items"]) == "array"){
+						foreach ($section["items"] as $value) {
+						$item_data = explode(":", $value);
+						$item = $all_items[$item_data[0]][$item_data[1]];
+						if($item["can_buy"])
+							$items_for_buy[] = array(
+								'type' => $item_data[0],
+								'id' => $item_data[1]
+							);
 						}
 					}
 
-					$price_text = "\$".Economy\Main::getFormatedMoney($price);
-					if($items_for_buy_count >= 10){
-						$index_num = $i + 1;
-						if($index_num < 10)
-							$index = "0".$index_num;
-						else
-							$index = $index_num;
+					$economy = new Economy\Main($db);
+					$user_economy = $economy->getUser($data->object->from_id);
+
+					$argv2 = intval(bot_get_word_argv($words, 2));
+					if($argv2 >= 1){
+						$index = $argv2-1;
+						if(count($items_for_buy) <= $index){
+							$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Товара под номером {$argv2} не существует.", $data->object->from_id);
+							return;
+						}
+
+						$item_for_buy = $items_for_buy[$index];
+
+						if($user_economy->checkItem($item_for_buy["type"], $item_for_buy["id"]) !== false){
+							$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас уже есть товар под номером {$argv2}.", $data->object->from_id);
+							return;
+						}
+
+						$price = $all_items[$item_for_buy["type"]][$item_for_buy["id"]]["price"];
+						$transaction_result = $user_economy->changeMoney(-$price);
+
+						if($transaction_result){
+							$user_economy->changeItem($item_for_buy["type"], $item_for_buy["id"], 1);
+							$db->save();
+							$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Вы приобрели {$all_items[$item_for_buy["type"]][$item_for_buy["id"]]["name"]}.", $data->object->from_id);
+						}
+						else{
+							$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас недостаточно ".mb_strtoupper($price["currency"])." на счету.", $data->object->from_id);
+						}
 					}
-					else
-						$index = $i + 1;
-					$msg = $msg . "\n{$index}. {$status}" . $all_items[$items_for_buy[$i]["type"]][$items_for_buy[$i]["id"]]["name"] . " — {$price_text}";
-				}
-				$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+					else{
+						$msg = ", используйте \"!купить ".mb_strtolower($sections[$i]["name"])." <номер>\".\n📄Доступно для покупки:";
+						$items_for_buy_count = count($items_for_buy);
+						$user_items = $db->getValue(array("economy", "users", "id{$data->object->from_id}", "items"), array());
+						for($i = 0; $i < $items_for_buy_count; $i++){
+							$price = $all_items[$items_for_buy[$i]["type"]][$items_for_buy[$i]["id"]]["price"];
+							
+							$status = "⛔";
+							for($j = 0; $j < count($user_items); $j++){
+								$r = explode(":", $user_items[$j]);
+								if($r[0] == $items_for_buy[$i]["type"] && $r[1] == $items_for_buy[$i]["id"]){
+									$status = "✅";
+								}
+							}
+
+							$price_text = "\$".Economy\Main::getFormatedMoney($price);
+							if($items_for_buy_count >= 10){
+								$index_num = $i + 1;
+								if($index_num < 10)
+									$index = "0".$index_num;
+								else
+									$index = $index_num;
+							}
+							else
+								$index = $i + 1;
+							$msg = $msg . "\n{$index}. {$status}" . $all_items[$items_for_buy[$i]["type"]][$items_for_buy[$i]["id"]]["name"] . " — {$price_text}";
+						}
+						$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+					}
+					break;
+
+				case 'enterprise':
+					$economy = new Economy\Main($db);
+					$user_economy = $economy->getUser($data->object->from_id);
+					Economy\EconomyFiles::readDataFiles();
+					if($user_economy->checkItem("edu", "level_4") === false){
+						$edu_name = Economy\Item::getItemName("edu", "level_4");
+						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы не можете купить бизнес. У вас должно быть {$edu_name}.", $data->object->from_id);
+						return;
+					}
+					if(count($user_economy->getEnterprises()) >= 3){
+						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔вы уже имеете максимальное количество бизнесов (3).", $data->object->from_id);
+						return;
+					}
+					$type_index = bot_get_word_argv($words, 2, 0);
+					$enterprise_types = Economy\EconomyFiles::getEconomyFileData("enterprise_types");
+					$types = array_keys($enterprise_types);
+					if($type_index > 0 && count($types) >= $type_index){
+						$enterprise_price = $enterprise_types[$types[$type_index-1]]["price"];
+						if($user_economy->canChangeMoney(-$enterprise_price)){
+							$enterpriseSystem = $economy->initEnterpriseSystem();
+							$enterprise_id = $enterpriseSystem->createEnterprise($types[$type_index-1], $data->object->from_id);
+							if($enterprise_id === false){
+								$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Не удалось купить бизнес.", $data->object->from_id);
+								return;
+							}
+							$user_economy->addEnterprise($enterprise_id);
+							$user_economy->changeMoney(-$enterprise_price);
+							$db->save();
+							$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Бизнес успешно куплен. Его ID: {$enterprise_id}.", $data->object->from_id);
+						}
+						else{
+							$enterprise_price = Economy\Main::getFormatedMoney($enterprise_price);
+							$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔На вашем счету нет \${$enterprise_price} для покупки бизнеса.", $data->object->from_id);
+						}
+					}
+					else{
+						$msg = ", доступные типы бизнесов: ";
+						for($i = 0; $i < count($types); $i++){
+							$index = $i + 1;
+							$price = Economy\Main::getFormatedMoney($enterprise_types[$types[$i]]["price"]);
+							$msg .= "\n{$index}. {$enterprise_types[$types[$i]]["name"]} — \${$price}";
+						}
+						$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+					}
+					break;
 			}
 		}
 		else{
@@ -1419,52 +1467,7 @@ namespace{
 
 		$command = mb_strtolower(bot_get_word_argv($words, 1, ""));
 
-		if($command == "купить"){
-			Economy\EconomyFiles::readDataFiles();
-			if($user_economy->checkItem("edu", "level_4") === false){
-				$edu_name = Economy\Item::getItemName("edu", "level_4");
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы не можете купить бизнес. У вас должно быть {$edu_name}.", $data->object->from_id);
-				return;
-			}
-			if(count($user_economy->getEnterprises()) >= 3){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔вы уже имеете максимальное количество бизнесов (3).", $data->object->from_id);
-				return;
-			}
-			$type_index = bot_get_word_argv($words, 2, 0);
-			$enterprise_types = Economy\EconomyFiles::getEconomyFileData("enterprise_types");
-			$types = array_keys($enterprise_types);
-				if($type_index > 0 && count($types) >= $type_index){
-					$enterprise_price = $enterprise_types[$types[$type_index-1]]["price"];
-					if($user_economy->canChangeMoney(-$enterprise_price)){
-						$enterpriseSystem = $economy->initEnterpriseSystem();
-						$enterprise_id = $enterpriseSystem->createEnterprise($types[$type_index-1], $data->object->from_id);
-						if($enterprise_id === false){
-							$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Не удалось купить бизнес.", $data->object->from_id);
-							return;
-						}
-						$user_economy->addEnterprise($enterprise_id);
-						$user_economy->changeMoney(-$enterprise_price);
-						$db->save();
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Бизнес успешно куплен. Его ID: {$enterprise_id}.", $data->object->from_id);
-					}
-					else{
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔На вашем счету нет \${$enterprise_price} для покупки бизнеса.", $data->object->from_id);
-					}
-				}
-				else{
-					$msg = ", доступные типы бизнесов: ";
-					for($i = 0; $i < count($types); $i++){
-						$index = $i + 1;
-						$price = Economy\Main::getFormatedMoney($enterprise_types[$types[$i]]["price"]);
-						$msg .= "\n{$index}. {$enterprise_types[$types[$i]]["name"]} — \${$price}";
-					}
-					$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
-				}
-		}
-		elseif($command == "продать"){
-			
-		}
-		elseif($command == "выбрать"){
+		if($command == "выбрать"){
 			$argv = bot_get_word_argv($words, 2, "");
 			if($argv == "0"){
 				$user_economy->deleteMeta("selected_enterprise_index");
@@ -1474,11 +1477,19 @@ namespace{
 			elseif($argv == ""){
 				$enterpriseSystem = $economy->initEnterpriseSystem();
 				$user_enterprises = $user_economy->getEnterprises();
-				$query = array();
-				for($i = 0; $i < count($user_enterprises); $i++){
-					$query[] = db_query_get(array("economy", "enterprises", $user_enterprises[$i]));
+				$enterprises = array();
+				foreach ($user_enterprises as $id) {
+					$enterprises[] = $db->getValue(array("economy", "enterprises", $id));
 				}
-				$enterprises = call_user_func_array(array($db, "getValues"), $query);
+				if(count($enterprises) == 0){
+					$keyboard = vk_keyboard_inline(array(
+						array(
+							vk_text_button("Купить бизнес", array("command" => "bot_run_text_command", "text_command" => "!бизнес купить"), "positive")
+						)
+					));
+					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет ни одного бизнеса.", $data->object->from_id, array('keyboard' => $keyboard));
+					return;
+				}
 				$msg = ", Используйте:\n• !бизнес выбрать <номер> - Выбрать бизнес\n• !бизнес выбрать 0 - Убрать выбранный бизнес\n\nСписок ваших бизнесов:";
 				$selected_enterprise_index = $user_economy->getMeta("selected_enterprise_index", 0) - 1;
 				$enterprise_buttons = array();
@@ -2036,7 +2047,7 @@ namespace{
 		else{
 			$keyboard = vk_keyboard_inline(array(
 				array(
-					vk_text_button("Купить", array("command" => "bot_run_text_command", "text_command" => "!бизнес купить"), "positive")
+					vk_text_button("Купить", array("command" => "bot_run_text_command", "text_command" => "!купить бизнес"), "positive")
 				),
 				array(
 					vk_text_button("Выбрать", array("command" => "bot_run_text_command", "text_command" => "!бизнес выбрать"), "primary"),
@@ -2052,7 +2063,7 @@ namespace{
 				)
 			));
 			$botModule->sendCommandListFromArray($data, ", используйте:", array(
-				'!бизнес купить <тип> - Покупка бизнеса',
+				'!купить бизнес <тип> - Покупка бизнеса',
 				//'!бизнес продать <id> - Продажа бизнеса',
 				'!бизнес выбрать - Список бизнесов/Выбирает управляемый бизнес',
 				'!бизнес инфа - Информация о выбранном бизнесе',

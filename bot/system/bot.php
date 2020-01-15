@@ -152,7 +152,6 @@ function bot_pre_handle_function($event){
 }
 
 function bot_is_mention($msg){ // Проверка упоминания пользователя
-	mb_internal_encoding("UTF-8");
 	if(mb_substr($msg, 0, 3) == "[id" && mb_substr($msg, mb_strlen($msg) - 1, mb_strlen($msg) - 1) == "]"){
 		if(sizeof(explode("|", $msg)) >= 2){
 			return true;
@@ -162,7 +161,6 @@ function bot_is_mention($msg){ // Проверка упоминания поль
 }
 
 function bot_get_id_from_mention($msg){ // Получение ID из упоминания
-	mb_internal_encoding("UTF-8");
 	if(bot_is_mention($msg)){
 		return explode('|', mb_substr($msg, 3, mb_strlen($msg)))[0];
 	}
@@ -324,7 +322,6 @@ function bot_like_handler($finput){
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	mb_internal_encoding("UTF-8");
 	if(array_key_exists(1, $words))
 		$command = mb_strtolower($words[1]);
 	else
@@ -353,7 +350,6 @@ function bot_remove_handler($finput){
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	mb_internal_encoding("UTF-8");
 	if(array_key_exists(1, $words))
 		$command = mb_strtolower($words[1]);
 	else
@@ -401,7 +397,6 @@ function bot_base64($finput){
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	mb_internal_encoding("UTF-8");
 	$str_data = mb_substr($data->object->text, 8);
 	$botModule = new BotModule($db);
 
@@ -595,7 +590,6 @@ function bot_help($finput){
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	mb_internal_encoding("UTF-8");
 	if(array_key_exists(1, $words))
 		$section = mb_strtolower($words[1]);
 	else

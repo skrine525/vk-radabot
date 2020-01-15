@@ -7,7 +7,6 @@ function wordgame_cmd($finput){
 }
 
 function wordgame_main($data, $words, &$db){
-	mb_internal_encoding("UTF-8");
 	$session = wordgame_get_session($data->object->peer_id);
 	if(array_key_exists(1, $words) && mb_strtolower($words[1]) == 'старт'){
 		if(!array_key_exists('word_game', $session)){
@@ -153,7 +152,6 @@ function wordgame_del_session($peer_id){
 }
 
 function wordgame_get_encoded_word($db){
-	mb_internal_encoding("UTF-8");
 	$word = preg_split('//u', $db["word_game"]["current_word"]["word"], null, PREG_SPLIT_NO_EMPTY);
 	$en_word = "";
 	for($i = 0; $i < sizeof($word); $i++){
@@ -171,7 +169,6 @@ function wordgame_get_encoded_word($db){
 }
 
 function wordgame_reset_word(&$db, $date, $user_id){
-	mb_internal_encoding("UTF-8");
 	while (true){
 		$database = json_decode(file_get_contents("https://engine.lifeis.porn/api/words.php?rus=true"), true);
 		if($database["ok"]){
@@ -194,7 +191,6 @@ function wordgame_reset_word(&$db, $date, $user_id){
 }
 
 function wordgame_gameplay($data, &$db){
-	mb_internal_encoding("UTF-8");
 	$session = wordgame_get_session($data->object->peer_id);
 
 	$date = time(); // Переменная времени
@@ -275,7 +271,6 @@ function wordgame_gameplay($data, &$db){
 				return API.messages.send({$json_request});
 				");
 		} elseif ($message_text == 'подсказка' && !$session["word_game"]["current_word"]["can_reset"]) {
-			mb_internal_encoding("UTF-8");
 			$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
 			if($wordlen - $session["word_game"]["current_word"]["used_hints"] > 3){
 				if(($date - $session["word_game"]["current_word"]["last_using_hints_time"]) >= 20){
@@ -366,7 +361,6 @@ function wordgame_gameplay($data, &$db){
 		} elseif (strcasecmp($message_text, $session["word_game"]["current_word"]["word"]) == 0 && !$session["word_game"]["current_word"]["can_reset"]){
 			$word = $session["word_game"]["current_word"]["word"];
 			$session["word_game"]["current_word"]["can_reset"] = true;
-			mb_internal_encoding("UTF-8");
 			$score = mb_strlen($word) - $session["word_game"]["current_word"]["used_hints"] - 2;
 			$user_score = $db->getValue(array("games", "word_game_rating", "id{$data->object->from_id}"), 0);
 			$db->setValue(array("games", "word_game_rating", "id{$data->object->from_id}"), $user_score+$score);
@@ -402,7 +396,6 @@ function wordgame_eng_cmd($finput){
 }
 
 function wordgame_eng_main($data, $words, &$db){
-	mb_internal_encoding("UTF-8");
 	$session = wordgame_eng_get_session($data->object->peer_id);
 	if(array_key_exists(1, $words) && mb_strtolower($words[1]) == 'start'){
 		if(!array_key_exists('word_game_eng', $session)){
@@ -543,7 +536,6 @@ function wordgame_eng_del_session($peer_id){
 }
 
 function wordgame_eng_get_encoded_word($db){
-	mb_internal_encoding("UTF-8");
 	$word = preg_split('//u', $db["word_game_eng"]["current_word"]["word"], null, PREG_SPLIT_NO_EMPTY);
 	$en_word = "";
 	for($i = 0; $i < sizeof($word); $i++){
@@ -561,7 +553,6 @@ function wordgame_eng_get_encoded_word($db){
 }
 
 function wordgame_eng_reset_word(&$db, $date){
-	mb_internal_encoding("UTF-8");
 	while (true){
 		$database = json_decode(file_get_contents("https://engine.lifeis.porn/api/words.php?eng=true"), true);
 		if($database["ok"]){
@@ -583,7 +574,6 @@ function wordgame_eng_reset_word(&$db, $date){
 }
 
 function wordgame_eng_gameplay($data, &$db){
-	mb_internal_encoding("UTF-8");
 	$session = wordgame_eng_get_session($data->object->peer_id);
 
 	$date = time(); // Переменная времени
@@ -664,7 +654,6 @@ function wordgame_eng_gameplay($data, &$db){
 				return API.messages.send({$json_request});
 				");
 		} elseif ($message_text == 'подсказка' && !$session["word_game_eng"]["current_word"]["can_reset"]) {
-			mb_internal_encoding("UTF-8");
 			$wordlen = mb_strlen($session["word_game_eng"]["current_word"]["word"]);
 			if($wordlen - $session["word_game_eng"]["current_word"]["used_hints"] > 3){
 				if(($date - $session["word_game_eng"]["current_word"]["last_using_hints_time"]) >= 20){
@@ -755,7 +744,6 @@ function wordgame_eng_gameplay($data, &$db){
 		} elseif (strcasecmp($message_text, $session["word_game_eng"]["current_word"]["word"]) == 0 && !$session["word_game_eng"]["current_word"]["can_reset"]){
 			$word = $session["word_game_eng"]["current_word"]["word"];
 			$session["word_game_eng"]["current_word"]["can_reset"] = true;
-			mb_internal_encoding("UTF-8");
 			$score = mb_strlen($word) - $session["word_game_eng"]["current_word"]["used_hints"] - 2;
 			if(array_key_exists("games", $db) && array_key_exists("word_game_eng_rating", $db["games"]))
 				$db["games"]["word_game_eng_rating"]["id{$data->object->from_id}"] = $db["games"]["word_game_eng_rating"]["id{$data->object->from_id}"] + $score;
