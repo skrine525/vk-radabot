@@ -398,7 +398,8 @@ namespace Economy{
 			$enterprise = $this->db->getValue(array("economy", "enterprises", $id), false);
 			if($enterprise !== false){
 				$time = time();
-				for($i = 0; $i < count($enterprise["contracts"]); $i++){
+				$contract_count = count($enterprise["contracts"]);
+				for($i = 0; $i < $contract_count; $i++){
 					if($time - $enterprise["contracts"][$i]["start_time"] >= $enterprise["contracts"][$i]["contract_info"]["duration"]){
 						if($enterprise["contracts"][$i]["type"] == "contract"){
 							$enterprise["capital"] += $enterprise["contracts"][$i]["contract_info"]["income"];
@@ -421,7 +422,6 @@ namespace Economy{
 					}
 				}
 				$enterprise["contracts"] = array_values($enterprise["contracts"]); // Заменяем несуществующие на существующие элементы массива
-				$this->db->setValue(array("economy", "enterprises", $id), $enterprise);
 				return $enterprise;
 			}
 			else
@@ -1598,15 +1598,21 @@ namespace{
 				else{
 					$keyboard = vk_keyboard_inline(array(
 						array(
-							vk_text_button("Внести 1К", array('command' => 'bot_run_text_command', 'text_command' => "!бизнес бюджет пополнить 1000"), "primary"),
-							vk_text_button("Внести 10К", array('command' => 'bot_run_text_command', 'text_command' => "!бизнес бюджет пополнить 10000"), "primary"),
-							vk_text_button("Внести 100К", array('command' => 'bot_run_text_command', 'text_command' => "!бизнес бюджет пополнить 100000"), "primary")
+							vk_text_button("⬆ 1К", array('command' => 'bot_run_text_command', 'text_command' => "!бизнес бюджет пополнить 1000"), "negative"),
+							vk_text_button("⬆ 5К", array('command' => 'bot_run_text_command', 'text_command' => "!бизнес бюджет пополнить 5000"), "negative")
 						),
 						array(
-							vk_text_button("Снять 1К", array('command' => 'bot_run_text_command', 'text_command' => "!бизнес бюджет снять 1000"), "primary"),
-							vk_text_button("Снять 10К", array('command' => 'bot_run_text_command', 'text_command' => "!бизнес бюджет снять 10000"), "primary"),
-							vk_text_button("Снять 100К", array('command' => 'bot_run_text_command', 'text_command' => "!бизнес бюджет снять 100000"), "primary")
-						)
+							vk_text_button("⬆ 10К", array('command' => 'bot_run_text_command', 'text_command' => "!бизнес бюджет пополнить 10000"), "negative"),
+							vk_text_button("⬆ 100К", array('command' => 'bot_run_text_command', 'text_command' => "!бизнес бюджет пополнить 100000"), "negative")
+						),
+						array(
+							vk_text_button("⬇ 1К", array('command' => 'bot_run_text_command', 'text_command' => "!бизнес бюджет снять 1000"), "positive"),
+							vk_text_button("⬇ 5К", array('command' => 'bot_run_text_command', 'text_command' => "!бизнес бюджет снять 5000"), "positive")
+						),
+						array(
+							vk_text_button("⬇ 10К", array('command' => 'bot_run_text_command', 'text_command' => "!бизнес бюджет снять 10000"), "positive"),
+							vk_text_button("⬇ 100К", array('command' => 'bot_run_text_command', 'text_command' => "!бизнес бюджет снять 100000"), "positive")
+						),
 					));
 					$botModule->sendCommandListFromArray($data, ", используйте:", array(
 						"!бизнес бюджет пополнить <сумма> - Попоплнение бюджета",
@@ -1764,10 +1770,6 @@ namespace{
 				$contracts = $enterprise["contracts"];
 				$argv = intval(bot_get_word_argv($words, 2, 0));
 
-				/*if(count($contracts) == 0){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", В данный момент нет активных контрактов.", $data->object->from_id);
-					return;
-				}*/
 				$time = time();
 				$msg = ", активные контракты:";
 				for($i = 0; $i < count($contracts) || $i < $enterprise["max_contracts"]; $i++){

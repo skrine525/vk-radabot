@@ -241,7 +241,7 @@ function event_handle($data){
 	// Fun
 	$event->addTextCommand("выбери", 'fun_choose');
 	$event->addTextCommand("сколько", 'fun_howmuch');
-	$event->addTextCommand("кто", 'fun_whois');
+	fun_whois_initcmd($event); // Инициализация команд [кто/кого/кому]
 	$event->addTextCommand("инфа", "fun_info");
 	$event->addTextCommand("!бузова", 'fun_buzova');
 	$event->addTextCommand("!карина", 'fun_karina_cmd');

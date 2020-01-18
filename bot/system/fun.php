@@ -639,7 +639,13 @@ function fun_bottle($finput){
 	}
 }
 
-function fun_whois($finput){
+function fun_whois_initcmd($event){
+	$event->addTextCommand("кто", 'fun_whois_nom');
+	$event->addTextCommand("кого", 'fun_whois_gen');
+	$event->addTextCommand("кому", 'fun_whois_dat');
+}
+
+function fun_whois_nom($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
@@ -654,6 +660,7 @@ function fun_whois($finput){
 		));
 		return;
 	}
+	$text = mb_eregi_replace("\n", " ", $text); // Убираем символ новой строки
 
 	$random_number = mt_rand(0, 65535);
 
@@ -664,6 +671,66 @@ function fun_whois($finput){
 		var members = API.messages.getConversationMembers({'peer_id':peer_id});
 		var member = members.profiles[random_number % members.profiles.length];
 		var msg = appeal+', 🤔Я думаю это @id'+ member.id + ' ('+member.first_name+' '+member.last_name+') - {$text}.';
+		API.messages.send({'peer_id':peer_id,'message':msg});
+	");
+}
+
+function fun_whois_gen($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$words = $finput->words;
+	$db = &$finput->db;
+
+	$botModule = new BotModule($db);
+
+	$text = mb_substr($data->object->text, 4);
+	if($text == ""){
+		$botModule->sendCommandListFromArray($data, ", используйте:", array(
+			'Кого <текст>'
+		));
+		return;
+	}
+	$text = mb_eregi_replace("\n", " ", $text); // Убираем символ новой строки
+
+	$random_number = mt_rand(0, 65535);
+
+	vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		var peer_id = {$data->object->peer_id};
+		var from_id = {$data->object->from_id};
+		var random_number = {$random_number};
+		var members = API.messages.getConversationMembers({'peer_id':peer_id,'fields':'first_name_gen,last_name_gen'});
+		var member = members.profiles[random_number % members.profiles.length];
+		var msg = appeal+', 🤔Я думаю это @id'+ member.id + ' ('+member.first_name_gen+' '+member.last_name_gen+') - {$text}.';
+		API.messages.send({'peer_id':peer_id,'message':msg});
+	");
+}
+
+function fun_whois_dat($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$words = $finput->words;
+	$db = &$finput->db;
+
+	$botModule = new BotModule($db);
+
+	$text = mb_substr($data->object->text, 4);
+	if($text == ""){
+		$botModule->sendCommandListFromArray($data, ", используйте:", array(
+			'Кому <текст>'
+		));
+		return;
+	}
+	$text = mb_eregi_replace("\n", " ", $text); // Убираем символ новой строки
+
+	$random_number = mt_rand(0, 65535);
+
+	vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		var peer_id = {$data->object->peer_id};
+		var from_id = {$data->object->from_id};
+		var random_number = {$random_number};
+		var members = API.messages.getConversationMembers({'peer_id':peer_id,'fields':'first_name_dat,last_name_dat'});
+		var member = members.profiles[random_number % members.profiles.length];
+		var msg = appeal+', 🤔Я думаю это @id'+ member.id + ' ('+member.first_name_dat+' '+member.last_name_dat+') - {$text}.';
 		API.messages.send({'peer_id':peer_id,'message':msg});
 	");
 }

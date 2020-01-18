@@ -372,78 +372,78 @@
 
 	"enterprise_types": {
 	    "shop": {
-	      "name": "Магазин",
-	      "price": 700000,
-	      "initial_workers": 5,
-	      "improvment":{
-	      	"workers": [
-	      		{
-	      			"name": "Улучшение условий рабочих Ⅰ",
-		          	"duration": 7200,
-		          	"workers_required": 5,
-		          	"exp_required": 60,
-		          	"cost": 20000,
-		          	"new_workers": 5
-	      		},
-	      		{
-	      			"name": "Улучшение условий рабочих Ⅱ",
-		          	"duration": 14400,
-		          	"workers_required": 10,
-		          	"exp_required": 100,
-		          	"cost": 40000,
-		          	"new_workers": 10
-	      		},
-	      		{
-	      			"name": "Улучшение условий рабочих Ⅲ",
-		          	"duration": 28800,
-		          	"workers_required": 20,
-		          	"exp_required": 260,
-		          	"cost": 80000,
-		          	"new_workers": 30
-	      		},
-	      		{
-	      			"name": "Улучшение условий рабочих Ⅳ",
-		          	"duration": 43200,
-		          	"workers_required": 50,
-		          	"exp_required": 400,
-		          	"cost": 160000,
-		          	"new_workers": 30
-	      		},
-	      		{
-	      			"name": "Улучшение условий рабочих Ⅴ",
-		          	"duration": 57600,
-		          	"workers_required": 80,
-		          	"exp_required": 930,
-		          	"cost": 320000,
-		          	"new_workers": 30
-	      		},
-	      		{
-	      			"name": "Улучшение условий рабочих Ⅵ",
-		          	"duration": 72000,
-		          	"workers_required": 110,
-		          	"exp_required": 1590,
-		          	"cost": 640000,
-		          	"new_workers": 55
-	      		}
-	      	],
+	      	"name": "Магазин",
+	      	"price": 700000,
+	      	"initial_workers": 5,
+	      	"improvment":{
+	      		"workers": [
+		      		{
+		      			"name": "Улучшение условий рабочих Ⅰ",
+			          	"duration": 7200,
+			          	"workers_required": 5,
+			          	"exp_required": 60,
+			          	"cost": 20000,
+			          	"new_workers": 5
+		      		},
+		      		{
+		      			"name": "Улучшение условий рабочих Ⅱ",
+			          	"duration": 14400,
+			          	"workers_required": 10,
+			          	"exp_required": 100,
+			          	"cost": 40000,
+			          	"new_workers": 10
+		      		},
+		      		{
+		      			"name": "Улучшение условий рабочих Ⅲ",
+			          	"duration": 28800,
+			          	"workers_required": 20,
+			          	"exp_required": 260,
+			          	"cost": 80000,
+			          	"new_workers": 30
+		      		},
+		      		{
+		      			"name": "Улучшение условий рабочих Ⅳ",
+			          	"duration": 43200,
+			          	"workers_required": 50,
+			          	"exp_required": 400,
+			          	"cost": 160000,
+			          	"new_workers": 30
+		      		},
+		      		{
+		      			"name": "Улучшение условий рабочих Ⅴ",
+			          	"duration": 57600,
+			          	"workers_required": 80,
+			          	"exp_required": 930,
+			          	"cost": 320000,
+			          	"new_workers": 30
+		      		},
+		      		{
+		      			"name": "Улучшение условий рабочих Ⅵ",
+			          	"duration": 72000,
+			          	"workers_required": 110,
+			          	"exp_required": 1590,
+			          	"cost": 640000,
+			          	"new_workers": 55
+		      		}
+	      		],
+		      	"contracts": [
+		      		{
+		      			"name": "Расширение торговой сети Ⅰ",
+			          	"duration": 21600,
+			          	"workers_required": 20,
+			          	"exp_required": 300,
+			          	"cost": 100000
+		      		},
+		      		{
+		      			"name": "Расширение торговой сети II",
+			          	"duration": 64800,
+			          	"workers_required": 165,
+			          	"exp_required": 2960,
+			          	"cost": 735000
+		      		}
+		      	]
+	      	},
 	      	"contracts": [
-	      		{
-	      			"name": "Расширение торговой сети Ⅰ",
-		          	"duration": 21600,
-		          	"workers_required": 20,
-		          	"exp_required": 300,
-		          	"cost": 100000
-	      		},
-	      		{
-	      			"name": "Расширение торговой сети II",
-		          	"duration": 64800,
-		          	"workers_required": 165,
-		          	"exp_required": 2960,
-		          	"cost": 735000
-	      		}
-	      	]
-	      },
-	      "contracts": [
 		        {
 		          	"name": "Продажа товаров Ⅰ",
 		          	"duration": 5400,
@@ -485,6 +485,121 @@
 		          	"exp": 320
 		        }
 	        ]
+	    },
+	    "restaurant": {
+	    	"name": "Ресторан",
+			"price": 1200000,
+			"initial_workers": 10,
+			"improvment":{
+			  	"workers": [
+			  		{
+			  			"name": "Улучшение условий рабочих Ⅰ",
+			        	"duration": 7200,
+			        	"workers_required": 10,
+			        	"exp_required": 100,
+			        	"cost": 30000,
+			        	"new_workers": 5
+			  		},
+			  		{
+			  			"name": "Улучшение условий рабочих Ⅱ",
+			        	"duration": 14400,
+			        	"workers_required": 15,
+			        	"exp_required": 165,
+			        	"cost": 75000,
+			        	"new_workers": 15
+			  		},
+			  		{
+			  			"name": "Улучшение условий рабочих Ⅲ",
+			        	"duration": 28800,
+			        	"workers_required": 30,
+			        	"exp_required": 475,
+			        	"cost": 120000,
+			        	"new_workers": 35
+			  		},
+			  		{
+			  			"name": "Улучшение условий рабочих Ⅳ",
+			        	"duration": 43200,
+			        	"workers_required": 65,
+			        	"exp_required": 1260,
+			        	"cost": 200000,
+			        	"new_workers": 35
+			  		},
+			  		{
+			  			"name": "Улучшение условий рабочих Ⅴ",
+			        	"duration": 57600,
+			        	"workers_required": 100,
+			        	"exp_required": 2210,
+			        	"cost": 320000,
+			        	"new_workers": 55
+			  		},
+			  		{
+			  			"name": "Улучшение условий рабочих Ⅵ",
+			        	"duration": 72000,
+			        	"workers_required": 155,
+			        	"exp_required": 4620,
+			        	"cost": 640000,
+			        	"new_workers": 35
+			  		}
+			  	],
+			  	"contracts": [
+			  		{
+			  			"name": "Расширение количества столиков Ⅰ",
+			        	"duration": 21600,
+			        	"workers_required": 20,
+			        	"exp_required": 275,
+			        	"cost": 100000
+			  		},
+			  		{
+			  			"name": "Расширение количества столиков II",
+			        	"duration": 64800,
+			        	"workers_required": 190,
+			        	"exp_required": 6160,
+			        	"cost": 720000
+			  		}
+			  	]
+			},
+			"contracts": [
+		      	{
+		        	"name": "Подача блюда Ⅰ",
+		        	"duration": 7200,
+		        	"workers_required": 10,
+		        	"cost": 1200,
+		        	"income": 4800,
+		        	"exp": 20
+		      	},
+		      	{
+		        	"name": "Подача блюда Ⅱ",
+		        	"duration": 14400,
+		        	"workers_required": 20,
+		        	"cost": 2800,
+		        	"income": 13600,
+		        	"exp": 55
+		      	},
+		      	{
+		        	"name": "Подача блюда Ⅲ",
+		        	"duration": 21600,
+		        	"workers_required": 25,
+		        	"cost": 7600,
+		        	"income": 36760,
+		        	"exp": 75
+		      	},
+		      	{
+		        	"name": "Подача блюда Ⅳ",
+		        	"duration": 28800,
+		        	"workers_required": 65,
+		        	"cost": 17800,
+		        	"income": 87880,
+		        	"exp": 275
+		      	},
+		      	{
+		        	"name": "Подача блюда Ⅴ",
+		        	"duration": 43200,
+		        	"workers_required": 90,
+		        	"cost": 78400,
+		        	"income": 287200,
+		        	"exp": 455
+		      	}
+		    ]
 	    }
   	}
 }

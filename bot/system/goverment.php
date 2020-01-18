@@ -928,8 +928,6 @@ function goverment_referendum_vote_cmd($finput){
 				var CANDIDATE1_NAME = users[0].first_name.substr(0, 2)+'. '+users[0].last_name;
 				var CANDIDATE2_NAME = users[1].first_name.substr(0, 2)+'. '+users[1].last_name;
 
-				var keyboard = \"{$keyboard_json}\";
-
 				var msg = appeal+', учавствуй в выборах президента. Просто нажми на кнопку понравившегося тебе кандидата и ты отдашь за него свой голос. Список кандидатов:\\n✅@id'+users[0].id+' ('+users[0].first_name+' '+users[0].last_name+')\\n✅@id'+users[1].id+' ('+users[1].first_name+' '+users[1].last_name+')';
 
 				return API.messages.send({$request});
