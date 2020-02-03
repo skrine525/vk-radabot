@@ -717,7 +717,7 @@ function goverment_referendum_candidate($finput){
 				$db->setValue(array("goverment", "referendum"), $referendum);
 				$db->save();
 				$msg1 = ", вы зарегистрировались как кандидат №2.";
-				$msg2 = "Кандидаты набраны, самое время голосовать. Используй \\\"!vote\\\", чтобы учавствовать в голосовании.";
+				$msg2 = "Кандидаты набраны, самое время голосовать. Используй [!vote], чтобы учавствовать в голосовании.";
 				vk_execute($botModule->makeExeAppeal($data->object->from_id)."
 					API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg1}'});
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg2}'});");
@@ -745,13 +745,34 @@ function goverment_referendum_system($data, &$db){
 		if($date - $referendum["last_notification_time"] >= 600){
 			$db->setValue(array("goverment", "referendum", "last_notification_time"), $date);
 			if($referendum["candidate1"]["id"] == 0 || $referendum["candidate2"]["id"] == 0){
-				$msg = "Начались выборы в президенты беседы. Чтобы зарегистрироваться, как кандидат, используйте команду \\\"!candidate\\\".";
+				$msg = "Начались выборы в президенты беседы. Чтобы зарегистрироваться, как кандидат, используйте команду [!candidate].";
 				vk_execute("
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});");
 			} else {
-				$msg = "Кандидаты набраны, самое время голосовать. Используй \\\"!vote\\\", чтобы учавствовать в голосовании.";
+				$keyboard = vk_keyboard_inline(array(
+					array(
+						vk_text_button("📝%CANDIDATE1_NAME%", array(
+						'command' => 'referendum_vote',
+						'params' => array(
+							'candidate' => 1
+						)), "primary"),
+						vk_text_button("📝%CANDIDATE2_NAME%", array(
+						'command' => 'referendum_vote',
+						'params' => array(
+							'candidate' => 2
+						)), "primary")
+					)
+				));
+				$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "Кандидаты набраны, самое время голосовать. Используй [!vote], чтобы учавствовать в голосовании или выберите своего кандидата ниже.", 'keyboard' => $keyboard), JSON_UNESCAPED_UNICODE);
+				$request = vk_parse_vars($request, array("CANDIDATE1_NAME", "CANDIDATE2_NAME"));
+				$candidate1_id = $referendum["candidate1"]["id"];
+				$candidate2_id = $referendum["candidate2"]["id"];
 				vk_execute("
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});");
+					var users = API.users.get({'user_ids':[{$candidate1_id},{$candidate2_id}]});
+					var CANDIDATE1_NAME = users[0].first_name.substr(0, 2)+'. '+users[0].last_name;
+					var CANDIDATE2_NAME = users[1].first_name.substr(0, 2)+'. '+users[1].last_name;
+					return API.messages.send({$request});
+				");
 			}
 		} elseif($date - $referendum["start_time"] >= 18000) {
 			if($referendum["candidate1"]["id"] == 0 || $referendum["candidate2"]["id"] == 0){
@@ -784,6 +805,7 @@ function goverment_referendum_system($data, &$db){
 					$economy->getUser($candidate_id)->changeItem("govdoc", "presidential_certificate", 1); // Выдаем удостоверение президента новому
 					$gov["president_id"] = $candidate_id;
 					$gov["batch_name"] = "Полит. партия ".$res->response->first_name_gen." ".$res->response->last_name_gen;
+					$gov["last_referendum_time"] = time();
 					unset($gov["referendum"]);
 					$db->setValue(array("goverment"), $gov);
 				} elseif($candidate1_voters_count < $candidate2_voters_count) {
@@ -807,6 +829,7 @@ function goverment_referendum_system($data, &$db){
 					$economy->getUser($candidate_id)->changeItem("govdoc", "presidential_certificate", 1);  // Выдаем удостоверение президента новому
 					$gov["president_id"] = $candidate_id;
 					$gov["batch_name"] = "Полит. партия ".$res->response->first_name_gen." ".$res->response->last_name_gen;
+					$gov["last_referendum_time"] = time();
 					unset($gov["referendum"]);
 					$db->setValue(array("goverment"), $gov);
 				} else {
@@ -816,6 +839,26 @@ function goverment_referendum_system($data, &$db){
 				$db->unsetValue(array("goverment", "referendum"));
 				}
 			}
+		}
+	}
+	else{
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue("auto_referendum"))
+			return;
+		$time = time();
+		$last_referendum_time = $db->getValue(array("goverment", "last_referendum_time"), 0);
+		if($time - $last_referendum_time >= 432000){
+			$referendum = array();
+			$referendum["candidate1"] = array('id' => 0, "voters_count" => 0);
+			$referendum["candidate2"] = array('id' => 0, "voters_count" => 0);
+			$referendum["all_voters"] = array();
+			$referendum["start_time"] = $time;
+			$referendum["last_notification_time"] = $time;
+			$db->setValue(array("goverment", "referendum"), $referendum);
+			$db->save();
+			$msg = "Начались выборы в президенты беседы. Чтобы зарегистрироваться, как кандидат, используйте команду \\\"!candidate\\\".";
+			vk_execute("
+				return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});");
 		}
 	}
 }

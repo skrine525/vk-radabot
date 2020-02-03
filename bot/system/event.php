@@ -196,7 +196,7 @@ function event_handle($data){
 	// Основное
 	$event->addTextCommand("!cmdlist", 'bot_cmdlist');
 	$event->addTextCommand("!reg", 'bot_register');
-	$event->addTextCommand("!help", 'bot_help');
+	$event->addTextCommand("!помощь", 'bot_help');
 
 	// Правительство
 	$event->addTextCommand("!конституция", 'goverment_constitution');

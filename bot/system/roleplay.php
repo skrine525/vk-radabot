@@ -17,7 +17,7 @@ function roleplay_api_act_with($db, $data, $command, $user_info = "", $params){
 		$msgFemale = $params["msgFemale"];
 	else{
 		$debug_backtrace = debug_backtrace();
-		error_log("Invalid parameter msgFemale msgFemale in function {$debug_backtrace[1]["function"]} in {$debug_backtrace[1]["file"]} on line {$debug_backtrace[1]["line"]}");
+		error_log("Invalid parameter msgFemale in function {$debug_backtrace[1]["function"]} in {$debug_backtrace[1]["file"]} on line {$debug_backtrace[1]["line"]}");
 		exit;
 	}
 

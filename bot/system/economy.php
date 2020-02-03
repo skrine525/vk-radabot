@@ -1572,7 +1572,7 @@ namespace{
 						$enterpriseSystem->saveEnterprise($enterprise["id"], $enterprise);
 						$db->save();
 						$value = Economy\Main::getFormatedMoney($value);
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ✅{$value} успешно переведены на счет бизнеса.", $data->object->from_id);
+						$botModule->sendSimpleMessage($data->object->peer_id, ", ✅\${$value} успешно переведены на счет бизнеса.", $data->object->from_id);
 					}
 					else{
 						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔На вашем счету недостаточно средств.", $data->object->from_id);
@@ -1589,7 +1589,7 @@ namespace{
 						$enterpriseSystem->saveEnterprise($enterprise["id"], $enterprise);
 						$db->save();
 						$value = Economy\Main::getFormatedMoney($value);
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ✅{$value} успешно переведены на ваш счет.", $data->object->from_id);
+						$botModule->sendSimpleMessage($data->object->peer_id, ", ✅\${$value} успешно переведены на ваш счет.", $data->object->from_id);
 					}
 					else{
 						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔На счету бизнеса недостаточно средств.", $data->object->from_id);

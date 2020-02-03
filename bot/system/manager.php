@@ -6,7 +6,7 @@
 // Rank API
 
 class RankSystem{ // Класс управления рангами
-	const RANKS_ARRAY = array("Создатель беседы", "Администратор");
+	const RANKS_ARRAY = array("Владелец", "Администратор");
 	const MINRANK_NAME = "Участник";
 
 	private $db;
@@ -72,7 +72,8 @@ class ChatModes{
 	const MODES = array( // Константа всех Режимов
 		// Template - array('name' => name, 'default_state' => state)
 		array('name' => 'allow_memes', 'default_state' => true),
-		array('name' => 'antiflood_enabled', 'default_state' => true)
+		array('name' => 'antiflood_enabled', 'default_state' => true),
+		array('name' => 'auto_referendum', 'default_state' => false)
 	);
 
 	private $db;
@@ -861,7 +862,7 @@ function manager_online_list($finput){
 				msg = msg + msg_users;
 			}
 
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+msg});
+			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+msg,'disable_mentions':true});
 			");
 	}
 }

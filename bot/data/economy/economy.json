@@ -373,7 +373,7 @@
 	"enterprise_types": {
 	    "shop": {
 	      	"name": "Магазин",
-	      	"price": 700000,
+	      	"price": 1500000,
 	      	"initial_workers": 5,
 	      	"improvment":{
 	      		"workers": [
@@ -381,7 +381,7 @@
 		      			"name": "Улучшение условий рабочих Ⅰ",
 			          	"duration": 7200,
 			          	"workers_required": 5,
-			          	"exp_required": 60,
+			          	"exp_required": 50,
 			          	"cost": 20000,
 			          	"new_workers": 5
 		      		},
@@ -390,14 +390,14 @@
 			          	"duration": 14400,
 			          	"workers_required": 10,
 			          	"exp_required": 100,
-			          	"cost": 40000,
+			          	"cost": 45000,
 			          	"new_workers": 10
 		      		},
 		      		{
 		      			"name": "Улучшение условий рабочих Ⅲ",
 			          	"duration": 28800,
 			          	"workers_required": 20,
-			          	"exp_required": 260,
+			          	"exp_required": 390,
 			          	"cost": 80000,
 			          	"new_workers": 30
 		      		},
@@ -405,24 +405,24 @@
 		      			"name": "Улучшение условий рабочих Ⅳ",
 			          	"duration": 43200,
 			          	"workers_required": 50,
-			          	"exp_required": 400,
-			          	"cost": 160000,
+			          	"exp_required": 1000,
+			          	"cost": 170000,
 			          	"new_workers": 30
 		      		},
 		      		{
 		      			"name": "Улучшение условий рабочих Ⅴ",
 			          	"duration": 57600,
 			          	"workers_required": 80,
-			          	"exp_required": 930,
-			          	"cost": 320000,
+			          	"exp_required": 2480,
+			          	"cost": 400000,
 			          	"new_workers": 30
 		      		},
 		      		{
 		      			"name": "Улучшение условий рабочих Ⅵ",
 			          	"duration": 72000,
 			          	"workers_required": 110,
-			          	"exp_required": 1590,
-			          	"cost": 640000,
+			          	"exp_required": 3180,
+			          	"cost": 780000,
 			          	"new_workers": 55
 		      		}
 	      		],
@@ -431,15 +431,15 @@
 		      			"name": "Расширение торговой сети Ⅰ",
 			          	"duration": 21600,
 			          	"workers_required": 20,
-			          	"exp_required": 300,
-			          	"cost": 100000
+			          	"exp_required": 450,
+			          	"cost": 125000
 		      		},
 		      		{
 		      			"name": "Расширение торговой сети II",
 			          	"duration": 64800,
 			          	"workers_required": 165,
-			          	"exp_required": 2960,
-			          	"cost": 735000
+			          	"exp_required": 5920,
+			          	"cost": 800000
 		      		}
 		      	]
 	      	},
