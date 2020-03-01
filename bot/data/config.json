@@ -4,5 +4,8 @@
 	"VK_CONFIRMATION_CODE": null,
 	"VK_SECRET_KEY": null,
 	"VK_USER_TOKEN": null,
-	"VOICERSS_KEY": null
+	"VOICERSS_KEY": null,
+	"GIPHY_API_TOKEN": null,
+	"RANDOMORG_API_KEY": null,
+	"DEBUG_USER_ID": null
 }

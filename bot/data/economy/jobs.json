@@ -27,7 +27,7 @@
 			"male": "{USERNAME} доставил газету к последнему дому и заработал {SALARY}.",
 			"female": "{USERNAME} доставила газету к последнему дому и заработала {SALARY}."
 		},
-		"item_dependencies": ["edu:level_1", "car:level_2", "immovables:level_1"]
+		"item_dependencies": ["edu:level_1", "immovables:level_1"]
 	},
 	"food_delivery_man": {
 		"name": "Доставщик еды",
@@ -37,7 +37,7 @@
 			"male": "{USERNAME} доставил еду голодному человеку и заработал {SALARY}.",
 			"female": "{USERNAME} доставила еду голодному человеку и заработала {SALARY}."
 		},
-		"item_dependencies": ["edu:level_1", "car:level_2", "immovables:level_1"]
+		"item_dependencies": ["edu:level_1", "immovables:level_1"]
 	},
 	"sales_assistant": {
 		"name": "Помощник продавца",

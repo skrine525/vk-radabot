@@ -2,7 +2,7 @@
 
 require('../vendor/autoload.php');
 
-require("../bot/core/loader.php"); // Загрузка модулей бота
+require("../bot/system/loader.php"); // Загрузка модулей бота
 
 $app = new Silex\Application();
 $app['debug'] = false;
@@ -29,11 +29,11 @@ $app->post('/bot', function() { // Обработчик логики бота
 	if (!$data)
 		return 'nioh';
 
-	if ($data->secret !== vars_get('VK_SECRET_KEY') && $data->type !== 'confirmation')
+	if ($data->secret !== bot_getconfig('VK_SECRET_KEY') && $data->type !== 'confirmation')
 		return 'nioh';
 
 	if ($data->type == "confirmation")
-		return vars_get('VK_CONFIRMATION_CODE');
+		return bot_getconfig('VK_CONFIRMATION_CODE');
 
 	// Возвращаем серверу ok
 	ob_end_clean();
@@ -48,7 +48,7 @@ $app->post('/bot', function() { // Обработчик логики бота
 	session_write_close(); // Added a line suggested in the comment
 	// Do processing here 
 
-	event_update($data); // Основная функции обработки событий бота
+	event_handle($data); // Основная функции обработки событий бота
 
 	return ''; // Ненужная хрень, которая здесь для того, чтобы было меньше ошибок в логе
 });

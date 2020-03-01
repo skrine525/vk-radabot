@@ -22,7 +22,7 @@ class Event{
 		return $this->data;
 	}
 
-  	public function &getDB(){
+  	public function getDB(){
   		return $this->db;
   	}
 
@@ -193,6 +193,9 @@ function event_handle($data){
 
 	// Template - $event->addTextCommand("command", "callback");
 
+	// Команды отладочного режима
+	bot_debug_cmdinit($event);
+
 	// Основное
 	$event->addTextCommand("!cmdlist", 'bot_cmdlist');
 	$event->addTextCommand("!reg", 'bot_register');
@@ -275,9 +278,6 @@ function event_handle($data){
 
 	// Economy
 	economy_initcmd($event);
-
-	// Для тестирование плюшек
-	//bot_test_initcmd($event);
 
 	// Функция обработки событий вне командной среды
 	$event->setDefaultFunction(function ($finput){

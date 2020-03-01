@@ -64,11 +64,11 @@ class BotModule{
 
 	function sendSimpleMessage($peer_id, $message, $from_id = null, $params = array()){ // Отправка простых сообщений
 		$appeal_code = "";
-		if(!is_null($from_id)){
+		if(gettype($from_id) == "integer"){
 			$appeal_code = $this->makeExeAppeal($from_id);
 			$message = "%appeal%{$message}";
 		}
-		$request_array = array('peer_id' => $peer_id, 'message' => $message);
+		$request_array = array('peer_id' => $peer_id, 'message' => $message, 'disable_mentions' => true);
 		foreach ($params as $key => $value) {
 			$request_array[$key] = $value;
 		}
@@ -93,6 +93,89 @@ class BotModule{
 	}
 }
 
+class RandomOrg{ // Класс для работы с Random.org
+	public static function generateIntegers($min, $max, $n, $id = 0, $replacement = true){
+		$options = array(
+	   		'http' => array(  
+	            'method'  => 'POST',
+	            'header'  => 'Content-type: application/json', 
+	            'content' => json_encode(array(
+	            	'jsonrpc' => '2.0',
+	            	'method' => 'generateIntegers',
+	            	'params' => array(
+	            		'apiKey' => bot_getconfig('RANDOMORG_API_KEY'),
+	            		'n' => $n,
+	            		'min' => $min,
+	            		'max' => $max,
+	            		'replacement' => $replacement
+	            	),
+	            	'id' => $id
+	            ))
+	        )  
+		);
+		$recieved_data = file_get_contents('https://api.random.org/json-rpc/2/invoke', false, stream_context_create($options));
+		if($recieved_data !== false)
+			return json_decode($recieved_data, true);
+		return false;
+	}
+}
+
+class GameController{
+	const GAME_SESSIONS_DIRECTORY = BOT_DATADIR."/game_sessions";
+
+	private static function initGameSessionsDirectory(){
+		if(!file_exists(self::GAME_SESSIONS_DIRECTORY))
+			mkdir(self::GAME_SESSIONS_DIRECTORY);
+	}
+
+	public static function getSession($chat_id){
+		self::initGameSessionsDirectory();
+		if(file_exists(self::GAME_SESSIONS_DIRECTORY."/chat{$chat_id}.json")){
+			$data = json_decode(file_get_contents(self::GAME_SESSIONS_DIRECTORY."/chat{$chat_id}.json"), true);
+			if($data !== false)
+				return (object) $data;
+		}
+		return false;
+	}
+
+	public static function setSession($chat_id, $id, $object){
+		self::initGameSessionsDirectory();
+		if(file_exists(self::GAME_SESSIONS_DIRECTORY."/chat{$chat_id}.json")){
+			$data = json_decode(file_get_contents(self::GAME_SESSIONS_DIRECTORY."/chat{$chat_id}.json"), true);
+			if($data !== false && $data["id"] == $id){
+				$data["object"] = $object;
+				if(file_put_contents(self::GAME_SESSIONS_DIRECTORY."/chat{$chat_id}.json", json_encode($data, JSON_UNESCAPED_UNICODE)) === false)
+					return false;
+				else
+					return true;
+			}
+			else{
+				return false;
+			}
+		}
+		else{
+			$data = array(
+				'id' => $id,
+				'object' => $object
+			);
+			if(file_put_contents(self::GAME_SESSIONS_DIRECTORY."/chat{$chat_id}.json", json_encode($data, JSON_UNESCAPED_UNICODE)) === false)
+				return false;
+			else
+				return true;
+		}
+	}
+
+	public static function deleteSession($chat_id, $id){
+		self::initGameSessionsDirectory();
+		if(file_exists(self::GAME_SESSIONS_DIRECTORY."/chat{$chat_id}.json")){
+			$data = json_decode(file_get_contents(self::GAME_SESSIONS_DIRECTORY."/chat{$chat_id}.json"), true);
+			if($data !== false && $data["id"] == $id)
+				return unlink(self::GAME_SESSIONS_DIRECTORY."/chat{$chat_id}.json");
+		}
+		return false;
+	}
+}
+
 function bot_register($finput){ // Регистрация чата
 	// Инициализация базовых переменных
 	$data = $finput->data; 
@@ -105,16 +188,16 @@ function bot_register($finput){ // Регистрация чата
 			var chat = API.messages.getConversationsById({'peer_ids':[{$data->object->peer_id}],'extended':1}).items[0];
 
 			if(chat.peer.type != 'chat'){
-				API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', эта беседа не является групповым чатом.'});
+				API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', эта беседа не является групповым чатом.','disable_mentions':true});
 				return {'result':0};
 			}
 			var owner = API.users.get({'user_ids':[{$data->object->from_id}],'fields':'first_name_gen,last_name_gen'})[0];
-			API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', беседа успешно зарегистрирована.'});
+			API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', беседа успешно зарегистрирована.','disable_mentions':true});
 			return {'result':1,'batch_name':'Полит. партия '+owner.first_name_gen+' '+owner.last_name_gen};
 			"))->response;
 		if ($response->result == 1){
 			$gov_data = array('soc_order' => 1,
-			'president_id' => $data->object->from_id,
+			'president_id' => 0,
 			'parliament_id' => $data->object->from_id,
 			'batch_name' => "Нет данных",
 			'laws' => array(),
@@ -122,23 +205,21 @@ function bot_register($finput){ // Регистрация чата
 			'flag' => "nil",
 			'capital' => 'г. Мда');
 			$chat_id = $data->object->peer_id - 2000000000;
-			$db->setValues(
-				db_query_set(array("chat_id"), $chat_id),
-				db_query_set(array("goverment"), $gov_data),
-				db_query_set(array("bot_manager"), array('user_ranks' => array("id{$data->object->from_id}" => 0)))
-			);
+			$db->setValue(array("chat_id"), $chat_id);
+			$db->setValue(array("goverment"), $gov_data);
+			$db->setValue(array("bot_manager"), array('user_ranks' => array("id{$data->object->from_id}" => 0)));
 			$db->save();
 		}	
 	} else {
 		$msg = ", данная беседа уже зарегистрирована.";
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			return API.messages.send({'peer_id':{$data->object->peer_id}, 'message':appeal+'{$msg}'});
+			return API.messages.send({'peer_id':{$data->object->peer_id}, 'message':appeal+'{$msg}','disable_mentions':true});
 			");
 	}
 }
 
 function bot_pre_handle_function($event){
-	$db = &$event->getDB();
+	$db = $event->getDB();
 	$data = $event->getData();
 
 	if($data->type != "message_new" || $data->object->peer_id < 2000000000 || !bot_check_reg($db)){
@@ -172,39 +253,50 @@ function bot_debug($str){ // Debug function
 	$botModule->sendSimpleMessage(219011658, "DEBUG: {$str}");
 }
 
-function bot_banned_kick($data, &$db){ // Кик забаненных пользователей после приглашения
-	$banned_users = BanSystem::getBanList($db);
+function bot_debug_cmdinit($event){ // Добавление DEBUG-команд специальному пользователю
+	if($event->getData()->object->from_id === bot_getconfig('DEBUG_USER_ID')){
 
-	if(property_exists($data->object, 'action')){
-		if ($data->object->action->type == "chat_invite_user"){
-			$botModule = new BotModule($db);
-			for($i = 0; $i < sizeof($banned_users); $i++){
-				if ($banned_users[$i]["user_id"] == $data->object->action->member_id){
-					$chat_id = $data->object->peer_id - 2000000000;
-					$ranksys = new RankSystem($db);
-					if($ranksys->checkRank($data->object->from_id, 1)){
-						vk_execute("
-							API.messages.send({'peer_id':{$data->object->peer_id},'message':'@id{$data->object->action->member_id} (Пользователь) был приглашен @id{$data->object->from_id} (администратором) беседы и автоматически разбанен.'});
-							");
-						BanSystem::unbanUser($db, $data->object->action->member_id);
-					}
-					else{
-						$ban_info = BanSystem::getUserBanInfo($db, $data->object->action->member_id);
-						json_decode(vk_execute($botModule->makeExeAppeal($data->object->action->member_id)."
-							API.messages.send({'peer_id':{$data->object->peer_id}, 'message':appeal+', вы забанены в этой беседе!\\nПричина: {$ban_info["reason"]}.'});
-							API.messages.removeChatUser({'chat_id':{$chat_id},'user_id':{$data->object->action->member_id}});
-							"));
-						return false;
-					}
-				}
+		$event->addTextCommand("!docmd", function ($finput){
+			// Инициализация базовых переменных
+			$data = $finput->data; 
+			$words = $finput->words;
+			$db = &$finput->db;
+
+			$botModule  = new BotModule($db);
+
+			$member = bot_get_word_argv($words, 1 , "");
+
+			if(is_numeric($member)){
+				$member_id = intval($member);
 			}
-			return true;
-		}
+			elseif(bot_is_mention($member)){
+				$member_id = bot_get_id_from_mention($member);
+			}
+			else{
+				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Используйте: !docmd <пользователь> <команда>", $data->object->from_id);
+				return;
+			}
+
+			$command = mb_substr($data->object->text, 8 + mb_strlen($member));
+
+			if($command == ""){
+				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Используйте: !docmd <пользователь> <команда>", $data->object->from_id);
+				return;
+			}
+
+			$modified_data = $data;
+			$modified_data->object->from_id = $member_id;
+			$modified_data->object->text = $command;
+			$result = $finput->event->runTextCommand($modified_data);
+			if($result == 1)
+				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Ошибка. Данной команды не существует.", $data->object->from_id);
+		});
+
 	}
 }
 
 function bot_test_rights_exe($chat_id, $user_id, $check_owner = false, $msgInvalidRights = "%__DEFAULTMSG__%"){ // Тестирование прав через VKScript
-	$messageRequest = json_encode(array('peer_id' => $chat_id, 'message' => $msgInvalidRights), JSON_UNESCAPED_UNICODE);
+	$messageRequest = json_encode(array('peer_id' => $chat_id, 'message' => $msgInvalidRights, 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 	$messageRequest = vk_parse_vars($messageRequest, array("appeal", "__DEFAULTMSG__"));
 	$code = "
 		var from_id = {$user_id};
@@ -270,10 +362,6 @@ function bot_int_to_emoji_str($number){
 	return $string;
 }
 
-function bot_test_initcmd($event){
-
-}
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Работа с Database
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -312,8 +400,8 @@ function bot_getconfig($name){
 
 function bot_keyboard_remove($data){
 	$keyboard = vk_keyboard(false, array());
-	$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => '✅Клавиатура убрана.', 'keyboard' => $keyboard), JSON_UNESCAPED_UNICODE);
-	vk_execute("return API.messages.send({$json_request});");
+	$botModule = new BotModule();
+	$botModule->sendSimpleMessage($data->object->peer_id, '✅Клавиатура убрана.', null, array('keyboard' => $keyboard));
 }
 
 function bot_like_handler($finput){
@@ -482,7 +570,7 @@ function bot_call_all($finput){
 	$botModule = new BotModule($db);
 	$ranksys = new RankSystem($db);
 
-	if(!$ranksys->checkRank($data->object->from_id, 1)){
+	if(!$ranksys->checkRank($data->object->from_id, 2)){ // Проверка ранга (Президент)
 		$botModule->sendSystemMsg_NoRights($data);
 		return;
 	}
@@ -526,13 +614,16 @@ function bot_message_action_handler($finput){
 		if($data->object->action->type == "chat_kick_user"){
 			if($data->object->action->member_id == $data->object->from_id){
 				$chat_id = $data->object->peer_id - 2000000000;
-				vk_execute("
-					var user = API.users.get({'user_ids':[{$data->object->from_id}]})[0];
-					var msg = 'Пока, @id{$data->object->from_id} ('+user.first_name+' '+user.last_name+'). Больше ты сюда не вернешься!';
-					API.messages.send({'peer_id':{$data->object->peer_id}, 'message':msg});
-					API.messages.removeChatUser({'chat_id':{$chat_id},'user_id':{$data->object->action->member_id}});
-					return 'ok';
-					");
+				$ranksys = new RankSystem($db);
+				if(!$ranksys->checkRank($data->object->from_id, 2)){ // Проверка ранга (Президент)
+					vk_execute("
+						var user = API.users.get({'user_ids':[{$data->object->from_id}]})[0];
+						var msg = 'Пока, @id{$data->object->from_id} ('+user.first_name+' '+user.last_name+'). Больше ты сюда не вернешься!';
+						API.messages.send({'peer_id':{$data->object->peer_id}, 'message':msg});
+						API.messages.removeChatUser({'chat_id':{$chat_id},'user_id':{$data->object->action->member_id}});
+						return 'ok';
+						");
+				}
 			}
 			else{
 				vk_execute("
@@ -561,7 +652,7 @@ function bot_message_action_handler($finput){
 					if($banned_users[$i]["user_id"] == $data->object->action->member_id){
 						$chat_id = $data->object->peer_id - 2000000000;
 						$ranksys = new RankSystem($db);
-						if($ranksys->checkRank($data->object->from_id, 1)){
+						if($ranksys->checkRank($data->object->from_id, 2)){ // Проверка ранга (Президент)
 							vk_execute("
 								API.messages.send({'peer_id':{$data->object->peer_id},'message':'@id{$data->object->action->member_id} (Пользователь) был приглашен @id{$data->object->from_id} (администратором) беседы и автоматически разбанен.'});
 								");
@@ -627,7 +718,9 @@ function bot_help($finput){
 				'Послать <пользователь> - Отправить пользователя в далекие края',
 				'Кастрировать <пользователь> - Лишить пользователя способности плодить себе подобных',
 				'Посадить <пользователь> - Садит пользователя на бутылку',
-				'Пожать руку <пользователь> - Жмет руку пользователю'
+				'Пожать руку <пользователь> - Жмет руку пользователю',
+				'Лизнуть <пользователь> - Лизнуть пользователя',
+				'Обосрать <пользователь> = Обосрать пользователя'
 			);
 
 			$botModule->sendCommandListFromArray($data, ', 📰Roleplay команды:', $commands);

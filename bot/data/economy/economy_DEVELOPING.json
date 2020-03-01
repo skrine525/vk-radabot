@@ -50,78 +50,78 @@
 
 		"car":{
 			"level_1": {
-				"name": "Лада-2106",
-				"price": 50000,
+				"name": "Самокат",
+				"price": 2000,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
 			},
 			"level_2": {
-				"name": "УАЗ-452 \"Буханка\"",
-				"price": 75000,
+				"name": "Велосипед",
+				"price": 4000,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
 			},
 			"level_3": {
-				"name": "ЗАЗ-968 \"Запорожец\"",
-				"price": 100000,
+				"name": "Гироскутер",
+				"price": 10000,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
 			},
 			"level_4": {
-				"name": "Mitsubishi Lancer",
-				"price": 200000,
+				"name": "Мопед Honda Tact",
+				"price": 25000,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
 			},
 			"level_5": {
-				"name": "Audi A6",
-				"price": 350000,
+				"name": "ВАЗ-2105",
+				"price": 35000,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
 			},
 			"level_6": {
-				"name": "Isuzu Bighorn",
-				"price": 650000,
+				"name": "ВАЗ-2106",
+				"price": 45000,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
 			},
 			"level_7": {
-				"name": "BMW X6",
-				"price": 800000,
+				"name": "ВАЗ-2107",
+				"price": 65000,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
 			},
 			"level_8": {
-				"name": "Toyota Supra",
-				"price": 1500000,
+				"name": "ВАЗ-2107 (Вишнёвая семёрка)",
+				"price": 150000,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
 			},
 			"level_9": {
-				"name": "Infiniti M37",
-				"price": 2000000,
+				"name": "Lada Priora",
+				"price": 250000,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
 			},
 			"level_10": {
-				"name": "Aston Martin Vantage",
-				"price": 5600000,
+				"name": "Lada Granta",
+				"price": 400000,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
 			},
 			"level_11": {
-				"name": "Mercedes-Benz SLR McLaren",
-				"price": 7000000,
+				"name": "Toyota Alteza",
+				"price": 650000,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -130,22 +130,22 @@
 				"name": "Nissan Primera",
 				"price": 780000,
 				"can_sell": true,
-				"can_buy": false,
-				"hidden": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_13": {
 				"name": "Subaru Impreza WRX",
 				"price": 965000,
 				"can_sell": true,
-				"can_buy": false,
-				"hidden": true
+				"can_buy": true,
+				"hidden": false
 			},
 			"level_14": {
 				"name": "Infinity G35",
 				"price": 1247000,
 				"can_sell": true,
-				"can_buy": false,
-				"hidden": true
+				"can_buy": true,
+				"hidden": false
 			}
 		},
 
@@ -333,7 +333,7 @@
 			},
 			"level_6": {
 				"name": "Кандидат наук",
-				"price": 3000000,
+				"price": 1500000,
 				"can_sell": false,
 				"can_buy": true,
 				"hidden": true
@@ -350,7 +350,7 @@
 
 	"shop_sections":[
 		{
-			"name": "Автомобиль",
+			"name": "Транспорт",
 			"type": "item",
 			"items": "car"
 		},
@@ -485,6 +485,121 @@
 		          	"exp": 320
 		        }
 	        ]
+	    },
+	    "restaurant": {
+	    	"name": "Ресторан",
+			"price": 1200000,
+			"initial_workers": 10,
+			"improvment":{
+			  	"workers": [
+			  		{
+			  			"name": "Улучшение условий рабочих Ⅰ",
+			        	"duration": 7200,
+			        	"workers_required": 10,
+			        	"exp_required": 100,
+			        	"cost": 30000,
+			        	"new_workers": 5
+			  		},
+			  		{
+			  			"name": "Улучшение условий рабочих Ⅱ",
+			        	"duration": 14400,
+			        	"workers_required": 15,
+			        	"exp_required": 165,
+			        	"cost": 75000,
+			        	"new_workers": 15
+			  		},
+			  		{
+			  			"name": "Улучшение условий рабочих Ⅲ",
+			        	"duration": 28800,
+			        	"workers_required": 30,
+			        	"exp_required": 475,
+			        	"cost": 120000,
+			        	"new_workers": 35
+			  		},
+			  		{
+			  			"name": "Улучшение условий рабочих Ⅳ",
+			        	"duration": 43200,
+			        	"workers_required": 65,
+			        	"exp_required": 1260,
+			        	"cost": 200000,
+			        	"new_workers": 35
+			  		},
+			  		{
+			  			"name": "Улучшение условий рабочих Ⅴ",
+			        	"duration": 57600,
+			        	"workers_required": 100,
+			        	"exp_required": 2210,
+			        	"cost": 320000,
+			        	"new_workers": 55
+			  		},
+			  		{
+			  			"name": "Улучшение условий рабочих Ⅵ",
+			        	"duration": 72000,
+			        	"workers_required": 155,
+			        	"exp_required": 4620,
+			        	"cost": 640000,
+			        	"new_workers": 35
+			  		}
+			  	],
+			  	"contracts": [
+			  		{
+			  			"name": "Расширение количества столиков Ⅰ",
+			        	"duration": 21600,
+			        	"workers_required": 20,
+			        	"exp_required": 275,
+			        	"cost": 100000
+			  		},
+			  		{
+			  			"name": "Расширение количества столиков II",
+			        	"duration": 64800,
+			        	"workers_required": 190,
+			        	"exp_required": 6160,
+			        	"cost": 720000
+			  		}
+			  	]
+			},
+			"contracts": [
+		      	{
+		        	"name": "Подача блюда Ⅰ",
+		        	"duration": 7200,
+		        	"workers_required": 10,
+		        	"cost": 1200,
+		        	"income": 4800,
+		        	"exp": 20
+		      	},
+		      	{
+		        	"name": "Подача блюда Ⅱ",
+		        	"duration": 14400,
+		        	"workers_required": 20,
+		        	"cost": 2800,
+		        	"income": 13600,
+		        	"exp": 55
+		      	},
+		      	{
+		        	"name": "Подача блюда Ⅲ",
+		        	"duration": 21600,
+		        	"workers_required": 25,
+		        	"cost": 7600,
+		        	"income": 36760,
+		        	"exp": 75
+		      	},
+		      	{
+		        	"name": "Подача блюда Ⅳ",
+		        	"duration": 28800,
+		        	"workers_required": 65,
+		        	"cost": 17800,
+		        	"income": 87880,
+		        	"exp": 275
+		      	},
+		      	{
+		        	"name": "Подача блюда Ⅴ",
+		        	"duration": 43200,
+		        	"workers_required": 90,
+		        	"cost": 78400,
+		        	"income": 287200,
+		        	"exp": 455
+		      	}
+		    ]
 	    }
   	}
 }

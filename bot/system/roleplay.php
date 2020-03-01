@@ -260,11 +260,13 @@ function roleplay_cmdinit(&$event){
 	$event->addTextCommand("поцеловать", 'roleplay_kiss');
 	$event->addTextCommand("харкнуть", 'roleplay_hark');
 	$event->addTextCommand("отсосать", 'roleplay_suck');
-	$event->addTextCommand("отлизать", 'roleplay_lick');
+	$event->addTextCommand("отлизать", 'roleplay_pussylick');
 	$event->addTextCommand("послать", 'roleplay_gofuck');
 	$event->addTextCommand("кастрировать", 'roleplay_castrate');
 	$event->addTextCommand("посадить", "roleplay_sit");
 	$event->addTextCommand("пожать", "roleplay_shake");
+	$event->addTextCommand("лизнуть", "roleplay_lick");
+	$event->addTextCommand("обосрать", "roleplay_shit");
 }
 
 ///////////////////////////////////////////////////////////
@@ -572,7 +574,7 @@ function roleplay_suck($finput){ // Test
 	roleplay_api_act_with($db, $data, "Отсосать", $user_info, $params);
 }
 
-function roleplay_lick($finput){ // Test
+function roleplay_pussylick($finput){ // Test
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
@@ -699,6 +701,54 @@ function roleplay_shake($finput){
 			));
 			break;
 	}
+}
+
+function roleplay_lick($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$words = $finput->words;
+	$db = &$finput->db;
+
+	$params = array(
+		"msgMale" => "%FROM_USERNAME% лизнул %MEMBER_USERNAME_DAT%.😋",
+		"msgFemale" => "%FROM_USERNAME% лизнула %MEMBER_USERNAME_DAT%.😋",
+		"msgMyselfMale" => "%FROM_USERNAME% лизнул себя.😋",
+		"msgMyselfFemale" => "%FROM_USERNAME% лизнула себя.😋",
+		"msgToAll" => array(
+			"male" => "%FROM_USERNAME% лизнул всех.😋",
+			"female" => "%FROM_USERNAME% лизнула всех.😋"
+		)
+	);
+
+	$user_info = bot_get_word_argv($words, 1, "");
+	if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
+		$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
+
+	roleplay_api_act_with($db, $data, "Лизнуть", $user_info, $params);
+}
+
+function roleplay_shit($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$words = $finput->words;
+	$db = &$finput->db;
+
+	$params = array(
+		"msgMale" => "%FROM_USERNAME% обосрал %MEMBER_USERNAME_ACC%.💩",
+		"msgFemale" => "%FROM_USERNAME% обосрала %MEMBER_USERNAME_ACC%.💩",
+		"msgMyselfMale" => "%FROM_USERNAME%, нельзя обосрать себя.😋",
+		"msgMyselfFemale" => "%FROM_USERNAME%, нельзя обосрать себя.😋",
+		"msgToAll" => array(
+			"male" => "%FROM_USERNAME% обосрал всех.💩",
+			"female" => "%FROM_USERNAME% обосрала всех.💩"
+		)
+	);
+
+	$user_info = bot_get_word_argv($words, 1, "");
+	if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
+		$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
+
+	roleplay_api_act_with($db, $data, "Обосрать", $user_info, $params);
 }
 
 ?>

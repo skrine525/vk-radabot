@@ -229,7 +229,6 @@ namespace Economy{
 		}
 
 		public static function getItemInfo($type, $id){
-			EconomyFiles::readDataFiles();
 			$items = EconomyFiles::getEconomyFileData("items");
 			if(array_key_exists($type, $items) && array_key_exists($id, $items[$type])){
 				return (object) $items[$type][$id];
@@ -247,12 +246,10 @@ namespace Economy{
 		}
 
 		public static function getShopSectionsArray(){
-			EconomyFiles::readDataFiles();
 			return EconomyFiles::getEconomyFileData("shop_sections");
 		}
 
 		public static function getItemListByType($type){
-			EconomyFiles::readDataFiles();
 			$items = EconomyFiles::getEconomyFileData("items");;
 			if(array_key_exists($type, $items)){
 				return $items[$type];
@@ -286,10 +283,9 @@ namespace Economy{
 		//private static $jobs_data;
 		private static $is_read = false;
 
-		public static function readDataFiles(){
+		private static function readDataFiles(){
 			if(!self::$is_read){
 				self::$economy_data = json_decode(file_get_contents(BOT_DATADIR."/economy/economy.json"), true);
-				//self::$jobs_data = json_decode(file_get_contents(BOT_DATADIR."/economy/jobs.json"), true);
 				if(is_null(self::$economy_data)/* || self::$jobs_data === false*/){
 					error_log("Invalid economy.json file");
 					exit;
@@ -299,6 +295,7 @@ namespace Economy{
 		}
 
 		public static function getEconomyFileData($section){
+			self::readDataFiles();
 			if(array_key_exists($section, self::$economy_data)){
 				return self::$economy_data[$section];
 			}
@@ -362,7 +359,6 @@ namespace Economy{
 			}
 			unset($attempts);
 
-			EconomyFiles::readDataFiles();
 			$types = array_keys(EconomyFiles::getEconomyFileData("enterprise_types"));
 			if(array_search($type, $types) === false)
 				return false;
@@ -404,7 +400,12 @@ namespace Economy{
 						if($enterprise["contracts"][$i]["type"] == "contract"){
 							$enterprise["capital"] += $enterprise["contracts"][$i]["contract_info"]["income"];
 							$enterprise["involved_workers"] -= $enterprise["contracts"][$i]["contract_info"]["workers_required"];
-							$enterprise["exp"] += $enterprise["contracts"][$i]["contract_info"]["exp"];
+							// Расчитываем получаемый опыт
+							$enterprise_types = EconomyFiles::getEconomyFileData("enterprise_types");
+							$improvment = $enterprise_types[$enterprise["type"]]["improvment"];
+							// Если предприятие максимального уровня, то не добавляем опыт
+							if(array_key_exists($enterprise["improvment"]["workers"], $improvment["workers"]) || array_key_exists($enterprise["improvment"]["contracts"], $improvment["contracts"]))
+								$enterprise["exp"] += $enterprise["contracts"][$i]["contract_info"]["exp"];
 							unset($enterprise["contracts"][$i]);
 						}
 						elseif($enterprise["contracts"][$i]["type"] == "workers_improvment"){
@@ -485,6 +486,10 @@ namespace Economy{
 namespace{
 
 	function economy_initcmd(&$event){ // Инициализация тексовых комманд модуля экономики
+		$chatModes = new ChatModes($event->getDB());
+		if(!$chatModes->getModeValue("economy_enabled")) // Отключаем, если в беседе запрещена экономика
+			return;
+
 		$event->addTextCommand("!счет", "economy_show_user_stats");
 		$event->addTextCommand("!счёт", "economy_show_user_stats");
 		$event->addTextCommand("!работать", "economy_work");
@@ -499,15 +504,12 @@ namespace{
 		$event->addTextCommand("!forbes", "economy_most_rich_users");
 		$event->addTextCommand("!бизнес", "economy_company");
 		$event->addTextCommand("подарить", "economy_give");
+		$event->addTextCommand("!казино", "CasinoRouletteGame::main");
+		$event->addTextCommand("!ставка", "CasinoRouletteGame::bet");
 
 		$event->addKeyboardCommand("economy_contract", "economy_keyboard_contract_handler");
 		$event->addKeyboardCommand("economy_getjob", "economy_keyboard_getjob");
 		$event->addKeyboardCommand("economy_improve", "economy_keyboard_improve_handler");
-
-		// Test
-		//$event->addTextCommand("!invlist", "economy_test1");
-		//$event->addTextCommand("!invadd", "economy_test2");
-		//$event->addTextCommand("!invtype", "economy_test3");
 	}
 
 	function economy_show_user_stats($finput){
@@ -624,7 +626,7 @@ namespace{
 		else
 			$enterprise_info = "";
 
-		$msg = ", {$pre_msg}:\n💰Деньги: \${$money}\n\n👥Профессия: {$job_name}\n📚Образование: {$edu_text}\n\n🚗Транспорт: {$car_text}\n🏡Недвижимость: {$immovables_text}\n📱Телефон: {$phone_text}{$enterprise_info}";
+		$msg = ", {$pre_msg}:\n💰Деньги: \${$money}\n\n👥Профессия: {$job_name}\n📚Образование: {$edu_text}\n\n🚗Транспорт:\n&#12288;🚘Автомобиль: {$car_text}\n🏡Недвижимость: {$immovables_text}\n📱Телефон: {$phone_text}{$enterprise_info}";
 
 		$keyboard = vk_keyboard_inline(array(
 			array(
@@ -747,10 +749,10 @@ namespace{
 						var user = API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex'})[0];
 
 						if(user.sex == 1){
-							return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg.female});
+							return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg.female,'disable_mentions':true});
 						}
 						else{
-							return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg.male});
+							return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg.male,'disable_mentions':true});
 						}
 						");
 				}
@@ -840,7 +842,7 @@ namespace{
 						$item_dependencies_text .= "\n&#12288;{$status_char}".Economy\Item::getItemName($item->type, $item->id);
 					}
 				}
-				if(!isset($item_dependencies_text))
+				else
 					$item_dependencies_text = "Ничего";
 				$salary = Economy\Main::getFormatedMoney($jobs[$job_id]["salary"]);
 				$msg = ",\n✏Название: {$jobs[$job_id]["name"]}\n💰Зарплата: \${$salary}\n📅Время отдыха: {$left_time_text}\n💼Необходимо: {$item_dependencies_text}";
@@ -1060,7 +1062,6 @@ namespace{
 				case 'enterprise':
 					$economy = new Economy\Main($db);
 					$user_economy = $economy->getUser($data->object->from_id);
-					Economy\EconomyFiles::readDataFiles();
 					if($user_economy->checkItem("edu", "level_4") === false){
 						$edu_name = Economy\Item::getItemName("edu", "level_4");
 						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы не можете купить бизнес. У вас должно быть {$edu_name}.", $data->object->from_id);
@@ -1536,7 +1537,6 @@ namespace{
 				$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$index-1]);
 
 				$current_contracts_count = count($enterprise["contracts"]);
-				Economy\EconomyFiles::readDataFiles();
 				$enterprise_types = Economy\EconomyFiles::getEconomyFileData("enterprise_types");
 				$type = $enterprise_types[$enterprise["type"]]["name"];
 				$capital = Economy\Main::getFormatedMoney($enterprise["capital"]);
@@ -1664,7 +1664,6 @@ namespace{
 			if($index > 0 && $user_enterprises_count >= $index){
 				$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$index-1]);
 
-				Economy\EconomyFiles::readDataFiles();
 				$enterprise_types = Economy\EconomyFiles::getEconomyFileData("enterprise_types");
 				$contracts = $enterprise_types[$enterprise["type"]]["contracts"];
 
@@ -1817,7 +1816,6 @@ namespace{
 					return;
 				}
 
-				Economy\EconomyFiles::readDataFiles();
 				$enterprise_types = Economy\EconomyFiles::getEconomyFileData("enterprise_types");
 				$improvment = $enterprise_types[$enterprise["type"]]["improvment"];
 
@@ -1894,7 +1892,6 @@ namespace{
 			if($index > 0 && $user_enterprises_count >= $index){
 				$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$index-1]);
 
-				Economy\EconomyFiles::readDataFiles();
 				$enterprise_types = Economy\EconomyFiles::getEconomyFileData("enterprise_types");
 				$improvment = $enterprise_types[$enterprise["type"]]["improvment"];
 
@@ -2006,7 +2003,6 @@ namespace{
 					return;
 				}
 
-				Economy\EconomyFiles::readDataFiles();
 				$enterprise_types = Economy\EconomyFiles::getEconomyFileData("enterprise_types");
 				$contracts = $enterprise_types[$enterprise["type"]]["contracts"];
 
@@ -2112,7 +2108,6 @@ namespace{
 				return;
 			}
 
-			Economy\EconomyFiles::readDataFiles();
 			$enterprise_types = Economy\EconomyFiles::getEconomyFileData("enterprise_types");
 			$contracts = $enterprise_types[$enterprise["type"]]["contracts"];
 			$contract = $contracts[$payload->params->contract_id];
@@ -2150,7 +2145,6 @@ namespace{
 					$contract_id++;
 					break;
 			}
-			Economy\EconomyFiles::readDataFiles();
 			$enterprise_types = Economy\EconomyFiles::getEconomyFileData("enterprise_types");
 			$contracts = $enterprise_types[$enterprise["type"]]["contracts"];
 			$index = $contract_id;
@@ -2247,7 +2241,6 @@ namespace{
 			return;
 		}
 
-		Economy\EconomyFiles::readDataFiles();
 		$enterprise_types = Economy\EconomyFiles::getEconomyFileData("enterprise_types");
 		$improvment = $enterprise_types[$enterprise["type"]]["improvment"];
 
@@ -2320,10 +2313,10 @@ namespace{
 				$user_economy = $economy->getUser($user_id);
 				$capital = $user_economy->getMoney();
 				$user_items = $user_economy->getItems();
-				Economy\EconomyFiles::readDataFiles();
 				$items = Economy\EconomyFiles::getEconomyFileData("items");
 				for($j = 0; $j < count($user_items); $j++){
-					$capital = $capital + $items[$user_items[$j]->type][$user_items[$j]->id]["price"];
+					$item_info = Economy\Item::getItemInfo($user_items[$j]->type, $user_items[$j]->id);
+					$capital += $item_info->price;
 				}
 
 				if($capital != 0){
@@ -2366,7 +2359,7 @@ namespace{
 					msg = msg+(i+1)+'. @id'+users[i].id+' ('+users[i].first_name.substr(0, 2)+'. '+users[i].last_name+') — \$'+rating[i].capital+'\\n';
 					i = i + 1;
 				}
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg,'disable_mentions':1});
+				return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg,'disable_mentions':true});
 				");
 
 		}
@@ -2452,7 +2445,7 @@ namespace{
 						msg = '@id{$data->object->from_id} ('+from.first_name+' '+from.last_name+') подарила {$giving_item_info->name} x{$argv2} @id{$member_id} ('+member.first_name_dat+' '+member.last_name_dat+')';
 					}
 					else{
-						msg = '@id{$data->object->from_id} ('+from.first_name+' '+from.last_name+') подарил одну {$giving_item_info->name} x{$argv2} @id{$member_id} ('+member.first_name_dat+' '+member.last_name_dat+')';
+						msg = '@id{$data->object->from_id} ('+from.first_name+' '+from.last_name+') подарил {$giving_item_info->name} x{$argv2} @id{$member_id} ('+member.first_name_dat+' '+member.last_name_dat+')';
 					}
 					API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
 					");
@@ -2471,6 +2464,317 @@ namespace{
 				'Подарить <номер> <количество> <пользователь> - Дарит пользователю подарок',
 				'!имущество - Список доступного для подарка имущества'
 			), $keyboard);
+		}
+	}
+
+	class CasinoRouletteGame{
+		const SPECIAL_BETS = array(
+			'красное' => 'red', 'черное' => 'black', 'чёрное' => 'black', 'четное' => 'even', 'чётное' => 'even',
+			'нечетное' => 'odd', 'нечётное' => 'odd', '1до18' => '1to18', '19до36' => '19to36', 'первая12' => "1st12",
+			'вторая12' => '2nd12', 'третья12' => '3d12', '2к1р1' => '2to1v1', '2к1р2' => '2to1v2', '2к1р3' => '2to1v3'
+		);
+		const ROULETTE = array(
+			'0;null;null;null;null;null', '32;19to36;even;red;3d12;2to1v2', '15;1to18;odd;black;2nd12;2to1v3', '19;19to36;odd;red;2nd12;2to1v1',
+			'4;1to18;even;black;1st12;2to1v1', '21;19to36;odd;red;2nd12;2to1v3', '2;1to18;even;black;1st12;2to1v2', '25;19to36;odd;red;3d12;2to1v1',
+			'17;1to18;odd;black;2nd12;2to1v2', '34;19to36;even;red;3d12;2to1v1', '6;1to18;even;black;1st12;2to1v3', '27;19to36;odd;red;3d12;2to1v3',
+			'13;1to18;odd;black;2nd12;2to1v1', '36;19to36;even;red;3d12;2to1v3', '11;1to18;odd;black;1st12;2to1v2', '30;19to36;even;red;3d12;2to1v3',
+			'8;1to18;even;black;1st12;2to1v2', '23;19to36;odd;red;2nd12;2to1v2', '10;1to18;even;black;1st12;2to1v1', '5;1to18;odd;red;1st12;2to1v2',
+			'24;19to36;even;black;2nd12;2to1v3', '16;1to18;even;red;2nd12;2to1v1', '33;19to36;odd;black;3d12;2to1v3', '1;1to18;odd;red;1st12;2to1v1',
+			'20;19to36;even;black;2nd12;2to1v2', '14;1to18;even;red;2nd12;2to1v2', '31;19to36;odd;black;3d12;2to1v1', '9;1to18;odd;red;1st12;2to1v3',
+			'22;19to36;even;black;2nd12;2to1v1', '18;1to18;even;red;2nd12;2to1v3', '29;19to36;odd;black;3d12;2to1v2', '7;1to18;odd;red;1st12;2to1v1',
+			'28;19to36;even;black;3d12;2to1v1', '12;1to18;even;red;1st12;2to1v3', '35;19to36;odd;black;3d12;2to1v2', '3;1to18;odd;red;1st12;2to1v3',
+			'26;19to36;even;black;3d12;2to1v2'
+		);
+		const TABLE_ATTACH = "photo-161901831_457240724"; // Константа фотографии игрового стола
+		//const TABLE_ATTACH = "photo-101206282_457239301"; // В релизе заменить на верхнюю
+
+		private static function getFinalPayment($bet, $value){
+			if(array_search($bet, array('red', 'black', 'even', 'odd', '1to18', '19to36')) !== false){
+				return $value * 2;
+			}
+			elseif(array_search($bet, array('1st12', '2nd12', '3d12', '2to1v1', '2to1v2', '2to1v3')) !== false){
+				return $value * 3;
+			}
+			else{
+				return $value * 35;
+			}
+		}
+
+		private static function doMoneyBack($economy, $session){
+			if($session->id == "casino_roulette"){
+				foreach ($session->object["bets"] as $bet) {
+					$user = $economy->getUser($bet["user_id"]);
+					$user->changeMoney($bet["value"]);
+				}
+			}
+		}
+
+		public static function bet($finput){
+			// Инициализация базовых переменных
+			$data = $finput->data; 
+			$words = $finput->words;
+			$db = &$finput->db;
+
+			$botModule = new BotModule($db);
+
+			$chat_id = $data->object->peer_id - 2000000000;
+			$session = GameController::getSession($chat_id);
+			if($session !== false && $session->id == "casino_roulette"){
+				$session_data = $session->object;
+				$argv1 = bot_get_word_argv($words, 1, "");
+				$argv2 = intval(bot_get_word_argv($words, 2, 0));
+
+				if(array_key_exists("id{$data->object->from_id}", $session_data["bets"])){
+					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы уже сделали ставку.", $data->object->from_id);
+					return;
+				}
+
+				if($argv2 == 0 || $argv1 == ''){
+					$botModule->sendSimpleMessage($data->object->peer_id, ", Используйте: [!ставка <ставка> <сумма>]\nЧтобы посмотреть все возможные ставки, используйте кнопку ниже.", $data->object->from_id);
+					return;
+				}
+				elseif($argv2 < 1000 || $argv2 > 100000){
+					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите сумму ставки в правильном формате (от \$1,000 до \$100,000).", $data->object->from_id);
+					return;
+				}
+
+				if(is_numeric($argv1)){
+					$bet_num = intval($argv1);
+					if($bet_num >= 0 && $bet_num <= 36){
+						$bet = "{$bet_num}";
+					}
+					else{
+						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите правильную ставку.\nЧтобы посмотреть все возможные ставки, используйте кнопку ниже.", $data->object->from_id);
+						return;
+					}
+				}
+				else{
+					$bet_str = mb_strtolower($argv1);
+					if(array_key_exists($bet_str, self::SPECIAL_BETS)){
+						$bet = self::SPECIAL_BETS[$bet_str];
+					}
+					else{
+						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите правильную ставку.\nЧтобы посмотреть все возможные ставки, используйте кнопку ниже.", $data->object->from_id);
+						return;
+					}
+				}
+
+				$economy = new Economy\Main($db); // Объект экономики
+				$user_economy = $economy->getUser($data->object->from_id);
+				if($user_economy->changeMoney(-$argv2)){
+					if(count($session_data["bets"]) == 0)
+						$session_data["last_twist_time"] = time();
+					$session_data["bets"]["id{$data->object->from_id}"] = array(
+						'user_id' => $data->object->from_id,
+						'bet' => $bet,
+						'value' => $argv2
+					);
+					if(GameController::setSession($chat_id, "casino_roulette", $session_data)){
+						$db->save();
+						$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Ставка успешно сделана. Используйте кнопку ниже, чтобы крутануть рулетку.", $data->object->from_id);
+					}
+					else{
+						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Произошла ошибка. Повторите попытку позже.", $data->object->from_id);
+					}
+				}
+				else{
+					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет указанной суммы денег.", $data->object->from_id);
+				}
+			}
+			else
+				$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Ошибка. Возможно сессия не запущена или запущена другая сессия.");
+		}
+
+		function main($finput){
+			// Инициализация базовых переменных
+			$data = $finput->data; 
+			$words = $finput->words;
+			$db = &$finput->db;
+
+			$botModule = new BotModule($db);
+			$chat_id = $data->object->peer_id - 2000000000;
+
+			$command = mb_strtolower(bot_get_word_argv($words, 1, ""));
+
+			if($command == "старт"){
+				$session = GameController::getSession($chat_id);
+				if($session !== false){
+					if($session->id == "casino_roulette")
+						$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Сессия уже запущена.");
+					else
+						$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Запущена другая сессия.");
+					return;
+				}
+
+				$session = array(
+					'start_time' => time(),
+					'last_twist_time' => 0,
+					'bets' => array()
+				);
+				if(GameController::setSession($chat_id, "casino_roulette", $session)){
+					$keyboard = vk_keyboard(false, array(
+						array(
+							vk_text_button('Крутить рулетку', array('command' => 'bot_run_text_command', 'text_command' => '!казино крутить'), 'positive'),
+							vk_text_button('Стол', array('command' => 'bot_run_text_command', 'text_command' => '!казино стол'), 'secondary')
+						),
+						array(
+							vk_text_button('Помощь', array('command' => 'bot_run_text_command', 'text_command' => '!казино помощь'), 'primary'),
+							vk_text_button('Ставки', array('command' => 'bot_run_text_command', 'text_command' => '!казино ставки'), 'primary'),
+						),
+						array(
+							vk_text_button('Остановить', array('command' => 'bot_run_text_command', 'text_command' => '!казино стоп'), 'negative')
+						)
+					));
+					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ✅Сессия запущена. Для справки используйте используйте кнопку Помощь.", null, array('keyboard' => $keyboard, 'attachment' => self::TABLE_ATTACH));
+				}
+				else
+					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Ошибка создания сессии.");
+			}
+			elseif($command == "стоп"){
+				$session = GameController::getSession($chat_id);
+				if($session === false){
+					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Сессия не запущена.");
+					return;
+				}
+				elseif($session->id != "casino_roulette"){
+					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Запущена другая сессия.");
+					return;
+				}
+
+				if(count($session->object["bets"]) != 0){
+					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Невозможно остановить сессию, если игроки сделали ставки.");
+					return;
+				}
+
+				if(GameController::deleteSession($chat_id, "casino_roulette")){
+					$keyboard = vk_keyboard(true, array());
+					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ✅Сессия остановлена.", null, array('keyboard' => $keyboard));
+				}
+				else
+					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Ошибка остановки сессии.");
+			}
+			elseif($command == "крутить"){
+				$session = GameController::getSession($chat_id);
+				if($session === false){
+					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Сессия не запущена.");
+					return;
+				}
+				elseif($session->id != "casino_roulette"){
+					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Запущена другая сессия.");
+					return;
+				}
+				$time = time();
+				$session_data = $session->object;
+
+				if(count($session_data["bets"]) == 0){
+					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Еще ни один игрок не сделал ставку.");
+					return;
+				}
+
+				$left_time_to_twist = $time - $session_data["last_twist_time"];
+				if($left_time_to_twist >= 60){
+					$economy = new Economy\Main($db); // Объект экономики
+
+					$random_data = RandomOrg::generateIntegers(0, 36, 1);
+					if($random_data === false || !array_key_exists('result', $random_data)){
+						$keyboard = vk_keyboard(true, array());
+						$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Произошла ошибка. Не удалось связаться с сервером RANDOM.ORG. Сессия остановлена.", null, array('keyboard' => $keyboard));
+						self::doMoneyBack($economy, $session);
+						$db->save();
+						GameController::deleteSession($chat_id, "casino_roulette");
+						return;
+					}
+					$cell = explode(';', self::ROULETTE[$random_data['result']["random"]["data"][0]]);
+
+					$winners_array = array();
+					foreach ($session_data["bets"] as $bet) {
+						if(array_search($bet["bet"], $cell) !== false){
+							$value = self::getFinalPayment($bet["bet"], $bet["value"]);
+							$economy->getUser($bet["user_id"])->changeMoney($value);
+							$winners_array[] = array(
+								'user_id' => $bet["user_id"],
+								'value' => Economy\Main::getFormatedMoney($value)
+							);
+						}
+					}
+					$db->save(); //  Сохраняем базу данных
+
+					$attach = self::TABLE_ATTACH;
+
+					if(count($winners_array) > 0){
+						$winners_array_vk = json_encode($winners_array, JSON_UNESCAPED_UNICODE);
+						vk_execute("
+							var winners = {$winners_array_vk};
+							var members = API.users.get({'user_ids':winners@.user_id});
+
+							var msg = '[Рулетка] Выпало число {$cell[0]}. Следующие ставки выйграли:';
+							var i = 0; while(i < members.length){
+								msg = msg + '\\n✅@id'+members[i].id+' ('+members[i].first_name+' '+members[i].last_name+') — \$'+winners[i].value;
+								i = i + 1;
+							}
+
+							API.messages.send({'peer_id':{$data->object->peer_id},'message':msg,'attachment':'{$attach}'});
+							");
+					}
+					else{
+						$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] Выпало число {$cell[0]}. Ни одна ставка не выйграла.", null, array('attachment' => $attach));
+					}
+
+					$session = array(
+						'start_time' => time(),
+						'last_twist_time' => 0,
+						'bets' => array()
+					);
+					GameController::setSession($chat_id, "casino_roulette", $session);
+				}
+				else{
+					$left_time = 60 - $left_time_to_twist;
+					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Крутануть рулетку можно будет через {$left_time} сек.");
+				}
+			}
+			elseif($command == "помощь"){
+				$msg = "[Рулетка] Рулетка — это популярная и всемирно известная азартная игра, суть которой заключается в угадывании числа. На вращающееся колесо с написанными на нем числами в диапазоне от 0 до 36 бросается шарик. После нескольких вращений вокруг колеса шарик останавливается в одном из секторов. Если игрок угадал число, то его ставка увеличивается в 35 раз. Ставить можно не только на число, но и на красное-черное, четное-нечетное, малое-большое, на дюжину, на колонку. Давайте разберемся, как происходит ставку у нас.\n\nИспользуйте следующую команду, чтобы сделать ставку: [!ставка <ставка> <сумма>]\n• Сумма - это количество денег, которые вы ставите. Вы можете поставить от \$1,000 до \$100,000.\n• Ставка - это непосредственно то место, куда вы ставите. Ознакомиться со списком возможных ставок можно с помощью кнопки Ставки.";
+				$keyboard = vk_keyboard_inline(array(
+					array(
+						vk_text_button("Ставки", array('command' => 'bot_run_text_command', 'text_command' => '!казино ставки'), 'positive')
+					)
+				));
+				$botModule->sendSimpleMessage($data->object->peer_id, $msg, null, array('keyboard' => $keyboard));
+			}
+			elseif($command == "ставки"){
+				$msg = "[Рулетка] Доступный следующие ставки:\n✅На число (0-36).\n&#12288;Выплата: 35:1\n&#12288;Например:\n&#12288;• [!ставка 12 1000]\n✅На красное-черное.\n&#12288;Выплата: 2:1\n&#12288;Например:\n&#12288;• [!ставка черное 1000]\n&#12288;• [!ставка красное 1000]\n✅На четное-нечетное.\n&#12288;Выплата: 2:1\n&#12288;Например:\n&#12288;• [!ставка четное 1000]\n&#12288;• [!ставка нечетное 1000]✅На малое-большое.\n&#12288;Выплата: 2:1\n&#12288;Например:\n&#12288;• [!ставка 1до18 1000]\n&#12288;• [!ставка 19до36 1000]\n✅На Дюжину (первая 12: 1-12, вторая 12: 13-14, третья 12: 25-36).\n&#12288;Выплата: 3:1\n&#12288;Например:\n&#12288;• [!ставка первая12 1000] \n&#12288;• [!ставка вторая12 1000]\n&#12288;• [!ставка третья12 1000]\n✅На Колонку (2к1р1: [1, 4, 7...], 2к1р2: [2, 5, 8...], 2к1р3: [3, 6, 9...]).\n&#12288;Выплата: 3:1\n&#12288;Например:\n&#12288;• [!ставка 2к1р1 1000] \n&#12288;• [!ставка 2к1р2 1000]\n&#12288;• [!ставка 2к1р3 1000]";
+				$botModule->sendSimpleMessage($data->object->peer_id, $msg, null, array('attachment' => self::TABLE_ATTACH));
+			}
+			elseif($command == "стол"){
+				$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] Игровой стол.", null, array('attachment' => self::TABLE_ATTACH));
+			}
+			elseif($command == "кнопки"){
+				$keyboard = vk_keyboard(false, array(
+					array(
+						vk_text_button('Крутить рулетку', array('command' => 'bot_run_text_command', 'text_command' => '!казино крутить'), 'positive'),
+						vk_text_button('Стол', array('command' => 'bot_run_text_command', 'text_command' => '!казино стол'), 'secondary')
+					),
+					array(
+						vk_text_button('Помощь', array('command' => 'bot_run_text_command', 'text_command' => '!казино помощь'), 'primary'),
+						vk_text_button('Ставки', array('command' => 'bot_run_text_command', 'text_command' => '!казино ставки'), 'primary'),
+					),
+					array(
+						vk_text_button('Остановить', array('command' => 'bot_run_text_command', 'text_command' => '!казино стоп'), 'negative')
+					)
+				));
+				$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ✅Кнопки отображены.", null, array('keyboard' => $keyboard));
+			}
+			else{
+				$botModule->sendCommandListFromArray($data, ", используйте:", array(
+					'!ставка - Сделать ставку',
+					'!казино старт - Запустить сессию Рулетка',
+					'!казино стоп - Остановить сессию Рулетка',
+					'!казино помощь - Помощь в Рулетке',
+					'!казино ставки - Возможные ставки',
+					'!казино стол - Изображение игрового стола',
+					'!казино кнопки - Отображает кнопки управления'
+				));
+			}
 		}
 	}
 }

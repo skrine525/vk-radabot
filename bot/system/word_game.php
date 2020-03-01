@@ -41,7 +41,7 @@ function wordgame_main($data, $words, &$db){
 		if(array_key_exists('word_game', $session)){
 			if($session["word_game"]["started_by"] != $data->object->from_id){
 				$ranksys = new RankSystem($db);
-				if(!$ranksys->checkRank($data->object->from_id, 1)){
+				if(!$ranksys->checkRank($data->object->from_id, 2)){ // Проверка ранга (Президент)
 					$botModule = new BotModule($db);
 					$botModule->sendSimpleMessage($data->object->peer_id, "[Слова] Вы не имеете права останавливать игру, запущенную другим пользователем.");
 					return;

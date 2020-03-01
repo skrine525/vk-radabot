@@ -5,16 +5,15 @@
 define("VK_API_VERSION", 5.84); // Константа версии VK API
 
 function vk_call($method, $parametres){
-	$sys = array(
-		'access_token' => bot_getconfig('VK_GROUP_TOKEN'),
-		'v' => VK_API_VERSION
-	);
+	// Устанавливаем системные параметры
+	$parametres['access_token'] = bot_getconfig('VK_GROUP_TOKEN');
+	$parametres['v'] = VK_API_VERSION;
 
 	$options = array(
    		'http' => array(  
             'method'  => 'POST',
             'header'  => 'Content-type: application/x-www-form-urlencoded', 
-            'content' => http_build_query($parametres).'&'.http_build_query($sys)
+            'content' => http_build_query($parametres)
         )  
 	);
 	return file_get_contents('https://api.vk.com/method/'.$method, false, stream_context_create($options));

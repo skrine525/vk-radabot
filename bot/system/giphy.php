@@ -1,12 +1,8 @@
 <?php
 
-function giphy_get_api_key(){
-	return "4vfgNLnHpU6grBT8o6GKHXLRFdXghgDR";
-}
-
 function giphy_random($parametres){
 	$sys = array(
-		'api_key' => giphy_get_api_key()
+		'api_key' => bot_getconfig('GIPHY_API_TOKEN')
 	);
 	$content = '?'.http_build_query($parametres).'&'.http_build_query($sys);
 
@@ -15,7 +11,7 @@ function giphy_random($parametres){
 
 function giphy_translate($parametres){
 	$sys = array(
-		'api_key' => giphy_get_api_key()
+		'api_key' => bot_getconfig('GIPHY_API_TOKEN')
 	);
 	$content = '?'.http_build_query($parametres).'&'.http_build_query($sys);
 
@@ -33,7 +29,7 @@ function giphy_handler($finput){
 	$botModule = new BotModule($db);
 	if (sizeof($gif->data) > 0){
 		$response =  json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', загружаем гифку...'});
+			API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', загружаем гифку...','disable_mentions':true});
 			API.messages.setActivity({'peer_id':{$data->object->peer_id},'type':'typing'});
 			return API.docs.getMessagesUploadServer({'peer_id':{$data->object->peer_id},'type':'doc'});"));
 
@@ -44,11 +40,11 @@ function giphy_handler($finput){
 		unlink($path);
 
 		vk_execute("var doc = API.docs.save({'file':'{$res->file}'});
-			API.messages.send({'peer_id':{$data->object->peer_id},'message':'Powered by GIPHY.@id{$data->object->from_id} (&#12288;)','attachment':'doc'+doc[0].owner_id+'_'+doc[0].id});
+			API.messages.send({'peer_id':{$data->object->peer_id},'message':'Powered by GIPHY.@id{$data->object->from_id} (&#12288;)','attachment':'doc'+doc[0].owner_id+'_'+doc[0].id,'disable_mentions':true});
 			");
 	} else {
 		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
-			API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ничего не найдено!😢'});
+			API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ничего не найдено!😢','disable_mentions':true});
 			");
 	}
 }
