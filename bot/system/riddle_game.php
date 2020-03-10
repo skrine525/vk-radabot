@@ -17,14 +17,14 @@ function riddlegame_cmd($finput){
 		case 'старт':
 			$session = riddlegame_get_session($data->object->peer_id);
 			if(array_key_exists("riddle_game", $session)){
-				$botModule->sendSimpleMessage($data->object->peer_id, "[Загадки] Сессия уже активна.");
+				$botModule->sendSilentMessage($data->object->peer_id, "[Загадки] Сессия уже активна.");
 				return;
 			}
 
 			$session = riddlegame_init_session($data, $db);
 
 			if($session === false){
-				$botModule->sendSimpleMessage($data->object->peer_id, "[Загадки] Не удалось запустить сессию.");
+				$botModule->sendSilentMessage($data->object->peer_id, "[Загадки] Не удалось запустить сессию.");
 			}
 			else{
 				$keyboard = vk_keyboard(false, array(
@@ -35,7 +35,7 @@ function riddlegame_cmd($finput){
 						vk_text_button("Остановить", array('command'=>'riddle_game','act'=>3), "primary")
 					)
 				));
-				$botModule->sendSimpleMessage($data->object->peer_id, "[Загадки]\n\n{$session["riddle_game"]["current_question"]}", null, array('keyboard' => $keyboard));
+				$botModule->sendSilentMessage($data->object->peer_id, "[Загадки]\n\n{$session["riddle_game"]["current_question"]}", null, array('keyboard' => $keyboard));
 			}
 
 			break;
@@ -43,13 +43,13 @@ function riddlegame_cmd($finput){
 		case 'стоп':
 			$session = riddlegame_get_session($data->object->peer_id);
 			if(!array_key_exists("riddle_game", $session)){
-				$botModule->sendSimpleMessage($data->object->peer_id, "[Загадки] Сессия не активна.");
+				$botModule->sendSilentMessage($data->object->peer_id, "[Загадки] Сессия не активна.");
 				return;
 			}
 			$chat_id = $data->object->peer_id - 2000000000;
 			unlink(BOT_DATADIR."/riddle_sessions/chat{$chat_id}_session.json");
 			$keyboard = vk_keyboard(true, array());
-			$botModule->sendSimpleMessage($data->object->peer_id, "[Загадки] Сессия остановлена.", null, array('keyboard' => $keyboard));
+			$botModule->sendSilentMessage($data->object->peer_id, "[Загадки] Сессия остановлена.", null, array('keyboard' => $keyboard));
 			break;
 
 		case 'рейтинг':
@@ -190,13 +190,13 @@ function riddlegame_gameplay($data, &$db){
 						$botModule = new BotModule($db);
 						$session = riddlegame_get_session($data->object->peer_id);
 						if(!array_key_exists("riddle_game", $session)){
-							$botModule->sendSimpleMessage($data->object->peer_id, "[Загадки] Сессия не активна.");
+							$botModule->sendSilentMessage($data->object->peer_id, "[Загадки] Сессия не активна.");
 							return;
 						}
 						$chat_id = $data->object->peer_id - 2000000000;
 						unlink(BOT_DATADIR."/riddle_sessions/chat{$chat_id}_session.json");
 						$keyboard = vk_keyboard(true, array());
-						$botModule->sendSimpleMessage($data->object->peer_id, "[Загадки] Сессия остановлена.", null, array('keyboard' => $keyboard));
+						$botModule->sendSilentMessage($data->object->peer_id, "[Загадки] Сессия остановлена.", null, array('keyboard' => $keyboard));
 						return;
 						break;
 				}
@@ -208,7 +208,7 @@ function riddlegame_gameplay($data, &$db){
 			$session = riddlegame_init_session($data, $db);
 
 			if($session === false){
-				$botModule->sendSimpleMessage($data->object->peer_id, "[Загадки] Не удалось запустить сессию.");
+				$botModule->sendSilentMessage($data->object->peer_id, "[Загадки] Не удалось запустить сессию.");
 			}
 			else{
 				$keyboard = vk_keyboard(false, array(
@@ -220,7 +220,7 @@ function riddlegame_gameplay($data, &$db){
 					)
 				));
 
-				$botModule->sendSimpleMessage($data->object->peer_id, "[Загадки]\n\n{$session["riddle_game"]["current_question"]}", null, array('keyboard' => $keyboard));
+				$botModule->sendSilentMessage($data->object->peer_id, "[Загадки]\n\n{$session["riddle_game"]["current_question"]}", null, array('keyboard' => $keyboard));
 			}
 		}
 		elseif($text_message == "сдаться" && !$session["riddle_game"]["is_completed"]){
@@ -241,10 +241,10 @@ function riddlegame_gameplay($data, &$db){
 					)
 				));
 
-				$botModule->sendSimpleMessage($data->object->peer_id, "[Загадки] Правильный ответ: {$session["riddle_game"]["answer"]}.", null, array('keyboard' => $keyboard));
+				$botModule->sendSilentMessage($data->object->peer_id, "[Загадки] Правильный ответ: {$session["riddle_game"]["answer"]}.", null, array('keyboard' => $keyboard));
 			}
 			else
-				$botModule->sendSimpleMessage($data->object->peer_id, "[Загадки] Пока что нельзя сдаться!");
+				$botModule->sendSilentMessage($data->object->peer_id, "[Загадки] Пока что нельзя сдаться!");
 		}
 		elseif(!$session["riddle_game"]["is_completed"]){
 			$botModule = new BotModule($db);

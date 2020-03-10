@@ -6,7 +6,7 @@ set_time_limit(5); // Время жизни скрипта - 5 секунд
 
 $data = json_decode(base64_decode($argv[1]));
 
-if($data != false){
+if($data !== false){
 	event_handle($data);
 }
 

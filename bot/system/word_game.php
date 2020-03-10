@@ -35,7 +35,7 @@ function wordgame_main($data, $words, &$db){
 		}
 		else{
 			$botModule = new BotModule($db);
-			$botModule->sendSimpleMessage($data->object->peer_id, "[Слова] Игра уже запущена.");
+			$botModule->sendSilentMessage($data->object->peer_id, "[Слова] Игра уже запущена.");
 		}
 	} elseif (mb_strtolower($words[1]) == 'стоп') {
 		if(array_key_exists('word_game', $session)){
@@ -43,7 +43,7 @@ function wordgame_main($data, $words, &$db){
 				$ranksys = new RankSystem($db);
 				if(!$ranksys->checkRank($data->object->from_id, 2)){ // Проверка ранга (Президент)
 					$botModule = new BotModule($db);
-					$botModule->sendSimpleMessage($data->object->peer_id, "[Слова] Вы не имеете права останавливать игру, запущенную другим пользователем.");
+					$botModule->sendSilentMessage($data->object->peer_id, "[Слова] Вы не имеете права останавливать игру, запущенную другим пользователем.");
 					return;
 				}
 			}
@@ -62,7 +62,7 @@ function wordgame_main($data, $words, &$db){
 		}
 		else{
 			$botModule = new BotModule($db);
-			$botModule->sendSimpleMessage($data->object->peer_id, "[Слова] Игра не запущена.");
+			$botModule->sendSilentMessage($data->object->peer_id, "[Слова] Игра не запущена.");
 		}
 	} elseif (mb_strtolower($words[1]) == 'рейтинг') {
 		$array = $db->getValue(array("games", "word_game_rating"), array());
@@ -424,7 +424,7 @@ function wordgame_eng_main($data, $words, &$db){
 		}
 		else{
 			$botModule = new BotModule($db);
-			$botModule->sendSimpleMessage($data->object->peer_id, "[Words] Игра уже запущена.");
+			$botModule->sendSilentMessage($data->object->peer_id, "[Words] Игра уже запущена.");
 		}
 	} elseif (mb_strtolower($words[1]) == 'stop') {
 		if(array_key_exists('word_game_eng', $session)){
@@ -443,7 +443,7 @@ function wordgame_eng_main($data, $words, &$db){
 		}
 		else{
 			$botModule = new BotModule($db);
-			$botModule->sendSimpleMessage($data->object->peer_id, "[Words] Игра не запущена.");
+			$botModule->sendSilentMessage($data->object->peer_id, "[Words] Игра не запущена.");
 		}
 	} elseif (mb_strtolower($words[1]) == 'rating') {
 		if(array_key_exists("games", $db) && array_key_exists("word_game_eng_rating", $db["games"]))

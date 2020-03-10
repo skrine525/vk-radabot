@@ -62,23 +62,31 @@ class BotModule{
 		return $code;
 	}
 
-	function sendSimpleMessage($peer_id, $message, $from_id = null, $params = array()){ // Отправка простых сообщений
+	function sendMessage($peer_id, $message, $from_id = null, $params = array()){ // Отправка сообщений
 		$appeal_code = "";
 		if(gettype($from_id) == "integer"){
 			$appeal_code = $this->makeExeAppeal($from_id);
 			$message = "%appeal%{$message}";
 		}
-		$request_array = array('peer_id' => $peer_id, 'message' => $message, 'disable_mentions' => true);
+		$request_array = array('peer_id' => $peer_id, 'message' => $message);
 		foreach ($params as $key => $value) {
 			$request_array[$key] = $value;
 		}
 		$json_request = json_encode($request_array, JSON_UNESCAPED_UNICODE);
 		$json_request = vk_parse_var($json_request, "appeal");
-		return vk_execute($appeal_code."return API.messages.send({$json_request});");
+		return vk_execute("{$appeal_code}return API.messages.send({$json_request});");
+	}
+
+	function sendSilentMessage($peer_id, $message, $from_id = null, $params = array()){ // Отправка сообщений без упоминаний
+		if(gettype($params) == "array")
+			$params['disable_mentions'] = true;
+		else
+			$params = array('disable_mentions' => true);
+		return $this->sendMessage($peer_id, $message, $from_id, $params);
 	}
 
 	function sendSystemMsg_NoRights($data){
-		$this->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет прав для использования этой команды.", $data->object->from_id);
+		$this->sendSilentMessage($data->object->peer_id, ", ⛔У вас нет прав для использования этой команды.", $data->object->from_id);
 	}
 
 	function sendCommandListFromArray($data, $message = "", $commands = array(), $keyboard = null){ // Legacy
@@ -87,9 +95,9 @@ class BotModule{
 			$msg = $msg . "\n• " . $commands[$i];
 		}
 		if(is_null($keyboard))
-			$this->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+			$this->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 		else
-			$this->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
+			$this->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
 	}
 }
 
@@ -250,7 +258,7 @@ function bot_get_id_from_mention($msg){ // Получение ID из упоми
 
 function bot_debug($str){ // Debug function
 	$botModule = new BotModule();
-	$botModule->sendSimpleMessage(219011658, "DEBUG: {$str}");
+	$botModule->sendMessage(bot_getconfig('DEBUG_USER_ID'), "DEBUG: {$str}");
 }
 
 function bot_debug_cmdinit($event){ // Добавление DEBUG-команд специальному пользователю
@@ -273,14 +281,14 @@ function bot_debug_cmdinit($event){ // Добавление DEBUG-команд �
 				$member_id = bot_get_id_from_mention($member);
 			}
 			else{
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Используйте: !docmd <пользователь> <команда>", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Используйте: !docmd <пользователь> <команда>", $data->object->from_id);
 				return;
 			}
 
 			$command = mb_substr($data->object->text, 8 + mb_strlen($member));
 
 			if($command == ""){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Используйте: !docmd <пользователь> <команда>", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Используйте: !docmd <пользователь> <команда>", $data->object->from_id);
 				return;
 			}
 
@@ -289,7 +297,7 @@ function bot_debug_cmdinit($event){ // Добавление DEBUG-команд �
 			$modified_data->object->text = $command;
 			$result = $finput->event->runTextCommand($modified_data);
 			if($result == 1)
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Ошибка. Данной команды не существует.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Ошибка. Данной команды не существует.", $data->object->from_id);
 		});
 
 	}
@@ -385,7 +393,7 @@ function bot_get_word_argv($words, $index, $default = ""){
 function bot_message_not_reg($data){ // Legacy
 	$msg = ", ⛔беседа не зарегистрирована. Используйте \"!reg\".";
 	$botModule = new BotModule();
-	$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+	$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 }
 
 function bot_getconfig($name){
@@ -401,7 +409,7 @@ function bot_getconfig($name){
 function bot_keyboard_remove($data){
 	$keyboard = vk_keyboard(false, array());
 	$botModule = new BotModule();
-	$botModule->sendSimpleMessage($data->object->peer_id, '✅Клавиатура убрана.', null, array('keyboard' => $keyboard));
+	$botModule->sendSilentMessage($data->object->peer_id, '✅Клавиатура убрана.', null, array('keyboard' => $keyboard));
 }
 
 function bot_like_handler($finput){
@@ -472,11 +480,11 @@ function bot_getid($finput){
 	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
 		$member_id = bot_get_id_from_mention($words[1]);
 	} else {
-		$botModule->sendSimpleMessage($data->object->peer_id, ", Ваш ID: {$data->object->from_id}.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", Ваш ID: {$data->object->from_id}.", $data->object->from_id);
 		return;
 	}
 
-	$botModule->sendSimpleMessage($data->object->peer_id, ", ID: {$member_id}.", $data->object->from_id);
+	$botModule->sendSilentMessage($data->object->peer_id, ", ID: {$member_id}.", $data->object->from_id);
 }
 
 function bot_base64($finput){
@@ -491,7 +499,7 @@ function bot_base64($finput){
 	$CHARS_LIMIT = 300; // Переменная ограничения символов
 
 	if($str_data == ""){
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Используйте !base64 <data>.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Используйте !base64 <data>.", $data->object->from_id);
 		return;
 	}
 
@@ -500,17 +508,17 @@ function bot_base64($finput){
 	if(!$decoded_data){
 		$encoded_data = base64_encode($str_data);
 		if(strlen($encoded_data) > $CHARS_LIMIT){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Зашифрованный текст превышает {$CHARS_LIMIT} симоволов.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Зашифрованный текст превышает {$CHARS_LIMIT} симоволов.", $data->object->from_id);
 			return;
 		}
-		$botModule->sendSimpleMessage($data->object->peer_id, ", Зашифрованный текст:\n{$encoded_data}", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", Зашифрованный текст:\n{$encoded_data}", $data->object->from_id);
 	}
 	else{
 		if(strlen($decoded_data) > $CHARS_LIMIT){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", Дешифрованный текст превышает {$CHARS_LIMIT} симоволов.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", Дешифрованный текст превышает {$CHARS_LIMIT} симоволов.", $data->object->from_id);
 			return;
 		}
-		$botModule->sendSimpleMessage($data->object->peer_id, ", Дешифрованный текст:\n{$decoded_data}", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", Дешифрованный текст:\n{$decoded_data}", $data->object->from_id);
 	}
 }
 
@@ -552,7 +560,7 @@ function bot_cmdlist($finput){
 	}
 	else{
 		// Сообщение об ошибке
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
 		return;
 	}
 	////////////////////////////////////////////////////
@@ -642,7 +650,7 @@ function bot_message_action_handler($finput){
 		elseif($data->object->action->type == "chat_invite_user") {
 			if($data->object->action->member_id == -bot_getconfig('VK_GROUP_ID')){
 				$botModule = new BotModule($db);
-				$botModule->sendSimpleMessage($data->object->peer_id, "О, привет!");
+				$botModule->sendSilentMessage($data->object->peer_id, "О, привет!");
 			}
 			else{
 				$banned_users = BanSystem::getBanList($db);
@@ -695,7 +703,7 @@ function bot_help($finput){
 				'!ник <ник> - Смена ника',
 				'!ники - Показать ники пользователей',
 				'!ранги - Вывод рангов пользователей в беседе',
-				'Онлайн - Показать online пользователей'
+				'!Онлайн - Показать online пользователей'
 			);
 
 			$botModule->sendCommandListFromArray($data, ', 📰Основные команды:', $commands);
@@ -756,7 +764,7 @@ function bot_help($finput){
 				'!ранг - Управление рангами пользователей',
 				'!ранглист - Список доступных рангов',
 				'!приветствие - Управление приветствием',
-				'!stats - Управление статистикой беседы',
+				'!стата - Статистика беседы',
 				'!modes - Список всех Режимов беседы',
 				'!mode <name> <value> - Управление Режимом беседы',
 				'!панель - Управление персональной панелью',
@@ -802,19 +810,19 @@ function bot_help($finput){
 				'!tableflip - (╯°□°）╯︵ ┻━┻',
 				'!unflip - ┬─┬ ノ( ゜-゜ノ)',
 				'!say <params> - Отправляет сообщение в текущую беседу с указанными параметрами',
-				'Выбери <v1> или <v2> или <v3>... - Случайный выбор одного из вариантов',
-				'Сколько <ед. измерения> <дополнение> - Сколько чего-то там что-то там',
-				'Кто/Кого/Кому <текст> - Выбирает случайного человека беседы',
-				'Инфа <выражение> - Вероятность выражения',
-				'Бутылочка - Мини-игра "Бутылочка"',
-				'Лайк <что-то> - Ставит лайк на что-то',
-				'Убрать <что-то> - Что-то убирает',
-				'Слова - Игра "Слова"',
-				'Words - Игра "Слова" на Английском языке',
-				'Загадки - Игры "Загадки"',
-				'Брак помощь - Помощь по системе браков',
-				'Браки - Список действующих браков беседы',
-				'Браки история - Список всех браков беседы'
+				'!Выбери <v1> или <v2> или <v3>... - Случайный выбор одного из вариантов',
+				'!Сколько <ед. измерения> <дополнение> - Сколько чего-то там что-то там',
+				'!Кто/!Кого/!Кому <текст> - Выбирает случайного человека беседы',
+				'!Инфа <выражение> - Вероятность выражения',
+				'!Бутылочка - Мини-игра "Бутылочка"',
+				'!Лайк <что-то> - Ставит лайк на что-то',
+				'!Убрать <что-то> - Что-то убирает',
+				'!Слова - Игра "Слова"',
+				//'Words - Игра "Слова" на Английском языке',
+				//'Загадки - Игры "Загадки"',
+				'!Брак помощь - Помощь по системе браков',
+				'!Браки - Список действующих браков беседы',
+				'!Браки история - Список всех браков беседы'
 			);
 
 			$botModule->sendCommandListFromArray($data, ', 📰Другие команды:', $commands);

@@ -221,7 +221,7 @@ function event_handle($data){
 	$event->addKeyboardCommand("referendum_vote", "goverment_referendum_vote");
 
 	// Система управления беседой
-	$event->addTextCommand("онлайн", 'manager_online_list');
+	$event->addTextCommand("!онлайн", 'manager_online_list');
 	$event->addTextCommand("!ban", 'manager_ban_user');
 	$event->addTextCommand("!unban", 'manager_unban_user');
 	$event->addTextCommand("!baninfo", 'manager_baninfo_user');
@@ -232,7 +232,7 @@ function event_handle($data){
 	$event->addTextCommand("!ранглист", 'manager_rank_list');
 	$event->addTextCommand("!ранги", 'manager_show_user_ranks');
 	$event->addTextCommand("!приветствие", 'manager_greeting');
-	$event->addTextCommand("стата", 'stats_cmd_handler');
+	$event->addTextCommand("!стата", 'stats_cmd_handler');
 	$event->addTextCommand("!modes", "manager_mode_list");
 	$event->addTextCommand("!mode", "manager_mode_cpanel");
 	$event->addTextCommand("!панель", "manager_panel_control");
@@ -242,24 +242,24 @@ function event_handle($data){
 	roleplay_cmdinit($event);
 
 	// Fun
-	$event->addTextCommand("выбери", 'fun_choose');
-	$event->addTextCommand("сколько", 'fun_howmuch');
+	$event->addTextCommand("!выбери", 'fun_choose');
+	$event->addTextCommand("!сколько", 'fun_howmuch');
 	fun_whois_initcmd($event); // Инициализация команд [кто/кого/кому]
-	$event->addTextCommand("инфа", "fun_info");
+	$event->addTextCommand("!инфа", "fun_info");
 	$event->addTextCommand("!бузова", 'fun_buzova');
 	$event->addTextCommand("!карина", 'fun_karina_cmd');
 	$event->addTextCommand("!амина", 'fun_amina_cmd');
 	$event->addTextCommand("!memes", 'fun_memes_control_panel');
 	$event->addTextCommand("!чулки", 'fun_stockings_cmd');
-	$event->addTextCommand("бутылочка", 'fun_bottle');
-	//$event->addTextCommand("!tts", 'fun_tts');
+	$event->addTextCommand("!бутылочка", 'fun_bottle');
+	$event->addTextCommand("!tts", 'fun_tts');
 	$event->addTextCommand("!say", "fun_say");
-	$event->addTextCommand("брак", "fun_marriage");
-	$event->addTextCommand("браки", "fun_show_marriage_list");
+	$event->addTextCommand("!брак", "fun_marriage");
+	$event->addTextCommand("!браки", "fun_show_marriage_list");
 
 	// Прочее
-	$event->addTextCommand("лайк", 'bot_like_handler');
-	$event->addTextCommand("убрать", 'bot_remove_handler');
+	$event->addTextCommand("!лайк", 'bot_like_handler');
+	$event->addTextCommand("!убрать", 'bot_remove_handler');
 	$event->addTextCommand("!id", 'bot_getid');
 	$event->addTextCommand("!ники", 'manager_show_nicknames');
 	$event->addTextCommand("!base64", 'bot_base64');
@@ -268,7 +268,7 @@ function event_handle($data){
 	$event->addTextCommand("!unflip", 'fun_unflip');
 	$event->addTextCommand("!giphy", 'giphy_handler');
 	$event->addTextCommand("!зов", 'bot_call_all');
-	$event->addTextCommand("слова", 'wordgame_cmd');
+	$event->addTextCommand("!слова", 'wordgame_cmd');
 	//$event->addTextCommand("words", 'wordgame_eng_cmd');
 	//$event->addTextCommand("загадки", "riddlegame_cmd");
 

@@ -70,37 +70,54 @@ function stats_cmd_handler($finput){
 
 	$botModule = new BotModule($db);
 
-	if(array_key_exists(0, $data->object->fwd_messages)){
-		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
-		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
-		$member_id = intval($words[1]);
-	} else $member_id = $data->object->from_id;
+	$command = mb_strtolower(bot_get_word_argv($words, 1, ""));
+	if($command == ""){
+		if(array_key_exists(0, $data->object->fwd_messages)){
+			$member_id = $data->object->fwd_messages[0]->from_id;
+		} else $member_id = $data->object->from_id;
 
-	$stats = $db->getValue(array("chat_stats", "users", "id{$member_id}"), STATS_DEFAULT);
+		$stats = $db->getValue(array("chat_stats", "users", "id{$member_id}"), STATS_DEFAULT);
 
-	$all_stats = $db->getValue(array("chat_stats", "users"), array());
+		$all_stats = $db->getValue(array("chat_stats", "users"), array());
 
-	$rating = array();
-	foreach ($all_stats as $key => $value) {
-		$rating[$key] = $value["msg_count"] - $value["msg_count_in_succession"];
+		$rating = array();
+		foreach ($all_stats as $key => $value) {
+			$rating[$key] = $value["msg_count"] - $value["msg_count_in_succession"];
+		}
+		arsort($rating);
+		$position = array_search("id{$member_id}", array_keys($rating));
+		if($position !== false){
+			$position++;
+			$rating_text = "{$position} место";
+		}
+		else
+			$rating_text = "Нет данных";
+
+		if($data->object->from_id == $member_id)
+			$msg = ", статистика:\n📧Сообщений: {$stats["msg_count"]}\n&#12288;📝Подряд: {$stats["msg_count_in_succession"]}\n🔍Символов: {$stats["simbol_count"]}\n📟Гол. сообщений: {$stats["audio_msg_count"]}\n\n📷Фотографий: {$stats["photo_count"]}\n📹Видео: {$stats["video_count"]}\n🎧Аудиозаписей: {$stats["audio_count"]}\n🤡Стикеров: {$stats["sticker_count"]}\n\n👑Активность: {$rating_text}";
+		else
+			$msg = ", статистика @id{$member_id} (пользователя):\n📧Сообщений: {$stats["msg_count"]}\n&#12288;📝Подряд: {$stats["msg_count_in_succession"]}\n🔍Символов: {$stats["simbol_count"]}\n📟Гол. сообщений: {$stats["audio_msg_count"]}\n\n📷Фотографий: {$stats["photo_count"]}\n📹Видео: {$stats["video_count"]}\n🎧Аудиозаписей: {$stats["audio_count"]}\n🤡Стикеров: {$stats["sticker_count"]}\n\n👑Активность: {$rating_text}";
+
+		$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 	}
-	arsort($rating);
-	$position = array_search("id{$member_id}", array_keys($rating));
-	if($position !== false){
-		$position++;
-		$rating_text = "{$position} место";
+	elseif($command == "обнулить"){
+		$ranksys = new RankSystem($db);
+
+		if($ranksys->checkRank($data->object->from_id, 0)){ // Проверка ранга (Владелец)
+			$db->unsetValue(array('chat_stats'));
+			$db->save();
+			$botModule->sendSilentMessage($data->object->peer_id, ", ✅Статистика обнулена.", $data->object->from_id);
+		}
+		else
+			$botModule->sendSystemMsg_NoRights($data);
 	}
-	else
-		$rating_text = "Нет данных";
-
-	if($data->object->from_id == $member_id)
-		$msg = ", статистика:\n📧Сообщений: {$stats["msg_count"]}\n&#12288;📝Подряд: {$stats["msg_count_in_succession"]}\n🔍Символов: {$stats["simbol_count"]}\n📟Гол. сообщений: {$stats["audio_msg_count"]}\n\n📷Фотографий: {$stats["photo_count"]}\n📹Видео: {$stats["video_count"]}\n🎧Аудиозаписей: {$stats["audio_count"]}\n🤡Стикеров: {$stats["sticker_count"]}\n\n👑Активность: {$rating_text}";
-	else
-		$msg = ", статистика @id{$member_id} (пользователя):\n📧Сообщений: {$stats["msg_count"]}\n🔍Символов: {$stats["simbol_count"]}\n📟Гол. сообщений: {$stats["audio_msg_count"]}\n\n📷Фотографий: {$stats["photo_count"]}\n📹Видео: {$stats["video_count"]}\n🎧Аудиозаписей: {$stats["audio_count"]}\n🤡Стикеров: {$stats["sticker_count"]}\n\n👑Активность: {$rating_text}";
-
-	$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+	else{
+		$botModule->sendCommandListFromArray($data, ", используйте:", array(
+			'Стата <пользователь> - Показать статистику',
+			'Стата <пересланное> - Показывает статистику пользователя',
+			'Стата обнулить - Обнуляить статистику беседы' 
+		));
+	}
 }
 
 ?>

@@ -94,7 +94,7 @@ function goverment_show_laws($finput){
 		$number = 1;
 
 	if(count($laws) == 0){
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ❗Пока нет действующих законов!", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ❗Пока нет действующих законов!", $data->object->from_id);
 		return;
 	}
 
@@ -128,7 +128,7 @@ function goverment_show_laws($finput){
 	}
 	else{
 		// Сообщение об ошибке
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
 		return;
 	}
 	////////////////////////////////////////////////////
@@ -142,7 +142,7 @@ function goverment_show_laws($finput){
 		$msg = $msg . "\n{$law_id}. {$laws_content[$i]}";
 	}
 
-	$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+	$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 }
 
 function goverment_laws_cpanel($finput){
@@ -176,10 +176,10 @@ function goverment_laws_cpanel($finput){
 			);
 			$db->setValue(array("goverment", "laws"), $gov["laws"]);
 			$db->save();
-			$botModule->sendSimpleMessage($data->object->peer_id, "@id{$data->object->from_id} (Правительство) обновило законы.");
+			$botModule->sendSilentMessage($data->object->peer_id, "@id{$data->object->from_id} (Правительство) обновило законы.");
 		}
 		else{
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;У вас нет прав на использование этой команды!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;У вас нет прав на использование этой команды!", $data->object->from_id);
 		}
 	}
 	elseif($command == "отменить"){
@@ -189,7 +189,7 @@ function goverment_laws_cpanel($finput){
 			else
 				$law_id = 0;
 			if($law_id == 0){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Укажите ID закона!", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Укажите ID закона!", $data->object->from_id);
 				return;
 			}
 
@@ -207,10 +207,10 @@ function goverment_laws_cpanel($finput){
 						$gov["laws"] = $laws;
 						$db->setValue(array("goverment", "laws"), $gov["laws"]);
 						$db->save();
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Вы отменили закон №{$law_id}.", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", ✅Вы отменили закон №{$law_id}.", $data->object->from_id);
 					}
 					else{
-						$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Вы не можете отменить закон президента!", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Вы не можете отменить закон президента!", $data->object->from_id);
 					}
 				}
 				else{
@@ -224,19 +224,19 @@ function goverment_laws_cpanel($finput){
 						$gov["laws"] = $laws;
 						$db->setValue(array("goverment", "laws"), $gov["laws"]);
 						$db->save();
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Вы отменили закон №{$law_id}.", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", ✅Вы отменили закон №{$law_id}.", $data->object->from_id);
 					}
 					else{
-						$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Вы не можете отменить закон парламента!", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Вы не можете отменить закон парламента!", $data->object->from_id);
 					}
 				}
 			}
 			else{
-				$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Закона с таким ID не существует!", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Закона с таким ID не существует!", $data->object->from_id);
 			}
 		}
 		else{
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;У вас нет прав на использование этой команды!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;У вас нет прав на использование этой команды!", $data->object->from_id);
 		}
 	}
 	elseif($command == "инфа"){
@@ -245,7 +245,7 @@ function goverment_laws_cpanel($finput){
 		else
 			$law_id = 0;
 		if($law_id == 0){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Укажите ID закона!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Укажите ID закона!", $data->object->from_id);
 			return;
 		}
 
@@ -278,12 +278,12 @@ function goverment_laws_cpanel($finput){
 				");
 		}
 		else{
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Закона с таким ID не существует!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Закона с таким ID не существует!", $data->object->from_id);
 		}
 	}
 	elseif($command == "переместить"){
 		if($data->object->from_id != $gov["president_id"] && $data->object->from_id != $gov["parliament_id"]){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;У вас нет прав на использование этой команды!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;У вас нет прав на использование этой команды!", $data->object->from_id);
 			return;
 		}
 		if(array_key_exists(2, $words))
@@ -297,16 +297,16 @@ function goverment_laws_cpanel($finput){
 			$to = 0;
 
 		if($from == $to){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Нельзя переместить закон в одно и тоже место.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Нельзя переместить закон в одно и тоже место.", $data->object->from_id);
 			return;
 		}
 
 		if(is_null($gov["laws"][$from-1])){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Закона №{$from} не существует.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Закона №{$from} не существует.", $data->object->from_id);
 			return;
 		}
 		if(is_null($gov["laws"][$to-1])){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Закона №{$to} не существует.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Закона №{$to} не существует.", $data->object->from_id);
 			return;
 		}
 
@@ -315,7 +315,7 @@ function goverment_laws_cpanel($finput){
 		$gov["laws"][$from-1] = $tmp;
 		$db->setValue(array("goverment", "laws"), $gov["laws"]);
 		$db->save();
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Закон №{$from} перемещен на место закона №{$to}.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Закон №{$from} перемещен на место закона №{$to}.", $data->object->from_id);
 
 	}
 	else{
@@ -382,10 +382,10 @@ function goverment_president($finput){
 				$db->save();
 			}
 			else{
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔данного пользователя не существует.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔данного пользователя не существует.", $data->object->from_id);
 			}
 		} else {
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;У вас нет прав на использование этой команды с аргументами!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;У вас нет прав на использование этой команды с аргументами!", $data->object->from_id);
 		}
 	}
 }
@@ -399,16 +399,16 @@ function goverment_batch($finput){
 	$botModule = new BotModule($db);
 	$gov = $db->getValue(array("goverment"));
 	if(!array_key_exists(1, $words)){
-		$botModule->sendSimpleMessage($data->object->peer_id, ", &#128214;Действующая партия: ".$gov["batch_name"].".", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", &#128214;Действующая партия: ".$gov["batch_name"].".", $data->object->from_id);
 	} else {
 		if($data->object->from_id == $gov["president_id"]){
 			$batch_name = mb_substr($data->object->text, 8, mb_strlen($data->object->text));
 			$db->setValue(array("goverment", "batch_name"), $batch_name);
 			$db->save();
 			$msg = "@id".$gov["president_id"]." (Президент) переименовал действующую партию.";
-			$botModule->sendSimpleMessage($data->object->peer_id, $msg);
+			$botModule->sendSilentMessage($data->object->peer_id, $msg);
 		} else {
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;У вас нет прав на использование этой команды с аргументами!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;У вас нет прав на использование этой команды с аргументами!", $data->object->from_id);
 		}
 	}
 }
@@ -422,22 +422,22 @@ function goverment_capital($finput){
 	$botModule = new BotModule($db);
 	$gov = $db->getValue(array("goverment"));
 	if(!array_key_exists(1, $words)){
-		$botModule->sendSimpleMessage($data->object->peer_id, ", &#127970;Текущая столица: ".$gov["capital"].".", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", &#127970;Текущая столица: ".$gov["capital"].".", $data->object->from_id);
 	} else {
 		if($data->object->from_id == $gov["president_id"]){
 			$capital = mb_substr($data->object->text, 9, mb_strlen($data->object->text));
 			$db->setValue(array("goverment", "capital"), $capital);
 			$db->save();
 			$msg = "@id".$gov["president_id"]." (Президент) изменил столицу государства.";
-			$botModule->sendSimpleMessage($data->object->peer_id, $msg);
+			$botModule->sendSilentMessage($data->object->peer_id, $msg);
 		} elseif($data->object->from_id == $gov["parliament_id"]){
 			$capital = mb_substr($data->object->text, 9, mb_strlen($data->object->text));
 			$db->setValue(array("goverment", "capital"), $capital);
 			$db->save();
 			$msg = "@id".$gov["parliament_id"]." (Парламент) изменил столицу государства.";
-			$botModule->sendSimpleMessage($data->object->peer_id, $msg);
+			$botModule->sendSilentMessage($data->object->peer_id, $msg);
 		} else {
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;У вас нет прав на использование этой команды с аргументами!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;У вас нет прав на использование этой команды с аргументами!", $data->object->from_id);
 		}
 	}
 }
@@ -451,7 +451,7 @@ function goverment_socorder($finput){
 	$botModule = new BotModule($db);
 	$gov = $db->getValue(array("goverment"));
 	if(!array_key_exists(1, $words)){
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⚔Текущий политический строй государства: ".SocOrderClass::socOrderDecode($gov["soc_order"]).".", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ⚔Текущий политический строй государства: ".SocOrderClass::socOrderDecode($gov["soc_order"]).".", $data->object->from_id);
 	} else {
 		if($data->object->from_id == $gov["parliament_id"]){
 			$id = SocOrderClass::socOrderEncode($words[1]);
@@ -459,9 +459,9 @@ function goverment_socorder($finput){
 				$db->setValue(array("goverment", "soc_order"), $id);
 				$db->save();
 				$msg = "@id".$gov["parliament_id"]." (Парламентом) был изменён политический строй.";
-				$botModule->sendSimpleMessage($data->object->peer_id, $msg);
+				$botModule->sendSilentMessage($data->object->peer_id, $msg);
 			} else {
-				$botModule->sendSimpleMessage($data->object->peer_id, ", Такого политического строя нет! Смотрите !стройлист.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", Такого политического строя нет! Смотрите !стройлист.", $data->object->from_id);
 			}
 		} elseif ($data->object->from_id == $gov["president_id"]) {
 			$id = SocOrderClass::socOrderEncode($words[1]);
@@ -469,12 +469,12 @@ function goverment_socorder($finput){
 				$db->setValue(array("goverment", "soc_order"), $id);
 				$db->save();
 				$msg = "@id".$gov["president_id"]." (Президентом) был изменён политический строй.";
-				$botModule->sendSimpleMessage($data->object->peer_id, $msg);
+				$botModule->sendSilentMessage($data->object->peer_id, $msg);
 			} else {
-				$botModule->sendSimpleMessage($data->object->peer_id, ", Такого политического строя нет! Смотрите !стройлист.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", Такого политического строя нет! Смотрите !стройлист.", $data->object->from_id);
 			}
 		} else {
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;У вас нет прав на использование этой команды с аргументами!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;У вас нет прав на использование этой команды с аргументами!", $data->object->from_id);
 		}
 	}
 }
@@ -492,7 +492,7 @@ function goverment_socorderlist($finput){
 		$msg = $msg."\n&#127381;".$array[$i];
 	}
 
-	$botModule->sendSimpleMessage($data->object->peer_id, ", Список политических строев: ".$msg, $data->object->from_id);
+	$botModule->sendSilentMessage($data->object->peer_id, ", Список политических строев: ".$msg, $data->object->from_id);
 }
 
 function goverment_anthem($finput){
@@ -509,7 +509,7 @@ function goverment_anthem($finput){
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', &#129345;Наш гимн: ','attachment':'{$gov["anthem"]}','disable_mentions':true});
 				");
 		} else {
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#129345;У нас нет гимна!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#129345;У нас нет гимна!", $data->object->from_id);
 		}
 	} else {
 		if($data->object->from_id == $gov["president_id"]){
@@ -526,9 +526,9 @@ function goverment_anthem($finput){
 				$db->setValue(array("goverment", "anthem"), $audio);
 				$db->save();
 				$msg = "@id".$gov["president_id"]." (Президент) изменил гимн государства.";
-				$botModule->sendSimpleMessage($data->object->peer_id, $msg);
+				$botModule->sendSilentMessage($data->object->peer_id, $msg);
 			} else {
-				$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Аудиозаписи не найдены!", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Аудиозаписи не найдены!", $data->object->from_id);
 			}
 		} elseif($data->object->from_id == $gov["parliament_id"]){
 			$first_audio_id = -1;
@@ -544,12 +544,12 @@ function goverment_anthem($finput){
 				$db->setValue(array("goverment", "anthem"), $audio);
 				$db->save();
 				$msg = "@id".$gov["parliament_id"]." (Парламент) изменил гимн государства.";
-				$botModule->sendSimpleMessage($data->object->peer_id, $msg);
+				$botModule->sendSilentMessage($data->object->peer_id, $msg);
 			} else {
-				$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Аудиозаписи не найдены!", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Аудиозаписи не найдены!", $data->object->from_id);
 			}
 		} else {
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;У вас нет прав на использование этой команды с аргументами!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;У вас нет прав на использование этой команды с аргументами!", $data->object->from_id);
 		}
 	}
 }
@@ -568,7 +568,7 @@ function goverment_flag($finput){
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', &#127987;Наш флаг: ','attachment':'{$gov["flag"]}','disable_mentions':true});
 				");
 		} else {
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#127987;У нас нет флага!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#127987;У нас нет флага!", $data->object->from_id);
 		}
 	} else {
 		if($data->object->from_id == $gov["president_id"]){
@@ -605,7 +605,7 @@ function goverment_flag($finput){
 				$db->setValue(array("goverment", "flag"), $flag);
 				$db->save();
 			} else {
-				$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Фотографии не найдены!", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Фотографии не найдены!", $data->object->from_id);
 			}
 		} elseif($data->object->from_id == $gov["parliament_id"]){
 			$first_photo_id = -1;
@@ -641,10 +641,10 @@ function goverment_flag($finput){
 				$db->setValue(array("goverment", "flag"), $flag);
 				$db->save();
 			} else {
-				$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Фотографии не найдены!", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Фотографии не найдены!", $data->object->from_id);
 			}
 		} else {
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;У вас нет прав на использование этой команды с аргументами!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;У вас нет прав на использование этой команды с аргументами!", $data->object->from_id);
 		}
 	}
 }
@@ -725,7 +725,7 @@ function goverment_referendum_candidate($finput){
 		$date = time(); // Переменная времени
 
 		if($gov["president_id"] == $data->object->from_id){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы не можете балотироваться на второй срок.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы не можете балотироваться на второй срок.", $data->object->from_id);
 			return;
 		}
 

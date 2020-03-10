@@ -320,7 +320,7 @@ function manager_mode_list($finput){
 	}
 	else{
 		// Сообщение об ошибке
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
 		return;
 	}
 
@@ -333,7 +333,7 @@ function manager_mode_list($finput){
 		$message = $message . "\n• {$name} — {$value}";
 	}
 
-	$botModule->sendSimpleMessage($data->object->peer_id, $message, $data->object->from_id);
+	$botModule->sendSilentMessage($data->object->peer_id, $message, $data->object->from_id);
 }
 
 function manager_mode_cpanel($finput){
@@ -362,7 +362,7 @@ function manager_mode_cpanel($finput){
 		$modeValue = "";
 
 	if($modeName == ""){
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔используйте \"!mode <name> <value>\".", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔используйте \"!mode <name> <value>\".", $data->object->from_id);
 		return;
 	}
 	elseif($modeValue == ""){
@@ -371,11 +371,11 @@ function manager_mode_cpanel($finput){
 			$value = "true";
 		else
 			$value = "false";
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Режим {$modeName} — {$value}.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Режим {$modeName} — {$value}.", $data->object->from_id);
 		return;
 	}
 	elseif($modeValue != "true" && $modeValue != "false"){
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Ошибка! Параметр <value> должен состоять из одного значения: true или false.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Ошибка! Параметр <value> должен состоять из одного значения: true или false.", $data->object->from_id);
 		return;
 	}
 
@@ -385,10 +385,10 @@ function manager_mode_cpanel($finput){
 
 	if($chatModes->setModeValue($modeName, $modeValueBoolean)){
 		$db->save();
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Режим {$modeName} изменен на {$modeValue}.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Режим {$modeName} изменен на {$modeValue}.", $data->object->from_id);
 	}
 	else
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Ошибка! Возможно Режима {$modeName} не существует!", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Ошибка! Возможно Режима {$modeName} не существует!", $data->object->from_id);
 
 }
 
@@ -419,19 +419,19 @@ function manager_ban_user($finput){
 
 	if($member_id == 0){
 		$msg = ", используйте \"!ban <пользователь> <причина>\".";
-		$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 		return;
 	}
 
 	if($ranksys->checkRank($member_id, 2)){  // Проверка ранга (Президент)
 		$rank_name = RankSystem::getRankNameByID($ranksys->getUserRank($member_id));
 		$msg = ", @id{$member_id} (Пользователя) нельзя забанить. Причина: Пользователь имеет ранг {$rank_name}.";
-		$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 		return;
 	}
 	elseif(BanSystem::getUserBanInfo($db, $member_id) !== false){
 		$msg = ", @id{$member_id} (Пользователя) нельзя забанить. Причина: Пользователь уже забанен.";
-		$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 		return;
 	}
 
@@ -648,7 +648,7 @@ function manager_banlist_user($finput){
 	}
 	else{
 		// Сообщение об ошибке
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
 		return;
 	}
 	////////////////////////////////////////////////////
@@ -695,7 +695,7 @@ function manager_baninfo_user($finput){
 
 	if($member_id == 0){
 		$msg = ", используйте \"!baninfo <пользователь>\".";
-		$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 		return;
 	}
 
@@ -716,7 +716,7 @@ function manager_baninfo_user($finput){
 			");
 	}
 	else{
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Указанный @id{$member_id} (пользователь) не заблокирован.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Указанный @id{$member_id} (пользователь) не заблокирован.", $data->object->from_id);
 	}
 }
 
@@ -883,7 +883,7 @@ function manager_nick($finput){
 			if(mb_strlen($nick) <= 15){
 				$nicknames = $db->getValue(array("bot_manager", "user_nicknames"), array());
 				if(array_search($nick, $nicknames) !== false){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Указанный ник занят!", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Указанный ник занят!", $data->object->from_id);
 					return;
 				}
 				$db->setValue(array("bot_manager", "user_nicknames", "id{$data->object->from_id}"), $nick);
@@ -901,7 +901,7 @@ function manager_nick($finput){
 		}
 		else{
 			if($data->object->fwd_messages[0]->from_id <= 0){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Ник можно установить только пользователю!", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Ник можно установить только пользователю!", $data->object->from_id);
 				return;
 			}
 
@@ -913,7 +913,7 @@ function manager_nick($finput){
 				}
 				$nicknames = $db->getValue(array("bot_manager", "user_nicknames"), array());
 				if(array_search($nick, $nicknames) !== false){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Указанный ник занят!", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Указанный ник занят!", $data->object->from_id);
 					return;
 				}
 
@@ -1021,7 +1021,7 @@ function manager_show_nicknames($finput){
 	}
 	else{
 		// Сообщение об ошибке
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
 		return;
 	}
 	////////////////////////////////////////////////////
@@ -1149,7 +1149,7 @@ function manager_rank($finput){
 			$ranksys = new RankSystem($db);
 			if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверка ранга (Администратор)
 				$rank_name = RankSystem::getRankNameByID(1);
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Для использования данной функции, ваш ранг должен быть как минимум {$rank_name} (1).", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Для использования данной функции, ваш ранг должен быть как минимум {$rank_name} (1).", $data->object->from_id);
 				return;
 			}
 
@@ -1168,10 +1168,10 @@ function manager_rank($finput){
 			$from_user_rank = $ranksys->getUserRank($data->object->from_id);
 
 			if($rank == 0){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите ранг.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите ранг.", $data->object->from_id);
 				return;
 			} elseif($rank <= $from_user_rank){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы не можете выдать пользователю такой же ранг, как и у вас или выше.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы не можете выдать пользователю такой же ранг, как и у вас или выше.", $data->object->from_id);
 				return;
 			}
 
@@ -1184,29 +1184,29 @@ function manager_rank($finput){
 			} elseif(array_key_exists(3, $words) && is_numeric($words[3])) {
 				$member_id = intval($words[3]);
 			} else {
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите пользователя.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите пользователя.", $data->object->from_id);
 				return;
 			}
 
 			$member_rank = $ranksys->getUserRank($member_id);
 			if(RankSystem::cmpRanks($from_user_rank, $member_rank) >= 0){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Пользователь обладает таким же рангом, как и вы, или выше.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Пользователь обладает таким же рангом, как и вы, или выше.", $data->object->from_id);
 				return;
 			}
 
 			if($ranksys->setUserRank($member_id, $rank)){
 				$db->save();
 				$rank_name = RankSystem::getRankNameByID($rank);
-				$botModule->sendSimpleMessage($data->object->peer_id, ", @id{$member_id} (Пользователю) установлен ранг: {$rank_name} [rank_{$rank}].", $data->object->from_id, array('disable_mentions' => false));
+				$botModule->sendMessage($data->object->peer_id, ", @id{$member_id} (Пользователю) установлен ранг: {$rank_name} [rank_{$rank}].");
 			} else{
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Такого ранга не существует.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Такого ранга не существует.", $data->object->from_id);
 			}
 		}
 		elseif($command == "забрать"){
 			$ranksys = new RankSystem($db);
 			if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверка ранга (Администратор)
 				$rank_name = RankSystem::getRankNameByID(1);
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Для использования данной функции, ваш ранг должен быть как минимум {$rank_name} (1).", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Для использования данной функции, ваш ранг должен быть как минимум {$rank_name} (1).", $data->object->from_id);
 				return;
 			}
 
@@ -1226,7 +1226,7 @@ function manager_rank($finput){
 			} elseif(array_key_exists(2, $words) && is_numeric($words[2])) {
 				$member_id = intval($words[2]);
 			} else {
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите пользователя.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите пользователя.", $data->object->from_id);
 				return;
 			}
 
@@ -1234,18 +1234,18 @@ function manager_rank($finput){
 			$member_rank = $ranksys->getUserRank($member_id);
 
 			if(RankSystem::cmpRanks($from_user_rank, $member_rank) >= 0){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Пользователь обладает таким же рангом, как и вы, или выше.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Пользователь обладает таким же рангом, как и вы, или выше.", $data->object->from_id);
 				return;
 			}
 
 			$ranksys->setUserRank($member_id, 0);
 			$db->save();
-			$botModule->sendSimpleMessage($data->object->peer_id, ", @id{$member_id} (Пользователь) больше не имеет ранга!", $data->object->from_id, array('disable_mentions' => false));
+			$botModule->sendMessage($data->object->peer_id, ", @id{$member_id} (Пользователь) больше не имеет ранга!", $data->object->from_id);
 		}
 		elseif($command == "получить"){
 			$ranksys = new RankSystem($db);
 			if($ranksys->checkRank($data->object->from_id, 1)){ // Проверка ранга (Администратор)
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы уже имеете данный ранг!", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы уже имеете данный ранг!", $data->object->from_id);
 				return;
 			}
 
@@ -1268,7 +1268,7 @@ function manager_rank($finput){
 		$ranksys = new RankSystem($db);
 		$user_rank = $ranksys->getUserRank($data->object->from_id);
 		$rank_name = RankSystem::getRankNameByID($user_rank);
-		$botModule->sendSimpleMessage($data->object->peer_id, ", Ваш ранг: {$rank_name} ({$user_rank}).", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", Ваш ранг: {$rank_name} ({$user_rank}).", $data->object->from_id);
 	}
 }
 
@@ -1322,7 +1322,7 @@ function manager_show_user_ranks($finput){
 	}
 	else{
 		// Сообщение об ошибке
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
 		return;
 	}
 	////////////////////////////////////////////////////
@@ -1355,7 +1355,7 @@ function manager_rank_list($finput){
 	}
 	$min_rank = RankSystem::getMinRankValue();
 	$msg = $msg . "\n• rank_{$min_rank} - ".RankSystem::getRankNameByID(RankSystem::getMinRankValue());
-	$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+	$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 }
 
 function manager_panel_show($finput){
@@ -1402,7 +1402,7 @@ function manager_panel_show($finput){
 			$elements[$current_element_index][] = vk_text_button($user_panel["elements"][$i]["name"], array("command" => "manager_panel", "last_change_time" => $last_change_time, 'user_id' => $data->object->from_id, 'element_id' => $i), $color);
 		}
 		$keyboard = vk_keyboard_inline($elements);
-		$botModule->sendSimpleMessage($data->object->peer_id, ", Ваша персональная панель. Используйте [!панель] для управления панелью.", $data->object->from_id, array('keyboard' => $keyboard));
+		$botModule->sendSilentMessage($data->object->peer_id, ", Ваша персональная панель. Используйте [!панель] для управления панелью.", $data->object->from_id, array('keyboard' => $keyboard));
 	}
 	else{
 		$keyboard = vk_keyboard_inline(array(
@@ -1410,7 +1410,7 @@ function manager_panel_show($finput){
 				vk_text_button("Помощь", array("command" => "bot_run_text_command", "text_command" => "!панель"), "positive")
 			)
 		));
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет элементов в персональной панели.", $data->object->from_id, array('keyboard' => $keyboard));
+		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас нет элементов в персональной панели.", $data->object->from_id, array('keyboard' => $keyboard));
 	}
 }
 
@@ -1427,11 +1427,11 @@ function manager_panel_control($finput){
 	if($command == "создать"){
 		$text_command = mb_substr($data->object->text, 16);
 		if($text_command == ""){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Используйте [!панель создать <команда>], чтобы создать новый элемент.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Используйте [!панель создать <команда>], чтобы создать новый элемент.", $data->object->from_id);
 			return;
 		}
 		if(mb_strlen($text_command) > 64){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Команда не может быть больше 64 символов.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Команда не может быть больше 64 символов.", $data->object->from_id);
 			return;
 		}
 		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
@@ -1440,7 +1440,7 @@ function manager_panel_control($finput){
 		else
 			$element_count = 0;
 		if($element_count >= 10){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы достили лимита элементов в панели.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы достили лимита элементов в панели.", $data->object->from_id);
 			return;
 		}
 		$panel_id = $element_count+1;
@@ -1454,7 +1454,7 @@ function manager_panel_control($finput){
 		);
 		$db->setValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), $user_panel);
 		$db->save();
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Панель с командой [{$text_command}] успешно создана. Её номер: {$panel_id}.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Панель с командой [{$text_command}] успешно создана. Её номер: {$panel_id}.", $data->object->from_id);
 	}
 	elseif($command == "список"){
 		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
@@ -1463,72 +1463,72 @@ function manager_panel_control($finput){
 			$id = 1; foreach ($user_panel["elements"] as $element) {
 				$msg .= "\n{$id}. {$element["name"]}: [{$element["command"]}]"; $id++;
 			}
-			$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 		}
 		else
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Ваша панель пуста.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Ваша панель пуста.", $data->object->from_id);
 	}
 	elseif($command == "название"){
 		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
 		$argv = bot_get_word_argv($words, 2, 0);
 		$name = mb_substr($data->object->text, 18+mb_strlen($argv));
 		if($argv == "" || !is_numeric($argv) || $name == ""){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", Используйте [!панель название <номер> <название>], чтобы изменить название элемента.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", Используйте [!панель название <номер> <название>], чтобы изменить название элемента.", $data->object->from_id);
 			return;
 		}
 		if(mb_strlen($name) > 15){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Название не может быть больше 15 символов.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Название не может быть больше 15 символов.", $data->object->from_id);
 			return;
 		}
 		$id = intval($argv) - 1;
 		if(!array_key_exists($id, $user_panel["elements"])){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Элемента под номером {$argv} не существует.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Элемента под номером {$argv} не существует.", $data->object->from_id);
 			return;
 		}
 		$user_panel["elements"][$id]["name"] = $name;
 		$user_panel["last_change_time"] = time();
 		$db->setValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), $user_panel);
 		$db->save();
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Название элемента №{$argv} успешно изменено.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Название элемента №{$argv} успешно изменено.", $data->object->from_id);
 	}
 	elseif($command == "команда"){
 		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
 		$argv = bot_get_word_argv($words, 2, 0);
 		$text_command = mb_substr($data->object->text, 17+mb_strlen($argv));
 		if($argv == "" || !is_numeric($argv) || $text_command == ""){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", Используйте [!панель команда <номер> <команда>], чтобы изменить команду элемента.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", Используйте [!панель команда <номер> <команда>], чтобы изменить команду элемента.", $data->object->from_id);
 			return;
 		}
 		if(mb_strlen($text_command) > 32){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Команда не может быть больше 32 символов.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Команда не может быть больше 32 символов.", $data->object->from_id);
 			return;
 		}
 		$id = intval($argv) - 1;
 		if(!array_key_exists($id, $user_panel["elements"])){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Элемента под номером {$argv} не существует.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Элемента под номером {$argv} не существует.", $data->object->from_id);
 			return;
 		}
 		$user_panel["elements"][$id]["command"] = $text_command;
 		$user_panel["last_change_time"] = time();
 		$db->setValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), $user_panel);
 		$db->save();
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Команда элемента №{$argv} успешно изменено.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Команда элемента №{$argv} успешно изменено.", $data->object->from_id);
 	}
 	elseif($command == "цвет"){
 		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
 		$argv1 = intval(bot_get_word_argv($words, 2, 0));
 		$argv2 = intval(bot_get_word_argv($words, 3, 0));
 		if($argv1 == 0 || $argv2 == 0){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", Используйте [!панель цвет <номер> <цвет>], чтобы изменить название элемента.\nДоступные цвета: 1 — белый, 2 - синий, 3- зелёный, 4 - красный.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", Используйте [!панель цвет <номер> <цвет>], чтобы изменить название элемента.\nДоступные цвета: 1 — белый, 2 - синий, 3- зелёный, 4 - красный.", $data->object->from_id);
 			return;
 		}
 		if($argv2 < 1 || $argv2 > 4){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Цвета под номером {$argv2} не существует.\nДоступные цвета: 1 — белый, 2 - синий, 3- зелёный, 4 - красный.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Цвета под номером {$argv2} не существует.\nДоступные цвета: 1 — белый, 2 - синий, 3- зелёный, 4 - красный.", $data->object->from_id);
 			return;
 		}
 		$id = $argv1 - 1;
 		if(!array_key_exists($id, $user_panel["elements"])){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Элемента под номером {$argv1} не существует.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Элемента под номером {$argv1} не существует.", $data->object->from_id);
 			return;
 		}
 		$user_panel["elements"][$id]["color"] = $argv2;
@@ -1552,18 +1552,18 @@ function manager_panel_control($finput){
 				$color_name = "Красный";
 				break;
 		}
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Название элемента номер {$argv1} успешно изменено. Установлен цвет: {$color_name}.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Название элемента номер {$argv1} успешно изменено. Установлен цвет: {$color_name}.", $data->object->from_id);
 	}
 	elseif($command == "удалить"){
 		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
 		$argv = intval(bot_get_word_argv($words, 2, 0));
 		if($argv == 0){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", Используйте [!панель удалить <номер>], чтобы удалить элемент.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", Используйте [!панель удалить <номер>], чтобы удалить элемент.", $data->object->from_id);
 			return;
 		}
 		$id = $argv - 1;
 		if(!array_key_exists($id, $user_panel["elements"])){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Элемента под номером {$argv} не существует.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Элемента под номером {$argv} не существует.", $data->object->from_id);
 			return;
 		}
 		unset($user_panel["elements"][$id]);
@@ -1571,7 +1571,7 @@ function manager_panel_control($finput){
 		$user_panel["last_change_time"] = time();
 		$db->setValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), $user_panel);
 		$db->save();
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Элемент под номером {$argv} успешно удален.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Элемент под номером {$argv} успешно удален.", $data->object->from_id);
 	}
 	else{
 		$botModule->sendCommandListFromArray($data, ", используйте:", array(
@@ -1606,11 +1606,11 @@ function manager_panel_keyboard_handler($finput){
 				vk_text_button("Панель", array("command" => "bot_run_text_command", "text_command" => "Панель"), "positive")
 			)
 		));
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы не можете использовать панель другого пользователя. Лучше откройте свою панель кнопкой ниже.", $data->object->from_id, array('keyboard' => $keyboard));
+		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы не можете использовать панель другого пользователя. Лучше откройте свою панель кнопкой ниже.", $data->object->from_id, array('keyboard' => $keyboard));
 		return;
 	}
 	if($user_panel["last_change_time"] !== $payload->last_change_time){
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Данная панель является устаревшей.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Данная панель является устаревшей.", $data->object->from_id);
 		return;
 	}
 	if(array_key_exists($payload->element_id, $user_panel["elements"])){
@@ -1619,11 +1619,11 @@ function manager_panel_keyboard_handler($finput){
 		unset($modified_data->object->payload);
 		$result = $finput->event->runTextCommand($modified_data);
 		if($result == 1){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Ошибка. Данной команды не существует.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Ошибка. Данной команды не существует.", $data->object->from_id);
 		}
 	}
 	else{
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Данного элемента не существует.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Данного элемента не существует.", $data->object->from_id);
 		return;
 	}
 }

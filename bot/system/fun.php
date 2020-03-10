@@ -54,7 +54,7 @@ function fun_memes_control_panel($finput){
 
 	$chatModes = new ChatModes($db);
 	if(!$chatModes->getModeValue("allow_memes")){ // Проверка режима
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Панель управления мемами недоступна, так как в беседе отключен Режим allow_memes.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Панель управления мемами недоступна, так как в беседе отключен Режим allow_memes.", $data->object->from_id);
 		return;
 	}
 
@@ -66,39 +66,39 @@ function fun_memes_control_panel($finput){
 		$forbidden_names = array("%__appeal__%", "%__ownername__%", "*all", "%appeal%"); // Массив запрещенных наименований мемов
 		$meme_name = mb_strtolower(mb_substr($data->object->text, 11));
 		if($meme_name == ""){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Не найдено название!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Не найдено название!", $data->object->from_id);
 			return;
 		}
 		for($i = 0; $i < count($forbidden_names); $i++){ // Массив проверки имя на запрет
 			if($meme_name == $forbidden_names[$i]){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Данное имя нельзя использовать!", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Данное имя нельзя использовать!", $data->object->from_id);
 				return;
 			}
 		}
 		if(mb_strlen($meme_name) > 15){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Имя не может быть больше 8 знаков!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Имя не может быть больше 8 знаков!", $data->object->from_id);
 			return;
 		}
 		if($db->getValue(array("fun", "memes", $meme_name), false) !== false){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Мем с таким именем уже существует!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Мем с таким именем уже существует!", $data->object->from_id);
 			return;
 		}
 
 		if(SysMemes::isExists($meme_name)){ // Запрет на использование названий из СИСТЕМНЫХ мемов
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Данное имя нельзя использовать!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Данное имя нельзя использовать!", $data->object->from_id);
 			return;
 		}
 
 		$event_command_list = $event->getMessageCommandList();
 		for($i = 0; $i < count($event_command_list); $i++){ // Запрет на использование названий из Командной системы
 			if($meme_name == $event_command_list[$i]){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Данное имя нельзя использовать!", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Данное имя нельзя использовать!", $data->object->from_id);
 				return;
 			}
 		}
 
 		if(count($data->object->attachments) == 0){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Вложения не найдены!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Вложения не найдены!", $data->object->from_id);
 			return;
 		}
 		$content_attach = "";
@@ -128,7 +128,7 @@ function fun_memes_control_panel($finput){
 		}
 		elseif($data->object->attachments[0]->type == 'video'){
 			if(property_exists($data->object->attachments[0]->video, "is_private") && $data->object->attachments[0]->video->is_private == 1){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Вложение является приватным!", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Вложение является приватным!", $data->object->from_id);
 				return;
 			}
 			else {
@@ -136,7 +136,7 @@ function fun_memes_control_panel($finput){
 			}
 		}
 		else {
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Тип вложения не поддерживается!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Тип вложения не поддерживается!", $data->object->from_id);
 			return;
 		}
 
@@ -147,24 +147,24 @@ function fun_memes_control_panel($finput){
 		);
 		$db->setValue(array("fun", "memes", $meme_name), $meme);
 		$db->save();
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Мем сохранен!", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Мем сохранен!", $data->object->from_id);
 	}
 	elseif($command == "del"){
 		$meme_name = mb_strtolower(mb_substr($data->object->text, 11));
 		$memes = $db->getValue(array("fun", "memes"), array());
 		if($meme_name == ""){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", &#9940;Не найдено название!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Не найдено название!", $data->object->from_id);
 			return;
 		}
 		if(!array_key_exists($meme_name, $memes) && $meme_name != "*all"){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔мема с именем \"{$meme_name}\" не существует.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔мема с именем \"{$meme_name}\" не существует.", $data->object->from_id);
 			return;
 		}
 
 		if($meme_name == "*all"){
 			$ranksys = new RankSystem($db);
 			if(!$ranksys->checkRank($data->object->from_id, 0)){ // Проверка ранга (Владелец)
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы не можете удалять мемы других пользователей.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы не можете удалять мемы других пользователей.", $data->object->from_id);
 				return;
 			}
 
@@ -176,13 +176,13 @@ function fun_memes_control_panel($finput){
 			$db->save();
 		} else {
 			if($memes[$meme_name]["owner_id"] == $data->object->from_id){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Мем \"{$meme_name}\" удален!", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ✅Мем \"{$meme_name}\" удален!", $data->object->from_id);
 				$db->unsetValue(array("fun", "memes", $meme_name));
 				$db->save();
 			} else {
 				$ranksys = new RankSystem($db);
 				if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверка ранга (Администратор)
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы не можете удалять мемы других пользователей.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы не можете удалять мемы других пользователей.", $data->object->from_id);
 					return;
 				}
 
@@ -201,7 +201,7 @@ function fun_memes_control_panel($finput){
     		$meme_names[] = $key;
 		}
 		if(count($meme_names) == 0){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", в беседе нет мемов.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", в беседе нет мемов.", $data->object->from_id);
 			return;
 		}
 		$meme_str_list = "";
@@ -211,13 +211,13 @@ function fun_memes_control_panel($finput){
 			else
 				$meme_str_list = $meme_str_list . ", [{$meme_names[$i]}]";
 		}
-		$botModule->sendSimpleMessage($data->object->peer_id, ", 📝список мемов в беседе:\n".$meme_str_list, $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", 📝список мемов в беседе:\n".$meme_str_list, $data->object->from_id);
 	}
 	elseif($command == "info"){
 		$meme_name = mb_strtolower(mb_substr($data->object->text, 12));
 
 		if($meme_name == ""){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔введите имя мема.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔введите имя мема.", $data->object->from_id);
 			return;
 		}
 
@@ -235,7 +235,7 @@ function fun_memes_control_panel($finput){
 				return API.messages.send({$request});
 				");
 		} else {
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔мема с именем \"{$meme_name}\" не существует.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔мема с именем \"{$meme_name}\" не существует.", $data->object->from_id);
 		}
 	}
 	else {
@@ -459,9 +459,9 @@ function fun_like_avatar($data, $db){
 		}
 		"))->response;
 	if($response->result == 1)
-		$botModule->sendSimpleMessage($data->object->peer_id, ", Теперь у тебя {$response->likes} ❤.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", Теперь у тебя {$response->likes} ❤.", $data->object->from_id);
 	else
-		$botModule->sendSimpleMessage($data->object->peer_id, ", Лайк уже стоит.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", Лайк уже стоит.", $data->object->from_id);
 }
 
 function fun_like_wallpost($data, $db){
@@ -480,12 +480,12 @@ function fun_like_wallpost($data, $db){
 		}
 		"))->response;
 	if($response->result == 1)
-		$botModule->sendSimpleMessage($data->object->peer_id, ", Теперь у тебя {$response->likes} ❤.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", Теперь у тебя {$response->likes} ❤.", $data->object->from_id);
 	else
-		$botModule->sendSimpleMessage($data->object->peer_id, ", Лайк уже стоит.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", Лайк уже стоит.", $data->object->from_id);
 	}
 	else{
-		$botModule->sendSimpleMessage($data->object->peer_id, ", Не могу найти пост.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", Не могу найти пост.", $data->object->from_id);
 	}
 }
 
@@ -569,7 +569,7 @@ function fun_howmuch($finput){
 
 	$add = mb_strtoupper(mb_substr($add, 0, 1)).mb_strtolower(mb_substr($add, 1)); // Делает первую букву верхнего регистра, а остальные - нижнего
 
-	$botModule->sendSimpleMessage($data->object->peer_id, ", {$add} {$rnd} {$unitname}.", $data->object->from_id);
+	$botModule->sendSilentMessage($data->object->peer_id, ", {$add} {$rnd} {$unitname}.", $data->object->from_id);
 }
 
 function fun_bottle($finput){
@@ -623,9 +623,9 @@ function fun_bottle($finput){
 }
 
 function fun_whois_initcmd($event){
-	$event->addTextCommand("кто", 'fun_whois_nom');
-	$event->addTextCommand("кого", 'fun_whois_gen');
-	$event->addTextCommand("кому", 'fun_whois_dat');
+	$event->addTextCommand("!кто", 'fun_whois_nom');
+	$event->addTextCommand("!кого", 'fun_whois_gen');
+	$event->addTextCommand("!кому", 'fun_whois_dat');
 }
 
 function fun_whois_nom($finput){
@@ -636,10 +636,10 @@ function fun_whois_nom($finput){
 
 	$botModule = new BotModule($db);
 
-	$text = mb_substr($data->object->text, 4);
+	$text = mb_substr($data->object->text, 5);
 	if($text == ""){
 		$botModule->sendCommandListFromArray($data, ", используйте:", array(
-			'Кто <текст>'
+			'!Кто <текст>'
 		));
 		return;
 	}
@@ -666,10 +666,10 @@ function fun_whois_gen($finput){
 
 	$botModule = new BotModule($db);
 
-	$text = mb_substr($data->object->text, 4);
+	$text = mb_substr($data->object->text, 5);
 	if($text == ""){
 		$botModule->sendCommandListFromArray($data, ", используйте:", array(
-			'Кого <текст>'
+			'!Кого <текст>'
 		));
 		return;
 	}
@@ -696,10 +696,10 @@ function fun_whois_dat($finput){
 
 	$botModule = new BotModule($db);
 
-	$text = mb_substr($data->object->text, 4);
+	$text = mb_substr($data->object->text, 5);
 	if($text == ""){
 		$botModule->sendCommandListFromArray($data, ", используйте:", array(
-			'Кому <текст>'
+			'!Кому <текст>'
 		));
 		return;
 	}
@@ -728,7 +728,7 @@ function fun_tts($finput){
 	$botModule = new BotModule($db);
 
 	if($message == ""){
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔используйте \"!tts <текст>\".", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔используйте \"!tts <текст>\".", $data->object->from_id);
 		return;
 	}
 
@@ -765,7 +765,7 @@ function fun_shrug($finput){
 	$db = &$finput->db;
 
 	$botModule = new BotModule();
-	$botModule->sendSimpleMessage($data->object->peer_id, "¯\_(ツ)_/¯");
+	$botModule->sendSilentMessage($data->object->peer_id, "¯\_(ツ)_/¯");
 }
 
 function fun_tableflip($finput){
@@ -775,7 +775,7 @@ function fun_tableflip($finput){
 	$db = &$finput->db;
 
 	$botModule = new BotModule();
-	$botModule->sendSimpleMessage($data->object->peer_id, "(╯°□°）╯︵ ┻━┻");
+	$botModule->sendSilentMessage($data->object->peer_id, "(╯°□°）╯︵ ┻━┻");
 }
 
 function fun_unflip($finput){
@@ -785,7 +785,7 @@ function fun_unflip($finput){
 	$db = &$finput->db;
 	
 	$botModule = new BotModule();
-	$botModule->sendSimpleMessage($data->object->peer_id, "┬─┬ ノ( ゜-゜ノ)");
+	$botModule->sendSilentMessage($data->object->peer_id, "┬─┬ ノ( ゜-゜ノ)");
 }
 
 function fun_info($finput){
@@ -796,16 +796,16 @@ function fun_info($finput){
 
 	$botModule = new BotModule($db);
 
-	$expression = mb_substr($data->object->text, 5);
+	$expression = mb_substr($data->object->text, 6);
 
 	if($expression == ""){
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔используйте \"Инфа <выражение>\".", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔используйте \"Инфа <выражение>\".", $data->object->from_id);
 		return;
 	}
 
 	$rnd = mt_rand(0, 100);
 
-	$botModule->sendSimpleMessage($data->object->peer_id, ", 📐Инфа, что {$expression} — {$rnd}%.", $data->object->from_id);
+	$botModule->sendSilentMessage($data->object->peer_id, ", 📐Инфа, что {$expression} — {$rnd}%.", $data->object->from_id);
 }
 
 function fun_say($finput){
@@ -823,14 +823,14 @@ function fun_say($finput){
 	$appeal_id = null;
 
 	if(!array_key_exists("msg", $vars)){
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Param <msg> not found!", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Param <msg> not found!", $data->object->from_id);
 		return;
 	}
 
 	if(array_key_exists("appeal_id", $vars))
 		$appeal_id = $vars["appeal_id"];
 
-	$botModule->sendSimpleMessage($data->object->peer_id, $vars["msg"], $appeal_id);
+	$botModule->sendSilentMessage($data->object->peer_id, $vars["msg"], $appeal_id);
 }
 
 function fun_marriage($finput){
@@ -865,7 +865,7 @@ function fun_marriage($finput){
 				if(array_key_exists("id{$data->object->from_id}", $marriages_db["user_info"]) && $marriages_db["user_info"]["id{$data->object->from_id}"]["type"] == 0){
 					$partner_id = $marriages_db["user_info"]["id{$data->object->from_id}"]["partner_id"];
 					if(array_key_exists("id{$partner_id}", $marriages_db["user_info"])){
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔@id{$partner_id} (Пользователь) уже находится в браке.", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", ⛔@id{$partner_id} (Пользователь) уже находится в браке.", $data->object->from_id);
 						unset($marriages_db["user_info"]["id{$data->object->from_id}"]);
 						return;
 					}
@@ -894,7 +894,7 @@ function fun_marriage($finput){
 						");
 				}
 				else{
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет приглашения о заключении брака.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас нет приглашения о заключении брака.", $data->object->from_id);
 				}
 				break;
 
@@ -913,7 +913,7 @@ function fun_marriage($finput){
 						");
 				}
 				else{
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет приглашения о заключении брака.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас нет приглашения о заключении брака.", $data->object->from_id);
 				}
 				break;
 
@@ -933,7 +933,7 @@ function fun_marriage($finput){
 						");
 				}
 				else{
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы не состоите в браке.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы не состоите в браке.", $data->object->from_id);
 				}
 				break;
 
@@ -960,7 +960,7 @@ function fun_marriage($finput){
 						");
 				}
 				else{
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы не состоите в браке.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы не состоите в браке.", $data->object->from_id);
 				}
 				break;
 		}
@@ -972,7 +972,7 @@ function fun_marriage($finput){
 
 	if(!array_key_exists("id{$member_id}", $marriages_db["user_info"])){
 		if(array_key_exists("id{$data->object->from_id}", $marriages_db["user_info"])){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы уже состоите в браке или получили приглашение.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы уже состоите в браке или получили приглашение.", $data->object->from_id);
 			return;
 		}
 		$res = json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
@@ -1011,7 +1011,7 @@ function fun_marriage($finput){
 		}
 	}
 	else{
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔@id{$member_id} (Пользователь) уже состоит в браке или получил приглашение.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔@id{$member_id} (Пользователь) уже состоит в браке или получил приглашение.", $data->object->from_id);
 	}
 }
 
@@ -1040,7 +1040,7 @@ function fun_show_marriage_list($finput){
 		$list = $marriages_db["list"];
 
 		if(count($list) == 0){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", в беседе нет браков!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", в беседе нет браков!", $data->object->from_id);
 			return;
 		}
 
@@ -1074,7 +1074,7 @@ function fun_show_marriage_list($finput){
 		}
 		else{
 			// Сообщение об ошибке
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
 			return;
 		}
 		////////////////////////////////////////////////////
@@ -1138,7 +1138,7 @@ function fun_show_marriage_list($finput){
 		}
 
 		if(count($list) == 0){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", в беседе нет браков!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", в беседе нет браков!", $data->object->from_id);
 			return;
 		}
 
@@ -1172,7 +1172,7 @@ function fun_show_marriage_list($finput){
 		}
 		else{
 			// Сообщение об ошибке
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
 			return;
 		}
 		////////////////////////////////////////////////////
@@ -1236,7 +1236,7 @@ class SysMemes{
 				else
 					$meme_str_list = $meme_str_list . ", [{$name}]";
 			}
-			$botModule->sendSimpleMessage($data->object->peer_id, ", 📝список СИСТЕМНЫХ мемов:\n".$meme_str_list, $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", 📝список СИСТЕМНЫХ мемов:\n".$meme_str_list, $data->object->from_id);
 			break;
 
 			case 'f':
@@ -1437,7 +1437,7 @@ class SysMemes{
 			break;
 
 			case 'пашел нахуй':
-			$botModule->sendSimpleMessage($data->object->peer_id, "Сам иди нахуй!");
+			$botModule->sendSilentMessage($data->object->peer_id, "Сам иди нахуй!");
 			break;
 
 			case 'лохи беседы':
@@ -1466,15 +1466,15 @@ class SysMemes{
 			$formating = explode("-", $date);
 			$date = "{$formating[2]}.{$formating[1]}.{$formating[0]}";
 			$msg = ", Ваша страница была зарегистрирована {$date}.";
-			$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 			break;
 
 			case 'memory_get_usage':
-			$botModule->sendSimpleMessage($data->object->peer_id, ", Memory Used: ".memory_get_usage()." B.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", Memory Used: ".memory_get_usage()." B.", $data->object->from_id);
 			break;
 
 			case 'memory_get_usage_real':
-			$botModule->sendSimpleMessage($data->object->peer_id, ", Memory Used: ".memory_get_usage(true)." B.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", Memory Used: ".memory_get_usage(true)." B.", $data->object->from_id);
 			break;
 		}
 
@@ -1681,7 +1681,7 @@ class SysMemes{
 					break;
 
 					case 10:
-					$botModule->sendSimpleMessage($data->object->peer_id, "@id477530202 (Самая офигенная!)", null, array('attachment' => 'photo477530202_457244949,photo219011658_457244383'));
+					$botModule->sendSilentMessage($data->object->peer_id, "@id477530202 (Самая офигенная!)", null, array('attachment' => 'photo477530202_457244949,photo219011658_457244383'));
 					break;
 				}
 			}

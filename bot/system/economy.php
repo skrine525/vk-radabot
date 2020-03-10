@@ -312,7 +312,7 @@ namespace Economy{
 		    $charactersLength = strlen($characters);
 		    $randomString = '';
 		    for ($i = 0; $i < $length; $i++) {
-		        $randomString .= $characters[rand(0, $charactersLength - 1)];
+		        $randomString .= $characters[mt_rand(0, $charactersLength - 1)];
 		    }
 		    return $randomString;
 		}
@@ -543,7 +543,7 @@ namespace{
 				$db->save();
 			}
 			else{
-				$botModule->sendSimpleMessage($data->object->peer_id, ", пользователь еще не зарегистрирован.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", пользователь еще не зарегистрирован.", $data->object->from_id);
 				return;
 			}
 		}
@@ -634,7 +634,7 @@ namespace{
 			)
 		));
 
-		$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
+		$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
 	}
 
 	function economy_work($finput){
@@ -653,7 +653,7 @@ namespace{
 		if(array_key_exists(1, $words)){
 			$job_index = intval(bot_get_word_argv($words, 1, 0));
 			if($job_index <= 0){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите номер профессии.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите номер профессии.", $data->object->from_id);
 				return;
 			}
 			$job_id = Economy\Job::getIDByIndex($job_index-1);
@@ -672,7 +672,7 @@ namespace{
 							$left_time_text = "{$minutes} мин. ";
 						$left_time_text = $left_time_text."{$seconds} сек.";
 						$msg = ", Вы сильно устали и не можете поменять профессию! Приходите через {$left_time_text}";
-						$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 						return;
 					}
 				}
@@ -683,7 +683,7 @@ namespace{
 					if($user_economy->checkItem($item->type, $item->id) === false){
 						$dependency_item_name = Economy\Item::getItemName($item->type, $item->id);
 						$job_name = Economy\Job::getNameByID($job_id);
-						$botModule->sendSimpleMessage($data->object->peer_id, ", Вы не можете устроиться на профессию {$job_name}. Вам необходимо иметь {$dependency_item_name}.", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", Вы не можете устроиться на профессию {$job_name}. Вам необходимо иметь {$dependency_item_name}.", $data->object->from_id);
 						return;
 					}
 				}
@@ -695,17 +695,17 @@ namespace{
 						vk_text_button("Работать", array("command" => "bot_run_text_command", "text_command" => "!работать"), "positive")
 					)
 				));
-				$botModule->sendSimpleMessage($data->object->peer_id, ", Вы устроились на работу {$job_name}.", $data->object->from_id, array('keyboard' => $keyboard));
+				$botModule->sendSilentMessage($data->object->peer_id, ", Вы устроились на работу {$job_name}.", $data->object->from_id, array('keyboard' => $keyboard));
 				}
 			else{
-				$botModule->sendSimpleMessage($data->object->peer_id, ", Такой профессии не существует.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", Такой профессии не существует.", $data->object->from_id);
 			}
 		} 
 		else{
 			$job_id = $user_economy->getJob();
 			if($job_id !== false){
 				if(!Economy\Job::jobExists($job_id)){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", вы работаете на несуществующей профессии.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", вы работаете на несуществующей профессии.", $data->object->from_id);
 					return;
 				}
 
@@ -715,7 +715,7 @@ namespace{
 					if($user_economy->checkItem($item->type, $item->id) === false){
 						$dependency_item_name = Economy\Item::getItemName($item->type, $item->id);
 						$job_name = Economy\Job::getNameByID($job_id);
-						$botModule->sendSimpleMessage($data->object->peer_id, ", Вы не можете работать по профессии {$job_name}. Вам необходимо иметь {$dependency_item_name}.", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", Вы не можете работать по профессии {$job_name}. Вам необходимо иметь {$dependency_item_name}.", $data->object->from_id);
 						return;
 					}
 				}
@@ -765,7 +765,7 @@ namespace{
 						$left_time_text = "{$minutes} мин. ";
 					$left_time_text = $left_time_text."{$seconds} сек.";
 					$msg = ", Вы сильно устали! Приходите через {$left_time_text}";
-					$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 				}
 			}
 			else{
@@ -774,7 +774,7 @@ namespace{
 						vk_text_button("Профессии", array("command" => "bot_run_text_command", "text_command" => "!профессии"), "primary")
 					)
 				));
-				$botModule->sendSimpleMessage($data->object->peer_id, ", вы нигде не работаете. !работать <профессия> - устройство на работу, !профессии - список профессий.", $data->object->from_id, array("keyboard" => $keyboard));
+				$botModule->sendSilentMessage($data->object->peer_id, ", вы нигде не работаете. !работать <профессия> - устройство на работу, !профессии - список профессий.", $data->object->from_id, array("keyboard" => $keyboard));
 			}
 		}
 	}
@@ -800,7 +800,7 @@ namespace{
 			$index++;
 		}
 
-		$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 	}
 
 	function economy_jobinfo($finput){
@@ -877,10 +877,10 @@ namespace{
 					),
 					$controlButtons
 				));
-				$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id, array('keyboard' => $keyboard));
+				$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id, array('keyboard' => $keyboard));
 			}
 			else{
-				$botModule->sendSimpleMessage($data->object->peer_id, ", Такой профессии нет!", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", Такой профессии нет!", $data->object->from_id);
 			}
 		}
 		else{
@@ -918,7 +918,7 @@ namespace{
 						$left_time_text = "{$minutes} мин. ";
 					$left_time_text = $left_time_text."{$seconds} сек.";
 					$msg = ", Вы сильно устали и не можете поменять профессию! Приходите через {$left_time_text}";
-					$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 					return;
 				}
 			}
@@ -929,7 +929,7 @@ namespace{
 				if($user_economy->checkItem($item->type, $item->id) === false){
 					$dependency_item_name = Economy\Item::getItemName($item->type, $item->id);
 					$job_name = Economy\Job::getNameByID($job_id);
-					$botModule->sendSimpleMessage($data->object->peer_id, ", Вы не можете устроиться на профессию {$job_name}. Вам необходимо иметь {$dependency_item_name}.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", Вы не можете устроиться на профессию {$job_name}. Вам необходимо иметь {$dependency_item_name}.", $data->object->from_id);
 					return;
 				}
 			}
@@ -940,11 +940,11 @@ namespace{
 					vk_text_button("Работать", array("command" => "bot_run_text_command", "text_command" => "!работать"), "positive")
 				)
 			));
-			$botModule->sendSimpleMessage($data->object->peer_id, ", Вы устроились на работу {$job_name}.", $data->object->from_id, array('keyboard' => $keyboard));
+			$botModule->sendSilentMessage($data->object->peer_id, ", Вы устроились на работу {$job_name}.", $data->object->from_id, array('keyboard' => $keyboard));
 			$db->save();
 		}
 		else{
-			$botModule->sendSimpleMessage($data->object->peer_id, ", Такой профессии нет!", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", Такой профессии нет!", $data->object->from_id);
 		}
 	}
 
@@ -1005,14 +1005,14 @@ namespace{
 					if($argv2 >= 1){
 						$index = $argv2-1;
 						if(count($items_for_buy) <= $index){
-							$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Товара под номером {$argv2} не существует.", $data->object->from_id);
+							$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Товара под номером {$argv2} не существует.", $data->object->from_id);
 							return;
 						}
 
 						$item_for_buy = $items_for_buy[$index];
 
 						if($user_economy->checkItem($item_for_buy["type"], $item_for_buy["id"]) !== false){
-							$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас уже есть товар под номером {$argv2}.", $data->object->from_id);
+							$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас уже есть товар под номером {$argv2}.", $data->object->from_id);
 							return;
 						}
 
@@ -1022,10 +1022,10 @@ namespace{
 						if($transaction_result){
 							$user_economy->changeItem($item_for_buy["type"], $item_for_buy["id"], 1);
 							$db->save();
-							$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Вы приобрели {$all_items[$item_for_buy["type"]][$item_for_buy["id"]]["name"]}.", $data->object->from_id);
+							$botModule->sendSilentMessage($data->object->peer_id, ", ✅Вы приобрели {$all_items[$item_for_buy["type"]][$item_for_buy["id"]]["name"]}.", $data->object->from_id);
 						}
 						else{
-							$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас недостаточно ".mb_strtoupper($price["currency"])." на счету.", $data->object->from_id);
+							$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас недостаточно ".mb_strtoupper($price["currency"])." на счету.", $data->object->from_id);
 						}
 					}
 					else{
@@ -1055,7 +1055,7 @@ namespace{
 								$index = $i + 1;
 							$msg = $msg . "\n{$index}. {$status}" . $all_items[$items_for_buy[$i]["type"]][$items_for_buy[$i]["id"]]["name"] . " — {$price_text}";
 						}
-						$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 					}
 					break;
 
@@ -1064,11 +1064,11 @@ namespace{
 					$user_economy = $economy->getUser($data->object->from_id);
 					if($user_economy->checkItem("edu", "level_4") === false){
 						$edu_name = Economy\Item::getItemName("edu", "level_4");
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы не можете купить бизнес. У вас должно быть {$edu_name}.", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы не можете купить бизнес. У вас должно быть {$edu_name}.", $data->object->from_id);
 						return;
 					}
 					if(count($user_economy->getEnterprises()) >= 3){
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔вы уже имеете максимальное количество бизнесов (3).", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", ⛔вы уже имеете максимальное количество бизнесов (3).", $data->object->from_id);
 						return;
 					}
 					$type_index = bot_get_word_argv($words, 2, 0);
@@ -1080,17 +1080,17 @@ namespace{
 							$enterpriseSystem = $economy->initEnterpriseSystem();
 							$enterprise_id = $enterpriseSystem->createEnterprise($types[$type_index-1], $data->object->from_id);
 							if($enterprise_id === false){
-								$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Не удалось купить бизнес.", $data->object->from_id);
+								$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Не удалось купить бизнес.", $data->object->from_id);
 								return;
 							}
 							$user_economy->addEnterprise($enterprise_id);
 							$user_economy->changeMoney(-$enterprise_price);
 							$db->save();
-							$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Бизнес успешно куплен. Его ID: {$enterprise_id}.", $data->object->from_id);
+							$botModule->sendSilentMessage($data->object->peer_id, ", ✅Бизнес успешно куплен. Его ID: {$enterprise_id}.", $data->object->from_id);
 						}
 						else{
 							$enterprise_price = Economy\Main::getFormatedMoney($enterprise_price);
-							$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔На вашем счету нет \${$enterprise_price} для покупки бизнеса.", $data->object->from_id);
+							$botModule->sendSilentMessage($data->object->peer_id, ", ⛔На вашем счету нет \${$enterprise_price} для покупки бизнеса.", $data->object->from_id);
 						}
 					}
 					else{
@@ -1100,7 +1100,7 @@ namespace{
 							$price = Economy\Main::getFormatedMoney($enterprise_types[$types[$i]]["price"]);
 							$msg .= "\n{$index}. {$enterprise_types[$types[$i]]["name"]} — \${$price}";
 						}
-						$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 					}
 					break;
 			}
@@ -1140,19 +1140,19 @@ namespace{
 			$index = $argv1 - 1;
 
 			if(count($items) < $argv1){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Собственности под номером {$argv1} у вас нет.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Собственности под номером {$argv1} у вас нет.", $data->object->from_id);
 				return;
 			}
 
 			if($argv2 <= 0){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Количество не может быть отрицательным числом или быть равным 0.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Количество не может быть отрицательным числом или быть равным 0.", $data->object->from_id);
 				return;
 			}
 
 			$selling_item_info = Economy\Item::getItemInfo($items[$index]->type, $items[$index]->id);
 
 			if(!$selling_item_info->can_sell){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Собственность \"{$selling_item_info->name}\" невозможно продать.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Собственность \"{$selling_item_info->name}\" невозможно продать.", $data->object->from_id);
 				return;
 			}
 
@@ -1161,10 +1161,10 @@ namespace{
 				$user_economy->changeMoney($value); // Добавляем к счету пользователя 70% от начальной стоимости товара
 				$db->save();
 				$value = Economy\Main::getFormatedMoney($value);
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Собственность \"{$selling_item_info->name}\" продана в количестве {$argv2} за \${$value}.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ✅Собственность \"{$selling_item_info->name}\" продана в количестве {$argv2} за \${$value}.", $data->object->from_id);
 			}
 			else{
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас в наличии только {$items[$index]->count} {$selling_item_info->name}.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас в наличии только {$items[$index]->count} {$selling_item_info->name}.", $data->object->from_id);
 			}
 		}
 		else{
@@ -1221,7 +1221,7 @@ namespace{
 			}
 			else{
 				// Сообщение об ошибке
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
 				return;
 			}
 			////////////////////////////////////////////////////
@@ -1233,10 +1233,10 @@ namespace{
 				$index = ($i + 1) + 10 * ($list_number-1);
 				$msg = $msg . "\n{$index}. " . $name;
 			}
-			$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 		}
 		else{
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет наград.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас нет наград.", $data->object->from_id);
 		}
 	}
 
@@ -1289,7 +1289,7 @@ namespace{
 				}
 				else{
 					// Сообщение об ошибке
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
 					return;
 				}
 				////////////////////////////////////////////////////
@@ -1302,16 +1302,16 @@ namespace{
 					$msg = $msg . "\n✅ {$index}. " . $name . " — {$list_out[$i]->count} шт.";
 				}
 				$keyboard = vk_keyboard_inline(array(array(vk_text_button("Купить", array("command" => "bot_run_text_command", "text_command" => "!купить"), "positive")),array(vk_text_button("Продать", array("command" => "bot_run_text_command", "text_command" => "!продать"), "negative")),array(vk_text_button("Подарить", array("command" => "bot_run_text_command", "text_command" => "Подарить"), "primary"))));
-				$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
+				$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
 			}
 			elseif(mb_strtolower($argv1) == "инфа"){
 				$argv2 = intval(bot_get_word_argv($words, 2, 0));
 				if($argv2 <= 0){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", используйте !имущество инфа <номер>.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", используйте !имущество инфа <номер>.", $data->object->from_id);
 					return;
 				}
 				if($argv2 > $items_count){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет имущества под номером {$argv2}.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас нет имущества под номером {$argv2}.", $data->object->from_id);
 					return;
 				}
 				$index = $argv2-1;
@@ -1322,12 +1322,12 @@ namespace{
 				$can_buy = ($item->can_buy ? "Да ✅" : "Нет ⛔");
 				$can_sell = ($item->can_sell ? "Да ✅" : "Нет ⛔");
 				$msg = ", информация о имуществе:\n📝Название: {$item->name}\n🛒Можно купить: {$can_buy}\n💳Можно продать: {$can_sell}\n💰Цена: \${$buying_price}\n📈Цена продажи: \${$selling_price}";
-				$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
+				$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
 			}
 		}
 		else{
 			$keyboard = vk_keyboard_inline(array(array(vk_text_button("Купить", array("command" => "bot_run_text_command", "text_command" => "!купить"), "positive")),array(vk_text_button("Продать", array("command" => "bot_run_text_command", "text_command" => "!продать"), "negative")),array(vk_text_button("Подарить", array("command" => "bot_run_text_command", "text_command" => "Подарить"), "primary"))));
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет имущества.", $data->object->from_id, array("keyboard" => $keyboard));
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас нет имущества.", $data->object->from_id, array("keyboard" => $keyboard));
 		}
 	}
 
@@ -1350,7 +1350,7 @@ namespace{
 			$argv3 = bot_get_word_argv($words, 3, "");
 
 			if($argv2 <= 0){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", используйте \"!банк перевод <сумма> <пользователь>\".", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", используйте \"!банк перевод <сумма> <пользователь>\".", $data->object->from_id);
 				return;
 			}
 
@@ -1361,12 +1361,12 @@ namespace{
 			} elseif(!is_null($argv3) && is_numeric($argv3)) {
 				$member_id = intval($argv3);
 			} else {
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите пользователя.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите пользователя.", $data->object->from_id);
 				return;
 			}
 
 			if($member_id == $data->object->from_id){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Невозможно перевести деньги самому себе.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Невозможно перевести деньги самому себе.", $data->object->from_id);
 				return;
 			}
 
@@ -1377,13 +1377,13 @@ namespace{
 					$member_economy->changeMoney($argv2);
 					$db->save();
 					$money = Economy\Main::getFormatedMoney($argv2);
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ✅\${$money} успешно переведены на счет @id{$member_id} (пользователя).", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ✅\${$money} успешно переведены на счет @id{$member_id} (пользователя).", $data->object->from_id);
 				}
 				else
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔На счету недостаточно $.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔На счету недостаточно $.", $data->object->from_id);
 			}
 			else{
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У @id{$member_id} (пользователя) нет счета в беседе.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У @id{$member_id} (пользователя) нет счета в беседе.", $data->object->from_id);
 			}
 		}
 		else{
@@ -1412,7 +1412,7 @@ namespace{
 		if($argv1 > 0 && count($edu_ids) >= $argv1){
 			if($argv1 == 1){
 				if($user_economy->checkItem("edu", $edu_ids[$argv1-1]) !== false){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас уже есть данное образование.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас уже есть данное образование.", $data->object->from_id);
 					return;
 				}
 				$edu_index = $argv1 - 1;
@@ -1420,11 +1420,11 @@ namespace{
 			else{
 				$previous_level = $argv1 - 2;
 				if($user_economy->checkItem("edu", $edu_ids[$previous_level]) === false){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет уровня \"".$edu_data[$previous_level]["name"]."\".", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас нет уровня \"".$edu_data[$previous_level]["name"]."\".", $data->object->from_id);
 					return;
 				}
 				if($user_economy->checkItem("edu", $edu_ids[$argv1-1]) !== false){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас уже есть данное образование.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас уже есть данное образование.", $data->object->from_id);
 					return;
 				}
 				$edu_index = $argv1 - 1;
@@ -1434,10 +1434,10 @@ namespace{
 			if($user_economy->changeMoney(-$price)){
 				$user_economy->changeItem("edu", $edu_ids[$edu_index], 1);
 				$db->save();
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Вы успешно получили образование уровня \"{$edu_data[$edu_index]["name"]}\".", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ✅Вы успешно получили образование уровня \"{$edu_data[$edu_index]["name"]}\".", $data->object->from_id);
 			}
 			else
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔На счету недостаточно $.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔На счету недостаточно $.", $data->object->from_id);
 		}
 		else{
 			$msg = ", используйте \"!образование <номер>\". Список доступного образования:";
@@ -1452,7 +1452,7 @@ namespace{
 				$price = Economy\Main::getFormatedMoney($edu_data[$i]["price"]);
 				$msg = $msg . "\n{$index}. {$status}" . $edu_data[$i]["name"] . " — \$" . $price;
 			}
-			$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 		}
 	}
 
@@ -1473,7 +1473,7 @@ namespace{
 			if($argv == "0"){
 				$user_economy->deleteMeta("selected_enterprise_index");
 				$db->save();
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Информация о выбранном бизнесе очищена.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ✅Информация о выбранном бизнесе очищена.", $data->object->from_id);
 			}
 			elseif($argv == ""){
 				$enterpriseSystem = $economy->initEnterpriseSystem();
@@ -1488,7 +1488,7 @@ namespace{
 							vk_text_button("Купить бизнес", array("command" => "bot_run_text_command", "text_command" => "!бизнес купить"), "positive")
 						)
 					));
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет ни одного бизнеса.", $data->object->from_id, array('keyboard' => $keyboard));
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас нет ни одного бизнеса.", $data->object->from_id, array('keyboard' => $keyboard));
 					return;
 				}
 				$msg = ", Используйте:\n• !бизнес выбрать <номер> - Выбрать бизнес\n• !бизнес выбрать 0 - Убрать выбранный бизнес\n\nСписок ваших бизнесов:";
@@ -1511,7 +1511,7 @@ namespace{
 						vk_text_button("Убрать", array("command" => "bot_run_text_command", "text_command" => "!бизнес выбрать 0"), "negative")
 					)
 				));
-				$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
+				$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
 			}
 			elseif(is_numeric($argv)){
 				$index = intval($argv);
@@ -1521,10 +1521,10 @@ namespace{
 					$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$index-1]);
 					$user_economy->setMeta("selected_enterprise_index", $index);
 					$db->save();
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Выбран бизнес под названием \"{$enterprise["name"]}\".", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ✅Выбран бизнес под названием \"{$enterprise["name"]}\".", $data->object->from_id);
 				}
 				else{
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Бизнеса под номером {$index} не существует.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Бизнеса под номером {$index} не существует.", $data->object->from_id);
 				}
 			}
 		}
@@ -1541,7 +1541,7 @@ namespace{
 				$type = $enterprise_types[$enterprise["type"]]["name"];
 				$capital = Economy\Main::getFormatedMoney($enterprise["capital"]);
 				$msg = ", информация о бизнесе:\n📎ID: {$enterprise["id"]}\n📝Название: {$enterprise["name"]}\n🔒Тип: {$type}\n💰Бюджет: \${$capital}\n👥Рабочие: {$enterprise["involved_workers"]}/{$enterprise["workers"]}\n📊Опыт: {$enterprise["exp"]}\n📄Контракты: {$current_contracts_count}/{$enterprise["max_contracts"]}";
-				$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 			}
 			else{
 				$botModule->sendCommandListFromArray($data, ", ⛔Бизнес не выбран. Используйте:", array(
@@ -1563,7 +1563,7 @@ namespace{
 
 				if($command == "пополнить"){
 					if($value == 0){
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите сумму операции.", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите сумму операции.", $data->object->from_id);
 						return;
 					}
 
@@ -1572,15 +1572,15 @@ namespace{
 						$enterpriseSystem->saveEnterprise($enterprise["id"], $enterprise);
 						$db->save();
 						$value = Economy\Main::getFormatedMoney($value);
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ✅\${$value} успешно переведены на счет бизнеса.", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", ✅\${$value} успешно переведены на счет бизнеса.", $data->object->from_id);
 					}
 					else{
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔На вашем счету недостаточно средств.", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", ⛔На вашем счету недостаточно средств.", $data->object->from_id);
 					}
 				}
 				elseif($command == "снять"){
 					if($value == 0){
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите сумму операции.", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите сумму операции.", $data->object->from_id);
 						return;
 					}
 
@@ -1589,10 +1589,10 @@ namespace{
 						$enterpriseSystem->saveEnterprise($enterprise["id"], $enterprise);
 						$db->save();
 						$value = Economy\Main::getFormatedMoney($value);
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ✅\${$value} успешно переведены на ваш счет.", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", ✅\${$value} успешно переведены на ваш счет.", $data->object->from_id);
 					}
 					else{
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔На счету бизнеса недостаточно средств.", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", ⛔На счету бизнеса недостаточно средств.", $data->object->from_id);
 					}
 				}
 				else{
@@ -1637,17 +1637,17 @@ namespace{
 
 				$name = mb_substr($data->object->text, 17);
 				if($name == ""){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите название.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите название.", $data->object->from_id);
 					return;
 				}
 				if(mb_strlen($name) > 20){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Название не может быть больше 20 символов.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Название не может быть больше 20 символов.", $data->object->from_id);
 					return;
 				}
 				$enterprise["name"] = $name;
 				$enterpriseSystem->saveEnterprise($enterprise["id"], $enterprise);
 				$db->save();
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Название \"{$name}\" установлено.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ✅Название \"{$name}\" установлено.", $data->object->from_id);
 			}
 			else{
 				$botModule->sendCommandListFromArray($data, ", ⛔Бизнес не выбран. Используйте:", array(
@@ -1728,7 +1728,7 @@ namespace{
 						));
 					}
 
-					$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
+					$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
 				}
 				elseif($argv == 0){
 					$elements = array(array());
@@ -1746,10 +1746,10 @@ namespace{
 						$elements[$current_element_index][] = vk_text_button(bot_int_to_emoji_str($j), array('command' => "economy_contract", 'params' => array("action" => 4, "enterprise_id" => $enterprise["id"], "contract_id" => $i, "user_id" => $data->object->from_id)), "secondary");
 					}
 					$keyboard = vk_keyboard_inline($elements);
-					$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id, array('keyboard' => $keyboard));
+					$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id, array('keyboard' => $keyboard));
 				}
 				else{
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Контракта под номером {$argv} не существует.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Контракта под номером {$argv} не существует.", $data->object->from_id);
 				}
 			}
 			else{
@@ -1794,7 +1794,7 @@ namespace{
 					else
 						$msg .= "\n{$j}. Свободный слот";
 				}
-				$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 			}
 			else{
 				$botModule->sendCommandListFromArray($data, ", ⛔Бизнес не выбран. Используйте:", array(
@@ -1812,7 +1812,7 @@ namespace{
 				$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$index-1]);
 
 				if(count($enterprise["contracts"]) >= $enterprise["max_contracts"]){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Нет свободных слотов (Лимит слотов: {$enterprise["max_contracts"]}).", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Нет свободных слотов (Лимит слотов: {$enterprise["max_contracts"]}).", $data->object->from_id);
 					return;
 				}
 
@@ -1834,7 +1834,7 @@ namespace{
 						$contract = $improvment["workers"][$enterprise["improvment"]["workers"]];
 					}
 					else{
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вами достигнут максимальный уровень.", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вами достигнут максимальный уровень.", $data->object->from_id);
 						return;
 					}
 				}
@@ -1844,24 +1844,24 @@ namespace{
 						$contract = $improvment["contracts"][$enterprise["improvment"]["contracts"]];
 					}
 					else{
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вами достигнут максимальный уровень.", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вами достигнут максимальный уровень.", $data->object->from_id);
 						return;
 					}
 				}
 
 				$capital_after_start = $enterprise["capital"] - $contract["cost"];
 				if($capital_after_start < 0){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔На счету бизнеса недостаточно средств.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔На счету бизнеса недостаточно средств.", $data->object->from_id);
 					return;
 				}
 				$exp_after_start = $enterprise["exp"] - $contract["exp_required"];
 				if($exp_after_start < 0){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Недостаточно опыта.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Недостаточно опыта.", $data->object->from_id);
 					return;
 				}
 				$involved_workers_after_start = $enterprise["involved_workers"] + $contract["workers_required"];
 				if($involved_workers_after_start > $enterprise["workers"]){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Не хватает рабочих для реализации этого контракта.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Не хватает рабочих для реализации этого контракта.", $data->object->from_id);
 					return;
 				}
 				$enterprise["capital"] = $capital_after_start;
@@ -1875,7 +1875,7 @@ namespace{
 				);
 				$enterpriseSystem->saveEnterprise($enterprise["id"], $enterprise);
 				$db->save();
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Контракт \"{$contract["name"]}\" успешно подписан.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ✅Контракт \"{$contract["name"]}\" успешно подписан.", $data->object->from_id);
 			}
 			else{
 				$botModule->sendCommandListFromArray($data, ", ⛔Бизнес не выбран. Используйте:", array(
@@ -1946,7 +1946,7 @@ namespace{
 
 					}
 					else{
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вами достигнут максимальный уровень.", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вами достигнут максимальный уровень.", $data->object->from_id);
 						return;
 					}
 				}
@@ -1974,14 +1974,14 @@ namespace{
 						));
 					}
 					else{
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вами достигнут максимальный уровень.", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вами достигнут максимальный уровень.", $data->object->from_id);
 						return;
 					}
 				}
 
 				$cost = Economy\Main::getFormatedMoney($contract["cost"]);
 				$msg = ", информация о улучшении:\n📝Название: {$contract["name"]}\n📅Продолжительность: {$duration}\n💰Стоимость: \${$cost}\n📊Необходимо Опыта: {$contract["exp_required"]}\n👥Необходимо рабочих: {$contract["workers_required"]}\n🔓Результат: {$improvment_text}";
-				$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id, array('keyboard' => $keyboard));
+				$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id, array('keyboard' => $keyboard));
 			}
 			else{
 				$botModule->sendCommandListFromArray($data, ", ⛔Бизнес не выбран. Используйте:", array(
@@ -1999,7 +1999,7 @@ namespace{
 				$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$index-1]);
 
 				if(count($enterprise["contracts"]) >= $enterprise["max_contracts"]){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Нет свободных слотов (Лимит слотов: {$enterprise["max_contracts"]}).", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Нет свободных слотов (Лимит слотов: {$enterprise["max_contracts"]}).", $data->object->from_id);
 					return;
 				}
 
@@ -2008,19 +2008,19 @@ namespace{
 
 				$argv = intval(bot_get_word_argv($words, 2, 0));
 				if($argv <= 0 || count($contracts) < $argv){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Контракта под #{$argv} не существует.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Контракта под #{$argv} не существует.", $data->object->from_id);
 					return;
 				}
 				$contract = $contracts[$argv-1];
 
 				$capital_after_start = $enterprise["capital"] - $contract["cost"];
 				if($capital_after_start < 0){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔На счету бизнеса недостаточно средств.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔На счету бизнеса недостаточно средств.", $data->object->from_id);
 					return;
 				}
 				$involved_workers_after_start = $enterprise["involved_workers"] + $contract["workers_required"];
 				if($involved_workers_after_start > $enterprise["workers"]){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Не хватает рабочих для реализации этого контракта.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Не хватает рабочих для реализации этого контракта.", $data->object->from_id);
 					return;
 				}
 				$enterprise["capital"] = $capital_after_start;
@@ -2033,7 +2033,7 @@ namespace{
 				);
 				$enterpriseSystem->saveEnterprise($enterprise["id"], $enterprise);
 				$db->save();
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Контракт \"{$contract["name"]}\" успешно подписан.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ✅Контракт \"{$contract["name"]}\" успешно подписан.", $data->object->from_id);
 			}
 			else{
 				$botModule->sendCommandListFromArray($data, ", ⛔Бизнес не выбран. Используйте:", array(
@@ -2093,18 +2093,18 @@ namespace{
 		$enterprise = $enterpriseSystem->getEnterprise($payload->params->enterprise_id);
 
 		if($enterprise === false){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Этот бизнес больше не существует.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Этот бизнес больше не существует.", $data->object->from_id);
 			return;
 		}
 
 		if($enterprise["owner_id"] != $data->object->from_id){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы больше не являетесь владельцем данного бизнеса.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы больше не являетесь владельцем данного бизнеса.", $data->object->from_id);
 			return;
 		}
 
 		if($payload->params->action == 1){
 			if(count($enterprise["contracts"]) >= $enterprise["max_contracts"]){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Нет свободных слотов (Лимит слотов: {$enterprise["max_contracts"]}).", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Нет свободных слотов (Лимит слотов: {$enterprise["max_contracts"]}).", $data->object->from_id);
 				return;
 			}
 
@@ -2114,12 +2114,12 @@ namespace{
 
 			$capital_after_start = $enterprise["capital"] - $contract["cost"];
 			if($capital_after_start < 0){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔На счету бизнеса недостаточно средств.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔На счету бизнеса недостаточно средств.", $data->object->from_id);
 				return;
 			}
 			$involved_workers_after_start = $enterprise["involved_workers"] + $contract["workers_required"];
 			if($involved_workers_after_start > $enterprise["workers"]){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Не хватает рабочих для реализации этого контракта.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Не хватает рабочих для реализации этого контракта.", $data->object->from_id);
 				return;
 			}
 			$enterprise["capital"] = $capital_after_start;
@@ -2132,7 +2132,7 @@ namespace{
 			);
 			$enterpriseSystem->saveEnterprise($enterprise["id"], $enterprise);
 			$db->save();
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Контракт \"{$contract["name"]}\" успешно подписан.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ✅Контракт \"{$contract["name"]}\" успешно подписан.", $data->object->from_id);
 		}
 		elseif($payload->params->action === 2 || $payload->params->action === 3 || $payload->params->action === 4){
 			$contract_id = $payload->params->contract_id;
@@ -2205,7 +2205,7 @@ namespace{
 				));
 			}
 
-			$botModule->sendSimpleMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
+			$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
 		}
 	}
 
@@ -2226,18 +2226,18 @@ namespace{
 		$enterprise = $enterpriseSystem->getEnterprise($payload->params->enterprise_id);
 
 		if($enterprise === false){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Этот бизнес больше не существует.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Этот бизнес больше не существует.", $data->object->from_id);
 			return;
 		}
 
 		if($enterprise["owner_id"] != $data->object->from_id){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы больше не являетесь владельцем данного бизнеса.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы больше не являетесь владельцем данного бизнеса.", $data->object->from_id);
 			return;
 		}
 
 
 		if(count($enterprise["contracts"]) >= $enterprise["max_contracts"]){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Нет свободных слотов (Лимит слотов: {$enterprise["max_contracts"]}).", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Нет свободных слотов (Лимит слотов: {$enterprise["max_contracts"]}).", $data->object->from_id);
 			return;
 		}
 
@@ -2250,7 +2250,7 @@ namespace{
 				$contract = $improvment["workers"][$enterprise["improvment"]["workers"]];
 			}
 			else{
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вами достигнут максимальный уровень.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вами достигнут максимальный уровень.", $data->object->from_id);
 				return;
 			}
 		}
@@ -2260,24 +2260,24 @@ namespace{
 				$contract = $improvment["contracts"][$enterprise["improvment"]["contracts"]];
 			}
 			else{
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вами достигнут максимальный уровень.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вами достигнут максимальный уровень.", $data->object->from_id);
 				return;
 			}
 		}
 
 		$capital_after_start = $enterprise["capital"] - $contract["cost"];
 		if($capital_after_start < 0){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔На счету бизнеса недостаточно средств.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔На счету бизнеса недостаточно средств.", $data->object->from_id);
 			return;
 		}
 		$exp_after_start = $enterprise["exp"] - $contract["exp_required"];
 		if($exp_after_start < 0){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Недостаточно опыта.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Недостаточно опыта.", $data->object->from_id);
 			return;
 		}
 		$involved_workers_after_start = $enterprise["involved_workers"] + $contract["workers_required"];
 		if($involved_workers_after_start > $enterprise["workers"]){
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Не хватает рабочих для реализации этого контракта.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Не хватает рабочих для реализации этого контракта.", $data->object->from_id);
 			return;
 		}
 		$enterprise["capital"] = $capital_after_start;
@@ -2291,7 +2291,7 @@ namespace{
 		);
 		$enterpriseSystem->saveEnterprise($enterprise["id"], $enterprise);
 		$db->save();
-		$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Контракт \"{$contract["name"]}\" успешно подписан.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Контракт \"{$contract["name"]}\" успешно подписан.", $data->object->from_id);
 	}
 
 	function economy_most_rich_users($finput){
@@ -2364,7 +2364,7 @@ namespace{
 
 		}
 		else{
-			$botModule->sendSimpleMessage($data->object->peer_id, ", ни один пользователь беседы не попал в этот список.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ни один пользователь беседы не попал в этот список.", $data->object->from_id);
 		}
 	}
 
@@ -2404,7 +2404,7 @@ namespace{
 			if($economy->checkUser($member_id))
 				$member_economy = $economy->getUser($member_id);
 			else{
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У @id{$member_id} (пользователя) нет счета в беседе.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У @id{$member_id} (пользователя) нет счета в беседе.", $data->object->from_id);
 				return;
 			}
 
@@ -2421,14 +2421,14 @@ namespace{
 			$index = $argv1 - 1;
 
 			if(count($items) < $argv1){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Собственности под номером {$argv1} у вас нет.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Собственности под номером {$argv1} у вас нет.", $data->object->from_id);
 				return;
 			}
 
 			$giving_item_info = Economy\Item::getItemInfo($items[$index]->type, $items[$index]->id);
 
 			if(!$giving_item_info->can_sell){
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Собственность \"{$giving_item_info->name}\" невозможно подарить.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Собственность \"{$giving_item_info->name}\" невозможно подарить.", $data->object->from_id);
 				return;
 			}
 
@@ -2451,7 +2451,7 @@ namespace{
 					");
 			}
 			else{
-				$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет столько {$giving_item_info->name}.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас нет столько {$giving_item_info->name}.", $data->object->from_id);
 			}
 		}
 		else{
@@ -2525,16 +2525,16 @@ namespace{
 				$argv2 = intval(bot_get_word_argv($words, 2, 0));
 
 				if(array_key_exists("id{$data->object->from_id}", $session_data["bets"])){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Вы уже сделали ставку.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы уже сделали ставку.", $data->object->from_id);
 					return;
 				}
 
 				if($argv2 == 0 || $argv1 == ''){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", Используйте: [!ставка <ставка> <сумма>]\nЧтобы посмотреть все возможные ставки, используйте кнопку ниже.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", Используйте: [!ставка <ставка> <сумма>]\nЧтобы посмотреть все возможные ставки, используйте кнопку ниже.", $data->object->from_id);
 					return;
 				}
 				elseif($argv2 < 1000 || $argv2 > 100000){
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите сумму ставки в правильном формате (от \$1,000 до \$100,000).", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите сумму ставки в правильном формате (от \$1,000 до \$100,000).", $data->object->from_id);
 					return;
 				}
 
@@ -2544,7 +2544,7 @@ namespace{
 						$bet = "{$bet_num}";
 					}
 					else{
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите правильную ставку.\nЧтобы посмотреть все возможные ставки, используйте кнопку ниже.", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите правильную ставку.\nЧтобы посмотреть все возможные ставки, используйте кнопку ниже.", $data->object->from_id);
 						return;
 					}
 				}
@@ -2554,7 +2554,7 @@ namespace{
 						$bet = self::SPECIAL_BETS[$bet_str];
 					}
 					else{
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Укажите правильную ставку.\nЧтобы посмотреть все возможные ставки, используйте кнопку ниже.", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите правильную ставку.\nЧтобы посмотреть все возможные ставки, используйте кнопку ниже.", $data->object->from_id);
 						return;
 					}
 				}
@@ -2571,18 +2571,18 @@ namespace{
 					);
 					if(GameController::setSession($chat_id, "casino_roulette", $session_data)){
 						$db->save();
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ✅Ставка успешно сделана. Используйте кнопку ниже, чтобы крутануть рулетку.", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", ✅Ставка успешно сделана. Используйте кнопку ниже, чтобы крутануть рулетку.", $data->object->from_id);
 					}
 					else{
-						$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔Произошла ошибка. Повторите попытку позже.", $data->object->from_id);
+						$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Произошла ошибка. Повторите попытку позже.", $data->object->from_id);
 					}
 				}
 				else{
-					$botModule->sendSimpleMessage($data->object->peer_id, ", ⛔У вас нет указанной суммы денег.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас нет указанной суммы денег.", $data->object->from_id);
 				}
 			}
 			else
-				$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Ошибка. Возможно сессия не запущена или запущена другая сессия.");
+				$botModule->sendSilentMessage($data->object->peer_id, "[Рулетка] ⛔Ошибка. Возможно сессия не запущена или запущена другая сессия.");
 		}
 
 		function main($finput){
@@ -2600,9 +2600,9 @@ namespace{
 				$session = GameController::getSession($chat_id);
 				if($session !== false){
 					if($session->id == "casino_roulette")
-						$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Сессия уже запущена.");
+						$botModule->sendSilentMessage($data->object->peer_id, "[Рулетка] ⛔Сессия уже запущена.");
 					else
-						$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Запущена другая сессия.");
+						$botModule->sendSilentMessage($data->object->peer_id, "[Рулетка] ⛔Запущена другая сессия.");
 					return;
 				}
 
@@ -2625,49 +2625,49 @@ namespace{
 							vk_text_button('Остановить', array('command' => 'bot_run_text_command', 'text_command' => '!казино стоп'), 'negative')
 						)
 					));
-					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ✅Сессия запущена. Для справки используйте используйте кнопку Помощь.", null, array('keyboard' => $keyboard, 'attachment' => self::TABLE_ATTACH));
+					$botModule->sendSilentMessage($data->object->peer_id, "[Рулетка] ✅Сессия запущена. Для справки используйте используйте кнопку Помощь.", null, array('keyboard' => $keyboard, 'attachment' => self::TABLE_ATTACH));
 				}
 				else
-					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Ошибка создания сессии.");
+					$botModule->sendSilentMessage($data->object->peer_id, "[Рулетка] ⛔Ошибка создания сессии.");
 			}
 			elseif($command == "стоп"){
 				$session = GameController::getSession($chat_id);
 				if($session === false){
-					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Сессия не запущена.");
+					$botModule->sendSilentMessage($data->object->peer_id, "[Рулетка] ⛔Сессия не запущена.");
 					return;
 				}
 				elseif($session->id != "casino_roulette"){
-					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Запущена другая сессия.");
+					$botModule->sendSilentMessage($data->object->peer_id, "[Рулетка] ⛔Запущена другая сессия.");
 					return;
 				}
 
 				if(count($session->object["bets"]) != 0){
-					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Невозможно остановить сессию, если игроки сделали ставки.");
+					$botModule->sendSilentMessage($data->object->peer_id, "[Рулетка] ⛔Невозможно остановить сессию, если игроки сделали ставки.");
 					return;
 				}
 
 				if(GameController::deleteSession($chat_id, "casino_roulette")){
 					$keyboard = vk_keyboard(true, array());
-					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ✅Сессия остановлена.", null, array('keyboard' => $keyboard));
+					$botModule->sendSilentMessage($data->object->peer_id, "[Рулетка] ✅Сессия остановлена.", null, array('keyboard' => $keyboard));
 				}
 				else
-					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Ошибка остановки сессии.");
+					$botModule->sendSilentMessage($data->object->peer_id, "[Рулетка] ⛔Ошибка остановки сессии.");
 			}
 			elseif($command == "крутить"){
 				$session = GameController::getSession($chat_id);
 				if($session === false){
-					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Сессия не запущена.");
+					$botModule->sendSilentMessage($data->object->peer_id, "[Рулетка] ⛔Сессия не запущена.");
 					return;
 				}
 				elseif($session->id != "casino_roulette"){
-					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Запущена другая сессия.");
+					$botModule->sendSilentMessage($data->object->peer_id, "[Рулетка] ⛔Запущена другая сессия.");
 					return;
 				}
 				$time = time();
 				$session_data = $session->object;
 
 				if(count($session_data["bets"]) == 0){
-					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Еще ни один игрок не сделал ставку.");
+					$botModule->sendSilentMessage($data->object->peer_id, "[Рулетка] ⛔Еще ни один игрок не сделал ставку.");
 					return;
 				}
 
@@ -2678,7 +2678,7 @@ namespace{
 					$random_data = RandomOrg::generateIntegers(0, 36, 1);
 					if($random_data === false || !array_key_exists('result', $random_data)){
 						$keyboard = vk_keyboard(true, array());
-						$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Произошла ошибка. Не удалось связаться с сервером RANDOM.ORG. Сессия остановлена.", null, array('keyboard' => $keyboard));
+						$botModule->sendSilentMessage($data->object->peer_id, "[Рулетка] ⛔Произошла ошибка. Не удалось связаться с сервером RANDOM.ORG. Сессия остановлена.", null, array('keyboard' => $keyboard));
 						self::doMoneyBack($economy, $session);
 						$db->save();
 						GameController::deleteSession($chat_id, "casino_roulette");
@@ -2717,7 +2717,7 @@ namespace{
 							");
 					}
 					else{
-						$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] Выпало число {$cell[0]}. Ни одна ставка не выйграла.", null, array('attachment' => $attach));
+						$botModule->sendSilentMessage($data->object->peer_id, "[Рулетка] Выпало число {$cell[0]}. Ни одна ставка не выйграла.", null, array('attachment' => $attach));
 					}
 
 					$session = array(
@@ -2729,7 +2729,7 @@ namespace{
 				}
 				else{
 					$left_time = 60 - $left_time_to_twist;
-					$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ⛔Крутануть рулетку можно будет через {$left_time} сек.");
+					$botModule->sendSilentMessage($data->object->peer_id, "[Рулетка] ⛔Крутануть рулетку можно будет через {$left_time} сек.");
 				}
 			}
 			elseif($command == "помощь"){
@@ -2739,14 +2739,14 @@ namespace{
 						vk_text_button("Ставки", array('command' => 'bot_run_text_command', 'text_command' => '!казино ставки'), 'positive')
 					)
 				));
-				$botModule->sendSimpleMessage($data->object->peer_id, $msg, null, array('keyboard' => $keyboard));
+				$botModule->sendSilentMessage($data->object->peer_id, $msg, null, array('keyboard' => $keyboard));
 			}
 			elseif($command == "ставки"){
 				$msg = "[Рулетка] Доступный следующие ставки:\n✅На число (0-36).\n&#12288;Выплата: 35:1\n&#12288;Например:\n&#12288;• [!ставка 12 1000]\n✅На красное-черное.\n&#12288;Выплата: 2:1\n&#12288;Например:\n&#12288;• [!ставка черное 1000]\n&#12288;• [!ставка красное 1000]\n✅На четное-нечетное.\n&#12288;Выплата: 2:1\n&#12288;Например:\n&#12288;• [!ставка четное 1000]\n&#12288;• [!ставка нечетное 1000]✅На малое-большое.\n&#12288;Выплата: 2:1\n&#12288;Например:\n&#12288;• [!ставка 1до18 1000]\n&#12288;• [!ставка 19до36 1000]\n✅На Дюжину (первая 12: 1-12, вторая 12: 13-14, третья 12: 25-36).\n&#12288;Выплата: 3:1\n&#12288;Например:\n&#12288;• [!ставка первая12 1000] \n&#12288;• [!ставка вторая12 1000]\n&#12288;• [!ставка третья12 1000]\n✅На Колонку (2к1р1: [1, 4, 7...], 2к1р2: [2, 5, 8...], 2к1р3: [3, 6, 9...]).\n&#12288;Выплата: 3:1\n&#12288;Например:\n&#12288;• [!ставка 2к1р1 1000] \n&#12288;• [!ставка 2к1р2 1000]\n&#12288;• [!ставка 2к1р3 1000]";
-				$botModule->sendSimpleMessage($data->object->peer_id, $msg, null, array('attachment' => self::TABLE_ATTACH));
+				$botModule->sendSilentMessage($data->object->peer_id, $msg, null, array('attachment' => self::TABLE_ATTACH));
 			}
 			elseif($command == "стол"){
-				$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] Игровой стол.", null, array('attachment' => self::TABLE_ATTACH));
+				$botModule->sendSilentMessage($data->object->peer_id, "[Рулетка] Игровой стол.", null, array('attachment' => self::TABLE_ATTACH));
 			}
 			elseif($command == "кнопки"){
 				$keyboard = vk_keyboard(false, array(
@@ -2762,7 +2762,7 @@ namespace{
 						vk_text_button('Остановить', array('command' => 'bot_run_text_command', 'text_command' => '!казино стоп'), 'negative')
 					)
 				));
-				$botModule->sendSimpleMessage($data->object->peer_id, "[Рулетка] ✅Кнопки отображены.", null, array('keyboard' => $keyboard));
+				$botModule->sendSilentMessage($data->object->peer_id, "[Рулетка] ✅Кнопки отображены.", null, array('keyboard' => $keyboard));
 			}
 			else{
 				$botModule->sendCommandListFromArray($data, ", используйте:", array(
