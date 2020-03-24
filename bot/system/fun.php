@@ -666,7 +666,7 @@ function fun_whois_gen($finput){
 
 	$botModule = new BotModule($db);
 
-	$text = mb_substr($data->object->text, 5);
+	$text = mb_substr($data->object->text, 6);
 	if($text == ""){
 		$botModule->sendCommandListFromArray($data, ", используйте:", array(
 			'!Кого <текст>'
@@ -696,7 +696,7 @@ function fun_whois_dat($finput){
 
 	$botModule = new BotModule($db);
 
-	$text = mb_substr($data->object->text, 5);
+	$text = mb_substr($data->object->text, 6);
 	if($text == ""){
 		$botModule->sendCommandListFromArray($data, ", используйте:", array(
 			'!Кому <текст>'

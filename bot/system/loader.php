@@ -17,7 +17,7 @@ require_once(BOT_DIR."/system/bot.php"); // Модуль, отвечающий �
 require_once(BOT_DIR."/system/goverment.php"); // Модуль, отвечающий за работу гос. устройства беседы
 require_once(BOT_DIR."/system/economy.php"); // Модуль, отвечающий за систему Экономики
 require_once(BOT_DIR."/system/fun.php"); // Модуль, отвечающий за развлечения
-require_once(BOT_DIR."/system/roleplay.php"); // Модуль, отвечающий за Roleplay комнды
+require_once(BOT_DIR."/system/roleplay.php"); // Модуль, отвечающий за Roleplay команды
 require_once(BOT_DIR."/system/manager.php"); // Модуль, отвечающий за управление беседой
 require_once(BOT_DIR."/system/giphy.php"); // Модуль, отвечающий за функции взаимодействия с GIPHY API
 require_once(BOT_DIR."/system/word_game.php"); // Модуль, отвечающий за игры Слова и Words

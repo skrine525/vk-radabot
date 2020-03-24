@@ -251,7 +251,7 @@ function bot_is_mention($msg){ // Проверка упоминания поль
 
 function bot_get_id_from_mention($msg){ // Получение ID из упоминания
 	if(bot_is_mention($msg)){
-		return explode('|', mb_substr($msg, 3, mb_strlen($msg)))[0];
+		return intval(explode('|', mb_substr($msg, 3, mb_strlen($msg)))[0]);
 	}
 	return null;
 }
@@ -291,15 +291,35 @@ function bot_debug_cmdinit($event){ // Добавление DEBUG-команд �
 				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Используйте: !docmd <пользователь> <команда>", $data->object->from_id);
 				return;
 			}
-
+			$from_id = $data->object->from_id; // Необходимо для ошибки ниже
 			$modified_data = $data;
 			$modified_data->object->from_id = $member_id;
 			$modified_data->object->text = $command;
 			$result = $finput->event->runTextCommand($modified_data);
 			if($result == 1)
-				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Ошибка. Данной команды не существует.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Ошибка. Данной команды не существует.", $from_id); // Вывод ошибки
 		});
 
+		$event->addTextCommand("!kick-all", function ($finput){
+			// Инициализация базовых переменных
+			$data = $finput->data; 
+			$words = $finput->words;
+			$db = &$finput->db;
+
+			$botModule  = new BotModule($db);
+
+			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+				var peer_id = {$data->object->peer_id};
+				var chat_id = peer_id - 2000000000;
+				var members = API.messages.getConversationMembers({'peer_id':peer_id});
+				API.messages.send({'peer_id':peer_id,'message':appeal+', запущен процесс удаления всех пользователей из беседы.','disable_mentions':true});
+				var i = 0;
+				while(i < members.profiles.length){
+					API.messages.removeChatUser({'chat_id':chat_id,'member_id':members.profiles[i].id});
+					i = i + 1;
+				};
+				");
+		});
 	}
 }
 
@@ -641,7 +661,7 @@ function bot_message_action_handler($finput){
 						msg = 'Правильно, она мне никогда не нравилась.';
 					}
 					else{
-						msg = 'Правильно, он мне никогда не нравилась.';
+						msg = 'Правильно, он мне никогда не нравился.';
 					}
 					API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
 					");

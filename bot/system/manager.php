@@ -1197,7 +1197,7 @@ function manager_rank($finput){
 			if($ranksys->setUserRank($member_id, $rank)){
 				$db->save();
 				$rank_name = RankSystem::getRankNameByID($rank);
-				$botModule->sendMessage($data->object->peer_id, ", @id{$member_id} (Пользователю) установлен ранг: {$rank_name} [rank_{$rank}].");
+				$botModule->sendMessage($data->object->peer_id, ", @id{$member_id} (Пользователю) установлен ранг: {$rank_name} [rank_{$rank}].", $data->object->from_id);
 			} else{
 				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Такого ранга не существует.", $data->object->from_id);
 			}
