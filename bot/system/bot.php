@@ -89,10 +89,10 @@ class BotModule{
 		$this->sendSilentMessage($data->object->peer_id, ", ⛔У вас нет прав для использования этой команды.", $data->object->from_id);
 	}
 
-	function sendCommandListFromArray($data, $message = "", $commands = array(), $keyboard = null){ // Legacy
+	function sendCommandListFromArray($data, $message = "", $list = array(), $keyboard = null){ // Legacy
 		$msg = $message;
-		for($i = 0; $i < count($commands); $i++){
-			$msg = $msg . "\n• " . $commands[$i];
+		for($i = 0; $i < count($list); $i++){
+			$msg = $msg . "\n• " . $list[$i];
 		}
 		if(is_null($keyboard))
 			$this->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
@@ -476,8 +476,8 @@ function bot_remove_handler($finput){
 		manager_remove_nick($data, $db);
 	else{
 		$commands = array(
-			'Убрать кнопки - Убирает кнопки',
-			'Убрать ник - Убирает ник пользователя'
+			'!убрать кнопки - Убирает кнопки',
+			'!убрать ник - Убирает ник пользователя'
 		);
 
 		$botModule = new BotModule($db);
@@ -586,7 +586,22 @@ function bot_cmdlist($finput){
 	////////////////////////////////////////////////////
 	////////////////////////////////////////////////////
 
-	$botModule->sendCommandListFromArray($data, ", список команд [$list_number/$list_max_number]:", $list_out);
+	$buttons = array();
+	if($list_max_number > 1){
+		if($list_number != 1){
+			$previous_list = $list_number - 1;
+			$emoji_str = bot_int_to_emoji_str($previous_list);
+			$buttons[] = vk_text_button("{$emoji_str} ⬅", array('command' => 'bot_run_text_command', 'text_command' => "!cmdlist {$previous_list}"), 'secondary');
+		}
+		if($list_number != $list_max_number){
+			$next_list = $list_number + 1;
+			$emoji_str = bot_int_to_emoji_str($next_list);
+			$buttons[] = vk_text_button("➡ {$emoji_str}", array('command' => 'bot_run_text_command', 'text_command' => "!cmdlist {$next_list}"), 'secondary');
+		}
+	}
+	$keyboard = vk_keyboard_inline(array($buttons));
+
+	$botModule->sendCommandListFromArray($data, ", список команд [$list_number/$list_max_number]:", $list_out, $keyboard);
 }
 
 function bot_call_all($finput){
@@ -748,7 +763,8 @@ function bot_help($finput){
 				'Посадить <пользователь> - Садит пользователя на бутылку',
 				'Пожать руку <пользователь> - Жмет руку пользователю',
 				'Лизнуть <пользователь> - Лизнуть пользователя',
-				'Обосрать <пользователь> = Обосрать пользователя'
+				'Обосрать <пользователь> - Обосрать пользователя',
+				'Облевать <пользователь> - Испачкать в рвоте пользователя'
 			);
 
 			$botModule->sendCommandListFromArray($data, ', 📰Roleplay команды:', $commands);
@@ -824,7 +840,7 @@ function bot_help($finput){
 				'!бузова - Случайная фотография со стены @olgabuzova (Ольги Бузовой)',
 				'!giphy <текст> - Гифка с сервиса giphy.com',
 				'!id <пользователь> - Получение VK ID пользователя',
-				//'!tts <текст> - Озвучивает текст и присылает голос. сообщение',
+				'!tts <текст> - Озвучивает текст и присылает голос. сообщение',
 				'!base64 <data> - Шифрует и Дешифрует данные в base64',
 				'!shrug - ¯\_(ツ)_/¯',
 				'!tableflip - (╯°□°）╯︵ ┻━┻',
