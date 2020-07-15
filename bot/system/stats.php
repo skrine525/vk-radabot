@@ -68,9 +68,10 @@ function stats_cmd_handler($finput){
 	$words = $finput->words;
 	$db = &$finput->db;
 
-	$botModule = new BotModule($db);
+	$messagesModule = new Bot\Messages($db);
+	$messagesModule->setAppealID($data->object->from_id);
 
-	$command = mb_strtolower(bot_get_word_argv($words, 1, ""));
+	$command = mb_strtolower(bot_get_array_argv($words, 1, ""));
 	if($command == ""){
 		if(array_key_exists(0, $data->object->fwd_messages)){
 			$member_id = $data->object->fwd_messages[0]->from_id;
@@ -94,11 +95,11 @@ function stats_cmd_handler($finput){
 			$rating_text = "Нет данных";
 
 		if($data->object->from_id == $member_id)
-			$msg = ", статистика:\n📧Сообщений: {$stats["msg_count"]}\n&#12288;📝Подряд: {$stats["msg_count_in_succession"]}\n🔍Символов: {$stats["simbol_count"]}\n📟Гол. сообщений: {$stats["audio_msg_count"]}\n\n📷Фотографий: {$stats["photo_count"]}\n📹Видео: {$stats["video_count"]}\n🎧Аудиозаписей: {$stats["audio_count"]}\n🤡Стикеров: {$stats["sticker_count"]}\n\n👑Активность: {$rating_text}";
+			$msg = "%appeal%, статистика:\n📧Сообщений: {$stats["msg_count"]}\n&#12288;📝Подряд: {$stats["msg_count_in_succession"]}\n🔍Символов: {$stats["simbol_count"]}\n📟Гол. сообщений: {$stats["audio_msg_count"]}\n\n📷Фотографий: {$stats["photo_count"]}\n📹Видео: {$stats["video_count"]}\n🎧Аудиозаписей: {$stats["audio_count"]}\n🤡Стикеров: {$stats["sticker_count"]}\n\n👑Активность: {$rating_text}";
 		else
-			$msg = ", статистика @id{$member_id} (пользователя):\n📧Сообщений: {$stats["msg_count"]}\n&#12288;📝Подряд: {$stats["msg_count_in_succession"]}\n🔍Символов: {$stats["simbol_count"]}\n📟Гол. сообщений: {$stats["audio_msg_count"]}\n\n📷Фотографий: {$stats["photo_count"]}\n📹Видео: {$stats["video_count"]}\n🎧Аудиозаписей: {$stats["audio_count"]}\n🤡Стикеров: {$stats["sticker_count"]}\n\n👑Активность: {$rating_text}";
+			$msg = "%appeal%, статистика @id{$member_id} (пользователя):\n📧Сообщений: {$stats["msg_count"]}\n&#12288;📝Подряд: {$stats["msg_count_in_succession"]}\n🔍Символов: {$stats["simbol_count"]}\n📟Гол. сообщений: {$stats["audio_msg_count"]}\n\n📷Фотографий: {$stats["photo_count"]}\n📹Видео: {$stats["video_count"]}\n🎧Аудиозаписей: {$stats["audio_count"]}\n🤡Стикеров: {$stats["sticker_count"]}\n\n👑Активность: {$rating_text}";
 
-		$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
+		$messagesModule->sendSilentMessage($data->object->peer_id, $msg);
 	}
 	elseif($command == "обнулить"){
 		$ranksys = new RankSystem($db);
@@ -106,16 +107,16 @@ function stats_cmd_handler($finput){
 		if($ranksys->checkRank($data->object->from_id, 0)){ // Проверка ранга (Владелец)
 			$db->unsetValue(array('chat_stats'));
 			$db->save();
-			$botModule->sendSilentMessage($data->object->peer_id, ", ✅Статистика обнулена.", $data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Статистика обнулена.");
 		}
 		else
-			$botModule->sendSystemMsg_NoRights($data);
+			$messagesModule->sendSilentMessage($data->object->peer_id, Bot\Messages::MESSAGE_NO_RIGHTS);
 	}
 	else{
-		$botModule->sendCommandListFromArray($data, ", используйте:", array(
+		$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, "%appeal%, используйте:", array(
 			'!cтата <пользователь> - Показать статистику',
 			'!cтата <пересланное> - Показывает статистику пользователя',
-			'!cтата обнулить - Обнуляить статистику беседы' 
+			'!cтата обнулить - Обнуляит статистику беседы' 
 		));
 	}
 }

@@ -51,7 +51,7 @@ function goverment_constitution($finput){
 		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 		$request = vk_parse_vars($request, array("__president_name__", "__confa_name__", "__appeal__"));
 
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 			var confa_info = API.messages.getConversationsById({'peer_ids':[{$data->object->peer_id}]}).items[0];
 			var president_info = API.users.get({'user_ids':[{$gov["president_id"]}],'fields':'screen_name'})[0];
 
@@ -68,7 +68,7 @@ function goverment_constitution($finput){
 		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg), JSON_UNESCAPED_UNICODE);
 		$request = vk_parse_vars($request, array("__president_name__", "__confa_name__", "__appeal__"));
 
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 			var confa_info = API.messages.getConversationsById({'peer_ids':[{$data->object->peer_id}]}).items[0];
 
 			var __confa_name__ = confa_info.chat_settings.title;
@@ -268,7 +268,7 @@ function goverment_laws_cpanel($finput){
 			$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 			$request = vk_parse_vars($request, array("__publisher_name__", "__appeal__"));
 
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				var publisher = API.users.get({'user_ids':[{$law['publisher_id']}],'fields':'screen_name,first_name_ins,last_name_ins'})[0];
 
 				var __publisher_name__ = '@'+publisher.screen_name+' ('+publisher.first_name_ins+' '+publisher.last_name_ins+')';
@@ -343,7 +343,7 @@ function goverment_president($finput){
 			$msg = "%appeal%, &#128104;&#8205;&#9878;Действующий президент: %president_name%.";
 			$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 			$request = vk_parse_vars($request, array("appeal", "president_name"));
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 			var president = API.users.get({'user_ids':[{$gov["president_id"]}]})[0];
 			var president_name = '@id{$gov["president_id"]} ('+president.first_name+' '+president.last_name+')';
 			return API.messages.send({$request});
@@ -353,7 +353,7 @@ function goverment_president($finput){
 			$msg = "%appeal%, &#128104;&#8205;&#9878;Действующий президент: ⛔Не назначен.";
 			$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 			$request = vk_parse_var($request, "appeal");
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 			return API.messages.send({$request});
 			");
 		}
@@ -361,7 +361,7 @@ function goverment_president($finput){
 		if($data->object->from_id == $gov["parliament_id"]){
 			$new_president_id = bot_get_id_from_mention($words[1]);
 			if(!is_null($new_president_id)){
-				$batch_name = json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+				$batch_name = json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				var president = API.users.get({'user_ids':[{$new_president_id}],'fields':'first_name_gen,last_name_gen'})[0];
 				var msg = '@id{$gov["parliament_id"]} (Парламентом) назначен новый президент: @id'+president.id+' ('+president.first_name+' '+president.last_name+').';
 				API.messages.send({'peer_id':{$data->object->peer_id},'message':msg,'disable_mentions':true});
@@ -504,8 +504,8 @@ function goverment_anthem($finput){
 	$botModule = new BotModule($db);
 	$gov = $db->getValue(array("goverment"));
 	if(count($data->object->attachments) == 0){
-		if($gov["anthem"] != "nil"){
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		if($gov["anthem"] != "null"){
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', &#129345;Наш гимн: ','attachment':'{$gov["anthem"]}','disable_mentions':true});
 				");
 		} else {
@@ -563,8 +563,8 @@ function goverment_flag($finput){
 	$botModule = new BotModule($db);
 	$gov = $db->getValue(array("goverment"));
 	if(count($data->object->attachments) == 0){
-		if($gov["flag"] != "nil"){
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		if($gov["flag"] != "null"){
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', &#127987;Наш флаг: ','attachment':'{$gov["flag"]}','disable_mentions':true});
 				");
 		} else {
@@ -591,7 +591,7 @@ function goverment_flag($finput){
 				$photo_url = $photo_sizes[$photo_url_index]->url;
 				$path = BOT_TMPDIR."/photo".mt_rand(0, 65535).".jpg";
 				file_put_contents($path, file_get_contents($photo_url));
-				$response =  json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+				$response =  json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 					return API.photos.getMessagesUploadServer({'peer_id':{$data->object->peer_id}});"));
 				$res = json_decode(vk_uploadDocs(array('photo' => new CURLFile($path)), $response->response->upload_url));
 				unlink($path);
@@ -627,7 +627,7 @@ function goverment_flag($finput){
 				$photo_url = $photo_sizes[$photo_url_index]->url;
 				$path = BOT_TMPDIR."/photo".mt_rand(0, 65535).".jpg";
 				file_put_contents($path, file_get_contents($photo_url));
-				$response =  json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+				$response =  json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 					return API.photos.getMessagesUploadServer({'peer_id':{$data->object->peer_id}});"));
 				$res = json_decode(vk_uploadDocs(array('photo' => new CURLFile($path)), $response->response->upload_url));
 				unlink($path);
@@ -674,12 +674,12 @@ function goverment_referendum_start($finput){
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}','disable_mentions':true});");
 		} else {
 			$msg = ", выборы уже проходят.";
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
 		}
 	} else {
 		$msg = ", &#9940;у вас нет прав для использования данной команды.";
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
 	}
 }
@@ -696,18 +696,18 @@ function goverment_referendum_stop($finput){
 	if($data->object->from_id == $gov["parliament_id"]){
 		if(!array_key_exists("referendum", $gov)){
 			$msg = ", сейчас не проходят выборы.";
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
 		} else {
 			$db->unsetValue(array("goverment", "referendum"));
 			$db->save();
 			$msg = ", выборы остановлены.";
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
 		}
 	} else {
 		$msg = ", &#9940;у вас нет прав для использования данной команды.";
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
 	}
 }
@@ -734,7 +734,7 @@ function goverment_referendum_candidate($finput){
 				$db->setValue(array("goverment", "referendum", "candidate1", "id"), $data->object->from_id);
 				$db->save();
 				$msg = ", вы зарегистрировались как кандидат №1.";
-				vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
 			} elseif($referendum["candidate2"]["id"] == 0) {
 				$referendum["candidate2"]["id"] = $data->object->from_id;
@@ -743,22 +743,22 @@ function goverment_referendum_candidate($finput){
 				$db->save();
 				$msg1 = ", вы зарегистрировались как кандидат №2.";
 				$msg2 = "Кандидаты набраны, самое время голосовать. Используй [!vote], чтобы учавствовать в голосовании.";
-				vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 					API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg1}','disable_mentions':true});
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg2}'});");
 			} else {
 				$msg = ", кандидаты уже набраны.";
-				vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
 			}
 		} else {
 			$msg = ", вы уже зарегистрированы как кандидат в президенты.";
-				vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
 		}
 	} else {
 		$msg = ", сейчас не проходят выборы.";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
 	}
 }
@@ -917,7 +917,7 @@ function goverment_referendum_vote($finput){
 		for($i = 0; $i < sizeof($referendum["all_voters"]); $i++){
 			if($referendum["all_voters"][$i] == $data->object->from_id){
 				$msg = ", ⛔вы уже голосовали.";
-				vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
 				return;
 			}
@@ -929,7 +929,7 @@ function goverment_referendum_vote($finput){
 			$db->setValue(array("goverment", "referendum"), $referendum);
 			$db->save();
 			$candidate_id = $referendum["candidate1"]["id"];
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				var user = API.users.get({'user_ids':[{$candidate_id}]});
 				var msg = ', 📝вы проголосовали за @id'+user[0].id+' ('+user[0].first_name+' '+user[0].last_name+').';
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+msg,'disable_mentions':true});");
@@ -940,7 +940,7 @@ function goverment_referendum_vote($finput){
 			$db->setValue(array("goverment", "referendum"), $referendum);
 			$db->save();
 			$candidate_id = $referendum["candidate2"]["id"];
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				var user = API.users.get({'user_ids':[{$candidate_id}]});
 				var msg = ', 📝вы проголосовали за @id'+user[0].id+' ('+user[0].first_name+' '+user[0].last_name+').';
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+msg,'disable_mentions':true});");
@@ -962,7 +962,7 @@ function goverment_referendum_vote_cmd($finput){
 			for($i = 0; $i < sizeof($referendum["all_voters"]); $i++){
 				if($referendum["all_voters"][$i] == $data->object->from_id){
 					$msg = ", ⛔вы уже голосовали.";
-					vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+					vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 						return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
 					return;
 				}
@@ -996,7 +996,7 @@ function goverment_referendum_vote_cmd($finput){
 			$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%msg%", 'keyboard' => $keyboard, 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 			$request = vk_parse_vars($request, array("CANDIDATE1_NAME", "CANDIDATE2_NAME", "msg"));
 
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				var users = API.users.get({'user_ids':[{$candidate1_id},{$candidate2_id}]});
 
 				var CANDIDATE1_NAME = users[0].first_name.substr(0, 2)+'. '+users[0].last_name;
@@ -1008,12 +1008,12 @@ function goverment_referendum_vote_cmd($finput){
 				");
 		} else {
 			$msg = ", кандидаты еще не набраны. Вы можете балотироваться в президенты, использовав команду \\\"!candidate\\\".";
-				vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
 		}
 	} else {
 		$msg = ", сейчас не проходят выборы.";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
 	}
 }

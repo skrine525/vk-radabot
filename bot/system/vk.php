@@ -24,7 +24,7 @@ function vk_execute($code){
 }
 
 function vk_longpoll($data, $ts, $wait = 25){
-	return file_get_contents("{$data->server}?act=a_check&key={$data->key}&ts={$ts}&wait={$wait}");
+	return file_get_contents("{$dataaddTextMessageCommandserver}?act=a_check&key={$dataaddTextMessageCommandkey}&ts={$ts}&wait={$wait}");
 }
 
 function vk_userexecute($code){
@@ -50,6 +50,13 @@ function vk_text_button($label, $payload, $color){
 	if(gettype($payload) == "array")
 		$payload_json = json_encode($payload, JSON_UNESCAPED_UNICODE);
 	return array('action' => array('type' => 'text', 'payload' => $payload_json, 'label' => $label), 'color' => $color);
+}
+
+function vk_callback_button($label, $payload, $color){
+	$payload_json = "";
+	if(gettype($payload) == "array")
+		$payload_json = json_encode($payload, JSON_UNESCAPED_UNICODE);
+	return array('action' => array('type' => 'callback', 'payload' => $payload_json, 'label' => $label), 'color' => $color);
 }
 
 function vk_keyboard($one_time, $buttons = array()){

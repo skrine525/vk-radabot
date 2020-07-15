@@ -120,7 +120,7 @@ function wordgame_main($data, $words, &$db){
 	} else {
 		$botModule = new BotModule($db);
 		$msg = ", используйте \\\"Слова старт/стоп/рейтинг\\\".";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 			");
 	}
@@ -205,7 +205,7 @@ function wordgame_gameplay($data, &$db){
 					break;
 
 				case 2:
-					wordgame_main($data, array('nil', 'стоп'), $db);
+					wordgame_main($data, array('null', 'стоп'), $db);
 					break;
 
 				case 3:
@@ -504,7 +504,7 @@ function wordgame_eng_main($data, $words, &$db){
 	} else {
 		$botModule = new BotModule($db);
 		$msg = ", используйте \\\"Words start/stop/rating\\\".";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 			");
 	}
@@ -588,7 +588,7 @@ function wordgame_eng_gameplay($data, &$db){
 					break;
 
 				case 2:
-					wordgame_eng_main($data, array('nil', 'stop'), $db);
+					wordgame_eng_main($data, array('null', 'stop'), $db);
 					break;
 
 				case 3:

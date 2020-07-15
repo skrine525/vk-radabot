@@ -35,9 +35,9 @@ def queue_handler():
 				Processes.pop(i)
 
 		for update in Queue:
-			if update["type"] == "message_new":
+			if update["type"] == "message_new" or update["type"] == "message_event":
 				peer_id = update["object"]["peer_id"]
-				process_name = "message_new{peer_id}".format(peer_id=peer_id)
+				process_name = "message{peer_id}".format(peer_id=peer_id)
 				process = Processes.get(process_name)
 				if process == None:
 					base64_update = base64.b64encode(bytes(json.dumps(update).encode('utf-8')))

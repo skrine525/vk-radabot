@@ -48,7 +48,7 @@ namespace Roleplay{
 
 		private function getTextUserInfo(){
 			$word_count_in_text_command = count(explode(' ', $this->text_command));
-			return bot_get_word_argv($this->words, $word_count_in_text_command, "") . bot_get_word_argv($words, $word_count_in_text_command+1, "");
+			return bot_get_array_argv($this->words, $word_count_in_text_command, "") . bot_get_array_argv($words, $word_count_in_text_command+1, "");
 		}
 
 		public function setPermittedMemberGender($gender, $message){
@@ -89,7 +89,7 @@ namespace Roleplay{
 				$msg = ", используйте \"{$command} <имя/фамилия/id/упоминание/перес. сообщение>\".";
 				$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%__appeal__%, используйте \"{$command} <имя/фамилия/id/упоминание/перес. сообщение>\"."), JSON_UNESCAPED_UNICODE);
 				$request = vk_parse_var($request, "__appeal__");
-				vk_execute($botModule->makeExeAppeal($data->object->from_id)."var __appeal__ = appeal;appeal = null;return API.messages.send({$request});");
+				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."var __appeal__ = appeal;appeal = null;return API.messages.send({$request});");
 				return false;
 			}
 
@@ -118,7 +118,7 @@ namespace Roleplay{
 					$permittedMemberGender_VKScript = "";
 
 
-				$res = (object) json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+				$res = (object) json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 					var users = API.users.get({'user_ids':[{$member_id},{$data->object->from_id}],'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});
 					var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id}});
 					var from_user = users[1];
@@ -240,7 +240,7 @@ namespace{
 			$msg = ", используйте \"{$command} <имя/фамилия/id/упоминание/перес. сообщение>\".";
 			$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%__appeal__%, используйте \"{$command} <имя/фамилия/id/упоминание/перес. сообщение>\"."), JSON_UNESCAPED_UNICODE);
 			$request = vk_parse_var($request, "__appeal__");
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."var __appeal__ = appeal;appeal = null;return API.messages.send({$request});");
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."var __appeal__ = appeal;appeal = null;return API.messages.send({$request});");
 			return false;
 		}
 
@@ -256,7 +256,7 @@ namespace{
 			$messagesJson = json_encode(array('male' => $msgMale, 'female' => $msgFemale, 'myselfMale' => $msgMyselfMale, 'myselfFemale' => $msgMyselfFemale, 'sexErrorMsg' => $sexErrorMsg), JSON_UNESCAPED_UNICODE);
 			$messagesJson = vk_parse_vars($messagesJson, array("FROM_USERNAME", "MEMBER_USERNAME", "MEMBER_USERNAME_GEN", "MEMBER_USERNAME_DAT", "MEMBER_USERNAME_ACC", "MEMBER_USERNAME_INS", "MEMBER_USERNAME_ABL", "appeal"));
 
-			$res = json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			$res = json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				var users = API.users.get({'user_ids':[{$member_id},{$data->object->from_id}],'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});
 				var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id}});
 				var from_user = users[1];
@@ -318,7 +318,7 @@ namespace{
 			if(isset($msgToAll) && array_search(mb_strtolower($user_info), array('всем', 'всех', 'у всех', 'со всеми', 'на всех')) !== false){ // Выполнение действия над всеми
 				$msgToAllMale = vk_parse_var($msgToAll["male"], "FROM_USERNAME");
 				$msgToAllFemale = vk_parse_var($msgToAll["female"], "FROM_USERNAME");
-				$res = json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+				$res = json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 					var from_user = API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
 
 					var FROM_USERNAME = '@'+from_user.screen_name+' ('+from_user.first_name.substr(0, 2)+'. '+from_user.last_name+')';
@@ -353,7 +353,7 @@ namespace{
 			}
 			else
 				$word2 = "";
-			$res = json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			$res = json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});
 				var from_user =  API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex,screen_name'})[0];
 				var word1 = '{$word1}';
@@ -424,25 +424,25 @@ namespace{
 	}
 
 	function roleplay_cmdinit(&$event){
-		$event->addTextCommand("!me", 'roleplay_me');
-		$event->addTextCommand("!do", 'roleplay_do');
-		$event->addTextCommand("!try", 'roleplay_try');
-		$event->addTextCommand("!s", 'roleplay_shout');
-		$event->addTextCommand("секс", 'roleplay_sex');
-		$event->addTextCommand("обнять", 'roleplay_hug');
-		$event->addTextCommand("уебать", 'roleplay_bump');
-		$event->addTextCommand("обоссать", 'roleplay_pissof');
-		$event->addTextCommand("поцеловать", 'roleplay_kiss');
-		$event->addTextCommand("харкнуть", 'roleplay_hark');
-		$event->addTextCommand("отсосать", 'roleplay_suck');
-		$event->addTextCommand("отлизать", 'roleplay_pussylick');
-		$event->addTextCommand("послать", 'roleplay_gofuck');
-		$event->addTextCommand("кастрировать", 'roleplay_castrate');
-		$event->addTextCommand("посадить", "roleplay_sit");
-		$event->addTextCommand("пожать", "roleplay_shake");
-		$event->addTextCommand("лизнуть", "roleplay_lick");
-		$event->addTextCommand("обосрать", "roleplay_shit");
-		$event->addTextCommand("облевать", "roleplay_puckingup");
+		$event->addTextMessageCommand("!me", 'roleplay_me');
+		$event->addTextMessageCommand("!do", 'roleplay_do');
+		$event->addTextMessageCommand("!try", 'roleplay_try');
+		$event->addTextMessageCommand("!s", 'roleplay_shout');
+		$event->addTextMessageCommand("секс", 'roleplay_sex');
+		$event->addTextMessageCommand("обнять", 'roleplay_hug');
+		$event->addTextMessageCommand("уебать", 'roleplay_bump');
+		$event->addTextMessageCommand("обоссать", 'roleplay_pissof');
+		$event->addTextMessageCommand("поцеловать", 'roleplay_kiss');
+		$event->addTextMessageCommand("харкнуть", 'roleplay_hark');
+		$event->addTextMessageCommand("отсосать", 'roleplay_suck');
+		$event->addTextMessageCommand("отлизать", 'roleplay_pussylick');
+		$event->addTextMessageCommand("послать", 'roleplay_gofuck');
+		$event->addTextMessageCommand("кастрировать", 'roleplay_castrate');
+		$event->addTextMessageCommand("посадить", "roleplay_sit");
+		$event->addTextMessageCommand("пожать", "roleplay_shake");
+		$event->addTextMessageCommand("лизнуть", "roleplay_lick");
+		$event->addTextMessageCommand("обосрать", "roleplay_shit");
+		$event->addTextMessageCommand("облевать", "roleplay_puckingup");
 	}
 
 	///////////////////////////////////////////////////////////
@@ -457,7 +457,7 @@ namespace{
 		if(is_null($words[1])){
 			$botModule = new botModule($db);
 			$msg = ", используйте \\\"!me <действие>\\\".";
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
 		} else {
@@ -482,7 +482,7 @@ namespace{
 		if(is_null($words[1])){
 			$botModule = new botModule($db);
 			$msg = ", используйте \\\"!try <действие>\\\".";
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
 		} else {
@@ -513,7 +513,7 @@ namespace{
 		if(is_null($words[1])){
 			$botModule = new botModule($db);
 			$msg = ", используйте \\\"!do <действие>\\\".";
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
 		} else {
@@ -539,7 +539,7 @@ namespace{
 		if(is_null($words[1])){
 			$botModule = new botModule($db);
 			$msg = ", используйте \\\"!s <текст>\\\".";
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
 		} else {
@@ -597,9 +597,9 @@ namespace{
 			)
 		);
 
-		$user_info = bot_get_word_argv($words, 1, "");
-		if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
+		$user_info = bot_get_array_argv($words, 1, "");
+		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
 
 		roleplay_api_act_with($db, $data, "Секс", $user_info, $params);
 	}
@@ -621,9 +621,9 @@ namespace{
 			)
 		);
 
-		$user_info = bot_get_word_argv($words, 1, "");
-		if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
+		$user_info = bot_get_array_argv($words, 1, "");
+		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
 
 		roleplay_api_act_with($db, $data, "Обнять", $user_info, $params);
 	}
@@ -645,9 +645,9 @@ namespace{
 			)
 		);
 
-		$user_info = bot_get_word_argv($words, 1, "");
-		if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
+		$user_info = bot_get_array_argv($words, 1, "");
+		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
 
 		roleplay_api_act_with($db, $data, "Уебать", $user_info, $params);
 	}
@@ -669,9 +669,9 @@ namespace{
 			)
 		);
 
-		$user_info = bot_get_word_argv($words, 1, "");
-		if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
+		$user_info = bot_get_array_argv($words, 1, "");
+		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
 
 		roleplay_api_act_with($db, $data, "Обоссать", $user_info, $params);
 	}
@@ -693,9 +693,9 @@ namespace{
 			)
 		);
 
-		$user_info = bot_get_word_argv($words, 1, "");
-		if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
+		$user_info = bot_get_array_argv($words, 1, "");
+		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
 
 		roleplay_api_act_with($db, $data, "Поцеловать", $user_info, $params);
 	}
@@ -717,9 +717,9 @@ namespace{
 			)
 		);
 
-		$user_info = bot_get_word_argv($words, 1, "");
-		if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
+		$user_info = bot_get_array_argv($words, 1, "");
+		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
 
 		roleplay_api_act_with($db, $data, "Харкнуть", $user_info, $params);
 	}
@@ -743,9 +743,9 @@ namespace{
 			"sexErrorMsg" => "%appeal%, нельзя отсосать у девочки.😂"
 		);
 
-		$user_info = bot_get_word_argv($words, 1, "");
-		if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
+		$user_info = bot_get_array_argv($words, 1, "");
+		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
 
 		roleplay_api_act_with($db, $data, "Отсосать", $user_info, $params);
 	}
@@ -769,9 +769,9 @@ namespace{
 			"sexErrorMsg" => "%appeal%, нельзя отлизать у мальчика.😂"
 		);
 
-		$user_info = bot_get_word_argv($words, 1, "");
-		if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
+		$user_info = bot_get_array_argv($words, 1, "");
+		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
 
 		roleplay_api_act_with($db, $data, "Отсосать", $user_info, $params);
 	}
@@ -793,9 +793,9 @@ namespace{
 			)
 		);
 
-		$user_info = bot_get_word_argv($words, 1, "");
-		if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
+		$user_info = bot_get_array_argv($words, 1, "");
+		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
 
 		roleplay_api_act_with($db, $data, "Послать", $user_info, $params);
 	}
@@ -813,9 +813,9 @@ namespace{
 			"msgMyselfFemale" => "%appeal%, нельзя кастрировать себя.😐",
 		);
 
-		$user_info = bot_get_word_argv($words, 1, "");
-		if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
+		$user_info = bot_get_array_argv($words, 1, "");
+		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
 
 		roleplay_api_act_with($db, $data, "Кастрировать", $user_info, $params);
 	}
@@ -837,9 +837,9 @@ namespace{
 			)
 		);
 
-		$user_info = bot_get_word_argv($words, 1, "");
-		if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
+		$user_info = bot_get_array_argv($words, 1, "");
+		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
 
 		roleplay_api_act_with($db, $data, "Посадить", $user_info, $params);
 	}
@@ -863,9 +863,9 @@ namespace{
 					)
 				);
 
-				$user_info = bot_get_word_argv($words, 2, "");
-				if($user_info != "" && bot_get_word_argv($words, 3, "") != "")
-					$user_info = $user_info . " " . bot_get_word_argv($words, 3, "");
+				$user_info = bot_get_array_argv($words, 2, "");
+				if($user_info != "" && bot_get_array_argv($words, 3, "") != "")
+					$user_info = $user_info . " " . bot_get_array_argv($words, 3, "");
 
 				roleplay_api_act_with($db, $data, "Пожать руку", $user_info, $params);
 				break;
@@ -896,9 +896,9 @@ namespace{
 			)
 		);
 
-		$user_info = bot_get_word_argv($words, 1, "");
-		if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
+		$user_info = bot_get_array_argv($words, 1, "");
+		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
 
 		roleplay_api_act_with($db, $data, "Лизнуть", $user_info, $params);
 	}
@@ -920,9 +920,9 @@ namespace{
 			)
 		);
 
-		$user_info = bot_get_word_argv($words, 1, "");
-		if($user_info != "" && bot_get_word_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_word_argv($words, 2, "");
+		$user_info = bot_get_array_argv($words, 1, "");
+		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
 
 		roleplay_api_act_with($db, $data, "Обосрать", $user_info, $params);
 	}

@@ -246,7 +246,7 @@ class AntiFlood{
 			if($ranksys->checkRank($data->object->from_id, 2)) // Проверка ранга (Президент)
 				return false;
 
-			$response = json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			$response = json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				var peer_id = {$data->object->peer_id};
 				var member_id = {$data->object->from_id};
 				var user = API.users.get({'user_ids':member_id})[0];
@@ -443,7 +443,7 @@ function manager_ban_user($finput){
 
 	$ban_info = json_encode(array("user_id" => $member_id, "reason" => $reason), JSON_UNESCAPED_UNICODE);
 
-	$res = json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+	$res = json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 		var peer_id = {$data->object->peer_id};
 		var ban_info = {$ban_info};
 		var users = API.users.get({'user_ids':[{$member_id}]});
@@ -539,13 +539,13 @@ function manager_unban_user($finput){
 
 	if(sizeof($member_ids) == 0){
 		$msg = ", используйте \\\"!unban <упоминание/id>\\\" или перешлите сообщение с командой \\\"!unban\\\".";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 				");
 		return;
 	} else if(sizeof($member_ids) > 10) {
 		$msg = ", нельзя разбанить более 10 участников одновременно.";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 				");
 		return;
@@ -567,7 +567,7 @@ function manager_unban_user($finput){
 		$member_ids_exe_array = $member_ids_exe_array.','.$unbanned_member_ids[$i];
 	}
 
-	$res = json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+	$res = json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 		var peer_id = {$data->object->peer_id};
 		var member_ids = [{$member_ids_exe_array}];
 		var users = API.users.get({'user_ids':member_ids});
@@ -619,7 +619,7 @@ function manager_banlist_user($finput){
 
 	$banned_users = BanSystem::getBanList($db);
 	if(sizeof($banned_users) == 0){
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', в беседе нет забаненных пользователей.','disable_mentions':true});");
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', в беседе нет забаненных пользователей.','disable_mentions':true});");
 		return;
 	}
 
@@ -662,7 +662,7 @@ function manager_banlist_user($finput){
 
 	//$users_list = json_encode($banned_users, JSON_UNESCAPED_UNICODE);
 
-	vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 		var users = API.users.get({'user_ids':{$users_list}});
 		var msg = ', список забаненых пользователей [{$list_number}/{$list_max_number}]:';
 		var i = 0; while(i < users.length){
@@ -704,7 +704,7 @@ function manager_baninfo_user($finput){
 	if($user_baninfo !== false){
 		$baninfo = json_encode($user_baninfo, JSON_UNESCAPED_UNICODE);
 		$strtime = gmdate("d.m.Y H:i:s", $user_baninfo["time"]+10800);
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 			var baninfo = {$baninfo};
 			var users = API.users.get({'user_ids':[baninfo.user_id,baninfo.banned_by],'fields':'first_name_ins,last_name_ins'});
 			var user = users[0];
@@ -777,13 +777,13 @@ function manager_kick_user($finput){
 
 	if(sizeof($member_ids) == 0){
 		$msg = ", используйте \\\"!kick <упоминание/id>\\\" или перешлите сообщение с командой \\\"!kick\\\".";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 				");
 		return;
 	} else if(sizeof($member_ids) > 10) {
 		$msg = ", нельзя кикнуть более 10 участников одновременно.";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 				");
 		return;
@@ -801,7 +801,7 @@ function manager_kick_user($finput){
 		$member_ids_exe_array = $member_ids_exe_array.','.$member_ids[$i];
 	}
 
-	vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 		var peer_id = {$data->object->peer_id};
 		var member_ids = [{$member_ids_exe_array}];
 		var users = API.users.get({'user_ids':member_ids});
@@ -845,7 +845,7 @@ function manager_online_list($finput){
 	$botModule = new BotModule($db);
 
 	if(!array_key_exists(1, $words)){
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'online'});
 			var msg = ', 🌐следующие пользователи в сети:\\n';
 			var msg_users = '';
@@ -889,12 +889,12 @@ function manager_nick($finput){
 				$db->setValue(array("bot_manager", "user_nicknames", "id{$data->object->from_id}"), $nick);
 				$db->save();
 				$msg = ", ✅ник установлен.";
-				vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 				");
 			} else {
 				$msg = ", ⛔Указанный ник больше 15 символов.";
-				vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 				");
 			}
@@ -919,7 +919,7 @@ function manager_nick($finput){
 
 				$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%, ✅ник @id{$data->object->fwd_messages[0]->from_id} (пользователя) изменён!", 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 				$request = vk_parse_var($request, "appeal");
-				$response = json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+				$response = json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 					API.messages.send({$request});
 					return 'ok';
 					"))->response;
@@ -927,14 +927,14 @@ function manager_nick($finput){
 				$db->save();
 			} else {
 				$msg = ", ⛔Указанный ник больше 15 символов.";
-				vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 				");
 			}
 		}
 	} else {
 		$msg = ", ⛔используйте\\\"!ник <ник>\\\" для управления ником.";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 			");
 	}
@@ -947,7 +947,7 @@ function manager_remove_nick($data, &$db){
 		$db->unsetValue(array("bot_manager", "user_nicknames", "id{$data->object->from_id}"));
 		$db->save();
 		$msg = ", ✅ник убран.";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 			");
 	}
@@ -962,7 +962,7 @@ function manager_remove_nick($data, &$db){
 		$request = vk_parse_var($request, "appeal");
 		$db->unsetValue(array("bot_manager", "user_nicknames", "id{$data->object->fwd_messages[0]->from_id}"));
 		$db->save();
-		json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 			API.messages.send({$request});
 			"));
 	}
@@ -992,7 +992,7 @@ function manager_show_nicknames($finput){
 	if(count($nicknames) == 0){
 		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%, ❗в беседе нет пользователей с никами!", 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 		$request = vk_parse_var($request, "appeal");
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."API.messages.send({$request});");
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."API.messages.send({$request});");
 		return;
 	}
 
@@ -1027,7 +1027,7 @@ function manager_show_nicknames($finput){
 	////////////////////////////////////////////////////
 	////////////////////////////////////////////////////
 
-	vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 		var nicknames = ".json_encode($list_out, JSON_UNESCAPED_UNICODE).";
 		var users = API.users.get({'user_ids':nicknames@.user_id});
 		var msg = appeal+', ники [{$list_number}/{$list_max_number}]:';
@@ -1062,7 +1062,7 @@ function manager_greeting($finput){
 		$db->setValue(array("bot_manager", "invited_greeting"), $invited_greeting);
 		$db->save();
 		$msg = ", ✅приветствие установлено.";
-		json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 			API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 			"));
 	} elseif($command == 'показать'){
@@ -1070,13 +1070,13 @@ function manager_greeting($finput){
 		if($invited_greeting !== false){
 			$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%, приветствие в беседе:\n{$invited_greeting}", 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 			$json_request = vk_parse_var($json_request, "appeal");
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				API.messages.send({$json_request});
 				return 'ok';
 				");
 		} else {
 			$msg = ", ⛔приветствие не установлено.";
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 				return 'ok';
 				");
@@ -1087,20 +1087,20 @@ function manager_greeting($finput){
 			$db->unsetValue(array("bot_manager", "invited_greeting"));
 			$db->save();
 			$msg = ", ✅приветствие убрано.";
-			json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 				"));
 
 		} else {
 			$msg = ", ⛔приветствие не установлено.";
-			vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 				API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 				return 'ok';
 				");
 		}
 	} else{
 		$msg = ", ⛔используйте \"!приветствие установить/показать/убрать\".";
-		vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 			API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 			return 'ok';
 			");
@@ -1155,7 +1155,7 @@ function manager_rank($finput){
 
 			if(!array_key_exists(2, $words) && !array_key_exists(0, $data->object->fwd_messages)){
 				$msg = ", используйте \"!ранг выдать <ранг> <id/упоминание/перес. сообщение>\".";
-				vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
 				return;
 			}
@@ -1212,7 +1212,7 @@ function manager_rank($finput){
 
 			if(!array_key_exists(2, $words) && !array_key_exists(0, $data->object->fwd_messages)){
 				$msg = ", используйте \"!ранг забрать <id/упоминание/перес. сообщение>\".";
-				vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
 				return;
 			}
@@ -1250,7 +1250,7 @@ function manager_rank($finput){
 			}
 
 			$rank_name = RankSystem::getRankNameByID(1);
-			$response = json_decode(vk_execute($botModule->makeExeAppeal($data->object->from_id).bot_test_rights_exe($data->object->peer_id, $data->object->from_id, false, "%appeal%, ⛔Чтобы получить ранг {$rank_name} [rank_1] нужно иметь статус администратора в беседе.")."
+			$response = json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id).bot_test_rights_exe($data->object->peer_id, $data->object->from_id, false, "%appeal%, ⛔Чтобы получить ранг {$rank_name} [rank_1] нужно иметь статус администратора в беседе.")."
 					API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Ранг {$rank_name} [rank_1] успешно получен.','disable_mentions':true});
 					return 'ok';
 				"))->response;
@@ -1328,7 +1328,7 @@ function manager_show_user_ranks($finput){
 	////////////////////////////////////////////////////
 	////////////////////////////////////////////////////
 
-	vk_execute($botModule->makeExeAppeal($data->object->from_id)."
+	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 		var ranks = ".json_encode($list_out, JSON_UNESCAPED_UNICODE).";
 		var users = API.users.get({'user_ids':ranks@.user_id});
 		var msg = appeal+', ранги [{$list_number}/{$list_max_number}]:';
@@ -1407,7 +1407,7 @@ function manager_panel_show($finput){
 	else{
 		$keyboard = vk_keyboard_inline(array(
 			array(
-				vk_text_button("Помощь", array("command" => "bot_run_text_command", "text_command" => "!панель"), "positive")
+				vk_text_button("Помощь", array("command" => "bot_runtc", "text_command" => "!панель"), "positive")
 			)
 		));
 		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас нет элементов в персональной панели.", $data->object->from_id, array('keyboard' => $keyboard));
@@ -1422,7 +1422,7 @@ function manager_panel_control($finput){
 
 	$botModule = new BotModule($db);
 
-	$command = mb_strtolower(bot_get_word_argv($words, 1, ""));
+	$command = mb_strtolower(bot_get_array_argv($words, 1, ""));
 
 	if($command == "создать"){
 		$text_command = mb_substr($data->object->text, 16);
@@ -1470,7 +1470,7 @@ function manager_panel_control($finput){
 	}
 	elseif($command == "название"){
 		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
-		$argv = bot_get_word_argv($words, 2, 0);
+		$argv = bot_get_array_argv($words, 2, 0);
 		$name = mb_substr($data->object->text, 18+mb_strlen($argv));
 		if($argv == "" || !is_numeric($argv) || $name == ""){
 			$botModule->sendSilentMessage($data->object->peer_id, ", Используйте [!панель название <номер> <название>], чтобы изменить название элемента.", $data->object->from_id);
@@ -1493,7 +1493,7 @@ function manager_panel_control($finput){
 	}
 	elseif($command == "команда"){
 		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
-		$argv = bot_get_word_argv($words, 2, 0);
+		$argv = bot_get_array_argv($words, 2, 0);
 		$text_command = mb_substr($data->object->text, 17+mb_strlen($argv));
 		if($argv == "" || !is_numeric($argv) || $text_command == ""){
 			$botModule->sendSilentMessage($data->object->peer_id, ", Используйте [!панель команда <номер> <команда>], чтобы изменить команду элемента.", $data->object->from_id);
@@ -1516,8 +1516,8 @@ function manager_panel_control($finput){
 	}
 	elseif($command == "цвет"){
 		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
-		$argv1 = intval(bot_get_word_argv($words, 2, 0));
-		$argv2 = intval(bot_get_word_argv($words, 3, 0));
+		$argv1 = intval(bot_get_array_argv($words, 2, 0));
+		$argv2 = intval(bot_get_array_argv($words, 3, 0));
 		if($argv1 == 0 || $argv2 == 0){
 			$botModule->sendSilentMessage($data->object->peer_id, ", Используйте [!панель цвет <номер> <цвет>], чтобы изменить название элемента.\nДоступные цвета: 1 — белый, 2 - синий, 3- зелёный, 4 - красный.", $data->object->from_id);
 			return;
@@ -1556,7 +1556,7 @@ function manager_panel_control($finput){
 	}
 	elseif($command == "удалить"){
 		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
-		$argv = intval(bot_get_word_argv($words, 2, 0));
+		$argv = intval(bot_get_array_argv($words, 2, 0));
 		if($argv == 0){
 			$botModule->sendSilentMessage($data->object->peer_id, ", Используйте [!панель удалить <номер>], чтобы удалить элемент.", $data->object->from_id);
 			return;
@@ -1603,7 +1603,7 @@ function manager_panel_keyboard_handler($finput){
 	if($user_panel["user_id"] !== $data->object->from_id){
 		$keyboard = vk_keyboard_inline(array(
 			array(
-				vk_text_button("Панель", array("command" => "bot_run_text_command", "text_command" => "Панель"), "positive")
+				vk_text_button("Панель", array("command" => "bot_runtc", "text_command" => "Панель"), "positive")
 			)
 		));
 		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы не можете использовать панель другого пользователя. Лучше откройте свою панель кнопкой ниже.", $data->object->from_id, array('keyboard' => $keyboard));
@@ -1617,7 +1617,7 @@ function manager_panel_keyboard_handler($finput){
 		$modified_data = $data;
 		$modified_data->object->text = $user_panel["elements"][$payload->element_id]["command"];
 		unset($modified_data->object->payload);
-		$result = $finput->event->runTextCommand($modified_data);
+		$result = $finput->event->runTextMessageCommand($modified_data);
 		if($result == 1){
 			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Ошибка. Данной команды не существует.", $data->object->from_id);
 		}
