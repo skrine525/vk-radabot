@@ -285,7 +285,7 @@ function manager_mode_list($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 	$chatModes = new ChatModes($db);
@@ -340,7 +340,7 @@ function manager_mode_cpanel($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 	$ranksys = new RankSystem($db);
@@ -396,7 +396,7 @@ function manager_ban_user($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$ranksys = new RankSystem($db);
 	$botModule = new BotModule($db);
@@ -486,7 +486,7 @@ function manager_unban_user($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 	$ranksys = new RankSystem($db);
@@ -607,7 +607,7 @@ function manager_banlist_user($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
@@ -678,7 +678,7 @@ function manager_baninfo_user($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
@@ -724,7 +724,7 @@ function manager_kick_user($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
@@ -840,7 +840,7 @@ function manager_online_list($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
@@ -872,7 +872,7 @@ function manager_nick($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
@@ -972,7 +972,7 @@ function manager_show_nicknames($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
@@ -1043,7 +1043,7 @@ function manager_greeting($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$ranksys = new RankSystem($db);
 	$botModule = new BotModule($db);
@@ -1139,7 +1139,7 @@ function manager_rank($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
@@ -1276,7 +1276,7 @@ function manager_show_user_ranks($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
@@ -1344,7 +1344,7 @@ function manager_rank_list($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
@@ -1362,7 +1362,7 @@ function manager_panel_show($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
@@ -1399,7 +1399,7 @@ function manager_panel_show($finput){
 				$elements[] = array();
 				$current_element_index++;
 			}
-			$elements[$current_element_index][] = vk_text_button($user_panel["elements"][$i]["name"], array("command" => "manager_panel", "last_change_time" => $last_change_time, 'user_id' => $data->object->from_id, 'element_id' => $i), $color);
+			$elements[$current_element_index][] = vk_callback_button($user_panel["elements"][$i]["name"], array("manager_panel", $data->object->from_id, $last_change_time, $i), $color);
 		}
 		$keyboard = vk_keyboard_inline($elements);
 		$botModule->sendSilentMessage($data->object->peer_id, ", Ваша персональная панель. Используйте [!панель] для управления панелью.", $data->object->from_id, array('keyboard' => $keyboard));
@@ -1418,7 +1418,7 @@ function manager_panel_control($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
@@ -1592,38 +1592,52 @@ function manager_panel_keyboard_handler($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$payload = $finput->payload;
-	$db = &$finput->db;
+	$db = $finput->db;
 
-	if(!property_exists($payload, 'user_id') || !property_exists($payload, 'last_change_time') || !property_exists($payload, 'element_id'))
+	$user_id = bot_get_array_argv($payload, 1, null);
+	$last_change_time = bot_get_array_argv($payload, 2, null);
+	$element_id = bot_get_array_argv($payload, 3, null);
+
+	if(is_null($user_id) || is_null($last_change_time) || is_null($last_change_time))
 		return;
-	$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$payload->user_id}"), false);
+
+	$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$user_id}"), false);
 	if($user_panel === false)
 		return;
-	$botModule = new BotModule($db);
-	if($user_panel["user_id"] !== $data->object->from_id){
-		$keyboard = vk_keyboard_inline(array(
-			array(
-				vk_text_button("Панель", array("command" => "bot_runtc", "text_command" => "Панель"), "positive")
-			)
-		));
-		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы не можете использовать панель другого пользователя. Лучше откройте свою панель кнопкой ниже.", $data->object->from_id, array('keyboard' => $keyboard));
+
+	if($user_panel["user_id"] !== $data->object->user_id){
+		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Вы не можете использовать панель другого пользователя.");
 		return;
 	}
-	if($user_panel["last_change_time"] !== $payload->last_change_time){
-		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Данная панель является устаревшей.", $data->object->from_id);
+	if($user_panel["last_change_time"] !== $last_change_time){
+		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Данная панель является устаревшей.");
 		return;
 	}
-	if(array_key_exists($payload->element_id, $user_panel["elements"])){
-		$modified_data = $data;
-		$modified_data->object->text = $user_panel["elements"][$payload->element_id]["command"];
-		unset($modified_data->object->payload);
+	if(array_key_exists($element_id, $user_panel["elements"])){
+		$modified_data = (object) array(
+				'type' => 'message_new',
+				'object' => (object) array(
+					'date' => time(),
+					'from_id' => $data->object->user_id,
+					'id' => 0,
+					'out' => 0,
+					'peer_id' => $data->object->peer_id,
+					'text' => $user_panel["elements"][$element_id]["command"],
+					'conversation_message_id' => $data->object->conversation_message_id,
+					'fwd_messages' => array(),
+					'important' => false,
+					'random_id' => 0,
+					'attachments' => array(),
+					'is_hidden' => false
+				)
+			);
 		$result = $finput->event->runTextMessageCommand($modified_data);
 		if($result == 1){
-			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Ошибка. Данной команды не существует.", $data->object->from_id);
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Ошибка. Данной команды не существует.");
 		}
 	}
 	else{
-		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Данного элемента не существует.", $data->object->from_id);
+		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Данного элемента не существует.");
 		return;
 	}
 }

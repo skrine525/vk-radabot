@@ -3,8 +3,9 @@
 class Event{
 	private $data;
 	private $db;
-	private $textMessageCommands; // Массив текстовых команд
-	private $textButtonCommands; // Массив команд клавиатуры
+	private $textMessageCommands;			// Массив текстовых команд
+	private $textButtonCommands;			// Массив команд Text-кнопок
+	private $callbackButtonCommands;		// Массив команд Callback-кнопок
 	private $defaultFunc;
 	private $dbIgnoreCommandList;
 
@@ -102,8 +103,8 @@ class Event{
 				$finput = (object) array(
 					'data' => $data,
 					'words' => $words,
-					'db' => &$this->db,
-					'event' => &$this
+					'db' => $this->db,
+					'event' => $this
 				);
 				$method = $this->textMessageCommands[$command]; // Получение значения Callback'а
 				call_user_func_array($method, array($finput)); // Выполнение Callback'а
@@ -125,8 +126,8 @@ class Event{
 					$finput = (object) array(
 						'data' => $data,
 						'payload' => $payload,
-						'db' => &$this->db,
-						'event' => &$this
+						'db' => $this->db,
+						'event' => $this
 					);
 					$method = $this->textButtonCommands[$payload->command]; // Получение значения Callback'а
 					call_user_func_array($method, array($finput)); // Выполнение Callback'а
@@ -149,8 +150,8 @@ class Event{
 					$finput = (object) array(
 						'data' => $data,
 						'payload' => $payload,
-						'db' => &$this->db,
-						'event' => &$this
+						'db' => $this->db,
+						'event' => $this
 					);
 					$method = $this->callbackButtonCommands[$payload[0]]; // Получение значения Callback'а
 					call_user_func_array($method, array($finput)); // Выполнение Callback'а
@@ -333,7 +334,7 @@ function event_handle($data){
 
 		// Обработчик для запуска текстовых команд из под аргумента кнопки
 		$event->addTextButtonCommand("bot_runtc", 'bot_keyboard_rtct_handler'); // Запуск текстовых команд из под Text-кнопки
-		$event->addTextButtonCommand("manager_panel", 'manager_panel_keyboard_handler'); // Обработка персональной панели
+		$event->addCallbackButtonCommand("manager_panel", 'manager_panel_keyboard_handler'); // Обработка персональной панели
 
 		// Callback-кнопки
 		$event->addCallbackButtonCommand("bot_menu", 'bot_menu_cb');
@@ -348,7 +349,7 @@ function event_handle($data){
 		$event->setDefaultFunction(function ($finput){
 			// Инициализация базовых переменных
 			$data = $finput->data; 
-			$db = &$finput->db;
+			$db = $finput->db;
 
 			goverment_referendum_system($data, $db); // Обработчик выборов президента в беседе
 

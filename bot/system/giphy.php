@@ -22,7 +22,7 @@ function giphy_handler($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$name = mb_substr($data->object->text, 7, mb_strlen($data->object->text));
 	$gif = json_decode(giphy_translate(array('s' => $name)));

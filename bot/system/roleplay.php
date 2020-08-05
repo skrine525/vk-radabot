@@ -452,7 +452,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		if(is_null($words[1])){
 			$botModule = new botModule($db);
@@ -477,7 +477,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		if(is_null($words[1])){
 			$botModule = new botModule($db);
@@ -508,7 +508,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		if(is_null($words[1])){
 			$botModule = new botModule($db);
@@ -534,7 +534,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		if(is_null($words[1])){
 			$botModule = new botModule($db);
@@ -584,7 +584,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$params = array(
 			"msgMale" => "%FROM_USERNAME% занялся сексом с %MEMBER_USERNAME_INS%.😍",
@@ -592,8 +592,8 @@ namespace{
 			"msgMyselfMale" => "%FROM_USERNAME% подрочил.🤗",
 			"msgMyselfFemale" => "%FROM_USERNAME% помастурбировала.🤗",
 			"msgToAll" => array(
-				"male" => "%FROM_USERNAME% занялся сексом с @all (со всеми).😍",
-				"female" => "%FROM_USERNAME% занялась сексом с @all (со всеми).😍"
+				"male" => "%FROM_USERNAME% занялся сексом со всеми.😍",
+				"female" => "%FROM_USERNAME% занялась сексом со всеми.😍"
 			)
 		);
 
@@ -608,7 +608,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$params = array(
 			"msgMale" => "%FROM_USERNAME% обнял %MEMBER_USERNAME_ACC%.🤗",
@@ -616,8 +616,8 @@ namespace{
 			"msgMyselfMale" => "%FROM_USERNAME% обнял сам себя.🤗",
 			"msgMyselfFemale" => "%FROM_USERNAME% обняла сама себя.🤗",
 			"msgToAll" => array(
-				"male" => "%FROM_USERNAME% обнял @all (всех).🤗",
-				"female" => "%FROM_USERNAME% обняла @all (всех).🤗"
+				"male" => "%FROM_USERNAME% обнял всех.🤗",
+				"female" => "%FROM_USERNAME% обняла всех.🤗"
 			)
 		);
 
@@ -632,7 +632,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$params = array(
 			"msgMale" => "%FROM_USERNAME% уебал %MEMBER_USERNAME_DAT%.👊🏻",
@@ -640,8 +640,8 @@ namespace{
 			"msgMyselfMale" => "%FROM_USERNAME% уебал сам себе.👊🏻",
 			"msgMyselfFemale" => "%FROM_USERNAME% уебала сама себе.👊🏻",
 			"msgToAll" => array(
-				"male" => "%FROM_USERNAME% уебал @all (всем).👊🏻",
-				"female" => "%FROM_USERNAME% уебал @all (всем).👊🏻"
+				"male" => "%FROM_USERNAME% уебал всем.👊🏻",
+				"female" => "%FROM_USERNAME% уебал всем.👊🏻"
 			)
 		);
 
@@ -656,7 +656,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$params = array(
 			"msgMale" => "%FROM_USERNAME% обоссал %MEMBER_USERNAME_GEN%.💦",
@@ -664,8 +664,8 @@ namespace{
 			"msgMyselfMale" => "%FROM_USERNAME% обоссал сам себя.💦",
 			"msgMyselfFemale" => "%FROM_USERNAME% обоссал сама себя.💦",
 			"msgToAll" => array(
-				"male" => "%FROM_USERNAME% обоссал @all (всех).💦",
-				"female" => "%FROM_USERNAME% обоссала @all (всех).💦"
+				"male" => "%FROM_USERNAME% обоссал всех.💦",
+				"female" => "%FROM_USERNAME% обоссала всех.💦"
 			)
 		);
 
@@ -680,7 +680,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$params = array(
 			"msgMale" => "%FROM_USERNAME% поцеловал %MEMBER_USERNAME_ACC%.😘",
@@ -688,8 +688,8 @@ namespace{
 			"msgMyselfMale" => "%FROM_USERNAME% поцеловал сам себя.😘",
 			"msgMyselfFemale" => "%FROM_USERNAME% поцеловала сама себя.😘",
 			"msgToAll" => array(
-				"male" => "%FROM_USERNAME% поцеловал @all (всех).😘",
-				"female" => "%FROM_USERNAME% поцеловала @all (всех).😘"
+				"male" => "%FROM_USERNAME% поцеловал всех.😘",
+				"female" => "%FROM_USERNAME% поцеловала всех.😘"
 			)
 		);
 
@@ -704,7 +704,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$params = array(
 			"msgMale" => "%FROM_USERNAME% харкнул в %MEMBER_USERNAME_ACC%.",
@@ -712,8 +712,8 @@ namespace{
 			"msgMyselfMale" => "%FROM_USERNAME% харкнул сам на себя.",
 			"msgMyselfFemale" => "%FROM_USERNAME% харкнула сама на себя.",
 			"msgToAll" => array(
-				"male" => "%FROM_USERNAME% харкнул на @all (всех).",
-				"female" => "%FROM_USERNAME% харкнула на @all (всех)."
+				"male" => "%FROM_USERNAME% харкнул на всех.",
+				"female" => "%FROM_USERNAME% харкнула на всех."
 			)
 		);
 
@@ -728,7 +728,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$params = array(
 			"msgMale" => "%FROM_USERNAME% отсосал у %MEMBER_USERNAME_GEN%.🍌",
@@ -736,8 +736,8 @@ namespace{
 			"msgMyselfMale" => "%FROM_USERNAME% попытался отсосать у себя.😂",
 			"msgMyselfFemale" => "%FROM_USERNAME% попыталась отсосать у себя.😂",
 			"msgToAll" => array(
-				"male" => "%FROM_USERNAME% отсосал у @all (всех).🍌",
-				"female" => "%FROM_USERNAME% отсосала у @all (всех).🍌"
+				"male" => "%FROM_USERNAME% отсосал у всех.🍌",
+				"female" => "%FROM_USERNAME% отсосала у всех.🍌"
 			),
 			"sexOnly" => 2,
 			"sexErrorMsg" => "%appeal%, нельзя отсосать у девочки.😂"
@@ -754,7 +754,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$params = array(
 			"msgMale" => "%FROM_USERNAME% отлизал у %MEMBER_USERNAME_GEN%.🍑",
@@ -762,8 +762,8 @@ namespace{
 			"msgMyselfMale" => "%FROM_USERNAME% попытался отлизать у себя.😂",
 			"msgMyselfFemale" => "%FROM_USERNAME% попыталась отлизать у себя.😂",
 			"msgToAll" => array(
-				"male" => "%FROM_USERNAME% отлизал у @all (всех).🍑",
-				"female" => "%FROM_USERNAME% отлизал у @all (всех).🍑"
+				"male" => "%FROM_USERNAME% отлизал у всех.🍑",
+				"female" => "%FROM_USERNAME% отлизал у всех.🍑"
 			),
 			"sexOnly" => 1,
 			"sexErrorMsg" => "%appeal%, нельзя отлизать у мальчика.😂"
@@ -780,7 +780,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$params = array(
 			"msgMale" => "%FROM_USERNAME% послал %MEMBER_USERNAME_ACC%.",
@@ -788,8 +788,8 @@ namespace{
 			"msgMyselfMale" => "%FROM_USERNAME% послал сам себя.",
 			"msgMyselfFemale" => "%FROM_USERNAME% послала сама себя.",
 			"msgToAll" => array(
-				"male" => "%FROM_USERNAME% послал @all (всех).",
-				"female" => "%FROM_USERNAME% послала @all (всех)."
+				"male" => "%FROM_USERNAME% послал всех.",
+				"female" => "%FROM_USERNAME% послала всех."
 			)
 		);
 
@@ -804,7 +804,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$params = array(
 			"msgMale" => "%FROM_USERNAME% кастрировал %MEMBER_USERNAME_ACC%.",
@@ -824,7 +824,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$params = array(
 			"msgMale" => "%FROM_USERNAME% посадил на бутылку %MEMBER_USERNAME_ACC%.🍾",
@@ -832,8 +832,8 @@ namespace{
 			"msgMyselfMale" => "%FROM_USERNAME% сел на бутылку.🍾",
 			"msgMyselfFemale" => "%FROM_USERNAME% села на бутылку.🍾",
 			"msgToAll" => array(
-				"male" => "%FROM_USERNAME% посадил на бутылку @all (всех).",
-				"female" => "%FROM_USERNAME% пасадила на бутылку @all (всех)."
+				"male" => "%FROM_USERNAME% посадил на бутылку всех.",
+				"female" => "%FROM_USERNAME% пасадила на бутылку всех."
 			)
 		);
 
@@ -848,7 +848,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		switch (mb_strtolower($words[1])) {
 			case 'руку':
@@ -858,8 +858,8 @@ namespace{
 					"msgMyselfMale" => "%FROM_USERNAME% настолько ЧСВ, что пожал руку сам с себе.",
 					"msgMyselfFemale" => "%FROM_USERNAME% настолько ЧСВ, что пожала руку сама с себе.",
 					"msgToAll" => array(
-						"male" => "%FROM_USERNAME% пожал руку @all (всем).",
-						"female" => "%FROM_USERNAME% пожала руку @all (всем)."
+						"male" => "%FROM_USERNAME% пожал руку всем.",
+						"female" => "%FROM_USERNAME% пожала руку всем."
 					)
 				);
 
@@ -883,7 +883,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$params = array(
 			"msgMale" => "%FROM_USERNAME% лизнул %MEMBER_USERNAME_DAT%.😋",
@@ -891,8 +891,8 @@ namespace{
 			"msgMyselfMale" => "%FROM_USERNAME% лизнул себя.😋",
 			"msgMyselfFemale" => "%FROM_USERNAME% лизнула себя.😋",
 			"msgToAll" => array(
-				"male" => "%FROM_USERNAME% лизнул @all (всех).😋",
-				"female" => "%FROM_USERNAME% лизнула @all (всех).😋"
+				"male" => "%FROM_USERNAME% лизнул всех.😋",
+				"female" => "%FROM_USERNAME% лизнула всех.😋"
 			)
 		);
 
@@ -907,7 +907,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$params = array(
 			"msgMale" => "%FROM_USERNAME% обосрал %MEMBER_USERNAME_ACC%.💩",
@@ -915,8 +915,8 @@ namespace{
 			"msgMyselfMale" => "%FROM_USERNAME%, нельзя обосрать себя.😋",
 			"msgMyselfFemale" => "%FROM_USERNAME%, нельзя обосрать себя.😋",
 			"msgToAll" => array(
-				"male" => "%FROM_USERNAME% обосрал @all (всех).💩",
-				"female" => "%FROM_USERNAME% обосрала @all (всех).💩"
+				"male" => "%FROM_USERNAME% обосрал всех.💩",
+				"female" => "%FROM_USERNAME% обосрала всех.💩"
 			)
 		);
 
@@ -931,15 +931,15 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$handler = new Roleplay\ActWithHandler($db, $data, $words, "Облевать");
 		$handler->maleMessage = "%FROM_USERNAME% облевал %MEMBER_USERNAME_ACC%.🤢";
 		$handler->femaleMessage = "%FROM_USERNAME% облевала %MEMBER_USERNAME_ACC%.🤢";
 		$handler->maleMessageToMyself = "%FROM_USERNAME% облевал себя.🤢";
 		$handler->femaleMessageToMyself = "%FROM_USERNAME% облевала себя.🤢";
-		$handler->maleMessageToAll = "%FROM_USERNAME% облевал @all (всех).🤢";
-		$handler->femaleMessageToAll = "%FROM_USERNAME% облевала @all (всех).🤢";
+		$handler->maleMessageToAll = "%FROM_USERNAME% облевал всех.🤢";
+		$handler->femaleMessageToAll = "%FROM_USERNAME% облевала всех.🤢";
 		$handler->setPermittedMemberGender(Roleplay\ActWithHandler::GENDER_MALE, "suka");
 
 		$handler->handle();

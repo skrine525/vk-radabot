@@ -3,120 +3,72 @@
 		"name": "Дворник",
 		"rest_time": 1200,
 		"salary": 800,
-		"message":{
-			"male": "{USERNAME} убрал самолетики после забастовки Телеграма, тем самым заработав {SALARY}.",
-			"female": "{USERNAME} убрала самолетики после забастовки Телеграма, тем самым заработав {SALARY}."
-		},
 		"item_dependencies": []
 	},
 	"scavenger": {
 		"name": "Уборщик мусора",
 		"rest_time": 1200,
 		"salary": 800,
-		"message":{
-			"male": "{USERNAME} убрал территорию от мусора и заработал {SALARY}.",
-			"female": "{USERNAME} убрала территорию от мусора и заработала {SALARY}."
-		},
 		"item_dependencies": []
 	},
 	"newspaper_delivery_man": {
 		"name": "Доставщик газет",
 		"rest_time": 1200,
 		"salary": 1000,
-		"message":{
-			"male": "{USERNAME} доставил газету к последнему дому и заработал {SALARY}.",
-			"female": "{USERNAME} доставила газету к последнему дому и заработала {SALARY}."
-		},
 		"item_dependencies": ["edu:level_1", "immovables:level_1"]
 	},
 	"food_delivery_man": {
 		"name": "Доставщик еды",
 		"rest_time": 1200,
 		"salary": 1000,
-		"message":{
-			"male": "{USERNAME} доставил еду голодному человеку и заработал {SALARY}.",
-			"female": "{USERNAME} доставила еду голодному человеку и заработала {SALARY}."
-		},
 		"item_dependencies": ["edu:level_1", "immovables:level_1"]
 	},
 	"sales_assistant": {
 		"name": "Помощник продавца",
 		"rest_time": 1500,
 		"salary": 1625,
-		"message":{
-			"male": "{USERNAME} продал очередной рулон туалетной бумаги. Его зарплата — {SALARY}.",
-			"female": "{USERNAME} продала очередной рулон туалетной бумаги. Ее зарплата — {SALARY}."
-		},
 		"item_dependencies": ["edu:level_2", "immovables:level_1"]
 	},
 	"waiter": {
 		"name": "Официант",
 		"rest_time": 1500,
 		"salary": 1625,
-		"message":{
-			"male": "{USERNAME} принял заказ у новых посетителей. Его зарплата — {SALARY}.",
-			"female": "{USERNAME} приняла заказ у новых посетителей. Ее зарплата — {SALARY}."
-		},
 		"item_dependencies": ["edu:level_2", "immovables:level_1"]
 	},
 	"mechanic_turner": {
 		"name": "Токарь-Механик",
 		"rest_time": 1800,
 		"salary": 2400,
-		"message":{
-			"male": "{USERNAME} выточил новую деталь. Зарплата — {SALARY}.",
-			"female": "{USERNAME} выточила новую деталь. Зарплата — {SALARY}."
-		},
 		"item_dependencies": ["edu:level_3", "immovables:level_2"]
 	},
 	"welder": {
 		"name": "Сварщик",
 		"rest_time": 1800,
 		"salary": 2400,
-		"message":{
-			"male": "{USERNAME} сварил две арматуры. Зарплата — {SALARY}.",
-			"female": "{USERNAME} сварила две арматуры. Зарплата — {SALARY}."
-		},
 		"item_dependencies": ["edu:level_3", "immovables:level_2"]
 	},
 	"it_specialist": {
 		"name": "IT-специалист",
 		"rest_time": 2100,
 		"salary": 3500,
-		"message":{
-			"male": "{USERNAME} написал новую функцию, которая создала новый баг. Зарплата — {SALARY}.",
-			"female": "{USERNAME} написала новую функцию, которая создала новый баг. Зарплата — {SALARY}."
-		},
 		"item_dependencies": ["edu:level_4", "immovables:level_3"]
 	},
 	"politician": {
 		"name": "Политик",
 		"rest_time": 2100,
 		"salary": 3500,
-		"message":{
-			"male": "{USERNAME} разработал курс развития страны. Зарплата — {SALARY}.",
-			"female": "{USERNAME} разработала курс развития страны. Зарплата — {SALARY}."
-		},
 		"item_dependencies": ["edu:level_4", "immovables:level_3"]
 	},
 	"president": {
 		"name": "Президент",
 		"rest_time": 2100,
 		"salary": 3500,
-		"message":{
-			"male": "Подписав новый закон, президент {USERNAME} заработал {SALARY}.",
-			"female": "Подписав новый закон, президент {USERNAME} заработал {SALARY}."
-		},
-		"item_dependencies": ["edu:level_3","govdoc:presidential_certificate", "immovables:level_3"]
+		"item_dependencies": ["edu:level_3", "govdoc:presidential_certificate", "immovables:level_3"]
 	},
 	"engineer": {
 		"name": "Инженер",
 		"rest_time": 2400,
 		"salary": 5200,
-		"message":{
-			"male": "{USERNAME} спроектировал новый механизм. Зарплата — {SALARY}.",
-			"female": "{USERNAME} спроектировала новый механизм. Зарплата — {SALARY}."
-		},
 		"item_dependencies": ["edu:level_5", "immovables:level_4"]
 	}
 }

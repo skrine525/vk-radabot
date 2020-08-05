@@ -39,7 +39,7 @@ function goverment_constitution($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 	$gov = $db->getValue(array("goverment"));
@@ -83,7 +83,7 @@ function goverment_show_laws($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
@@ -149,7 +149,7 @@ function goverment_laws_cpanel($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 	$gov = $db->getValue(array("goverment"));
@@ -334,7 +334,7 @@ function goverment_president($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 	$gov = $db->getValue(array("goverment"));
@@ -394,7 +394,7 @@ function goverment_batch($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 	$gov = $db->getValue(array("goverment"));
@@ -417,7 +417,7 @@ function goverment_capital($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 	$gov = $db->getValue(array("goverment"));
@@ -446,7 +446,7 @@ function goverment_socorder($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 	$gov = $db->getValue(array("goverment"));
@@ -483,7 +483,7 @@ function goverment_socorderlist($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 	$array = SocOrderClass::TYPES;
@@ -499,7 +499,7 @@ function goverment_anthem($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 	$gov = $db->getValue(array("goverment"));
@@ -558,7 +558,7 @@ function goverment_flag($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 	$gov = $db->getValue(array("goverment"));
@@ -653,7 +653,7 @@ function goverment_referendum_start($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
@@ -688,7 +688,7 @@ function goverment_referendum_stop($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
@@ -716,7 +716,7 @@ function goverment_referendum_candidate($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 	$referendum = $db->getValue(array("goverment", "referendum"), false);
@@ -898,7 +898,7 @@ function goverment_referendum_vote($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$payload = $finput->payload;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$referendum = $db->getValue(array("goverment", "referendum"), false);
 
@@ -952,7 +952,7 @@ function goverment_referendum_vote_cmd($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 

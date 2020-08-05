@@ -119,7 +119,7 @@ namespace Economy{
 				for($i = 0; $i < count($user_items); $i++){
 					$r = $this->getItemByIndex($i);
 					if($r->type == $type && $r->id == $id){
-						return $i;
+						return $r;
 					}
 				}
 			}
@@ -129,11 +129,12 @@ namespace Economy{
 		public function changeItem($type, $id, $count){
 			$user_items = $this->db->getValue(array("economy", "users", "id{$this->user_id}", "items"), array());
 			if(gettype($type) == "string" && gettype($id) == "string" && gettype($count) == "integer"){
+				$item_info = Item::getItemInfo($type, $id);
 				for($i = 0; $i < count($user_items); $i++){
 					$r = $this->getItemByIndex($i);
 					if($r->type == $type && $r->id == $id){
 						$new_count = $r->count + $count;
-						if($new_count < 0)
+						if($new_count < 0 || $new_count > $item_info->max_count)
 							return false;
 						elseif($new_count == 0){
 							$this->deleteItem($type, $id);
@@ -144,7 +145,7 @@ namespace Economy{
 						return true;
 					}
 				}
-				if($count > 0){
+				if($count > 0 && $count <= $item_info->max_count){
 					$user_items = $this->db->getValue(array("economy", "users", "id{$this->user_id}", "items"), array());
 					$user_items[] = "{$type}:{$id}:{$count}";
 					$this->db->setValue(array("economy", "users", "id{$this->user_id}", "items"), $user_items);
@@ -229,7 +230,7 @@ namespace Economy{
 		}
 
 		public static function getItemInfo($type, $id){
-			$items = EconomyFiles::getEconomyFileData("items");
+			$items = EconomyConfigFile::getEconomyConfigFileDataFromSection("items");
 			if(array_key_exists($type, $items) && array_key_exists($id, $items[$type])){
 				return (object) $items[$type][$id];
 			}
@@ -237,6 +238,7 @@ namespace Economy{
 				$item = array(
 					'name' => 'Неизвестный предмет',
 					'price' => 0,
+					'max_count' => 0,
 					'can_sell' => true,
 					'can_buy' => false,
 					'hidden' => true
@@ -246,11 +248,11 @@ namespace Economy{
 		}
 
 		public static function getShopSectionsArray(){
-			return EconomyFiles::getEconomyFileData("shop_sections");
+			return EconomyConfigFile::getEconomyConfigFileDataFromSection("shop_sections");
 		}
 
 		public static function getItemListByType($type){
-			$items = EconomyFiles::getEconomyFileData("items");;
+			$items = EconomyConfigFile::getEconomyConfigFileDataFromSection("items");;
 			if(array_key_exists($type, $items)){
 				return $items[$type];
 			}
@@ -278,23 +280,22 @@ namespace Economy{
 		}
 	}
 
-	class EconomyFiles{
+	class EconomyConfigFile{
 		private static $economy_data;
-		//private static $jobs_data;
 		private static $is_read = false;
 
 		private static function readDataFiles(){
 			if(!self::$is_read){
 				self::$economy_data = json_decode(file_get_contents(BOT_DATADIR."/economy/economy.json"), true);
-				if(is_null(self::$economy_data)/* || self::$jobs_data === false*/){
-					error_log("Invalid economy.json file");
+				if(is_null(self::$economy_data)){
+					error_log("Invalid economy.json config file");
 					exit;
 				}
 				self::$is_read = true;
 			}
 		}
 
-		public static function getEconomyFileData($section){
+		public static function getEconomyConfigFileDataFromSection($section){
 			self::readDataFiles();
 			if(array_key_exists($section, self::$economy_data)){
 				return self::$economy_data[$section];
@@ -359,7 +360,7 @@ namespace Economy{
 			}
 			unset($attempts);
 
-			$types = array_keys(EconomyFiles::getEconomyFileData("enterprise_types"));
+			$types = array_keys(EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types"));
 			if(array_search($type, $types) === false)
 				return false;
 
@@ -401,7 +402,7 @@ namespace Economy{
 							$enterprise["capital"] += $enterprise["contracts"][$i]["contract_info"]["income"];
 							$enterprise["involved_workers"] -= $enterprise["contracts"][$i]["contract_info"]["workers_required"];
 							// Расчитываем получаемый опыт
-							$enterprise_types = EconomyFiles::getEconomyFileData("enterprise_types");
+							$enterprise_types = EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types");
 							$improvment = $enterprise_types[$enterprise["type"]]["improvment"];
 							// Если предприятие максимального уровня, то не добавляем опыт
 							if(array_key_exists($enterprise["improvment"]["workers"], $improvment["workers"]) || array_key_exists($enterprise["improvment"]["contracts"], $improvment["contracts"]))
@@ -492,7 +493,7 @@ namespace{
 
 		$event->addTextMessageCommand("!счет", "economy_show_user_stats");
 		$event->addTextMessageCommand("!счёт", "economy_show_user_stats");
-		$event->addTextMessageCommand("!работать", "economy_work");
+		$event->addTextMessageCommand("!работа", "economy_work");
 		$event->addTextMessageCommand("!профессии", "economy_joblist");
 		$event->addTextMessageCommand("!профессия", "economy_jobinfo");
 		$event->addTextMessageCommand("!купить", "economy_buy");
@@ -507,17 +508,18 @@ namespace{
 		$event->addTextMessageCommand("!казино", "CasinoRouletteGame::main");
 		$event->addTextMessageCommand("!ставка", "CasinoRouletteGame::bet");
 
-		$event->addTextButtonCommand("economy_getjob", "economy_keyboard_getjob");
-
 		$event->addCallbackButtonCommand('economy_company', 'economy_company_cb');
 		$event->addCallbackButtonCommand('economy_work', 'economy_work_cb');
+		$event->addCallbackButtonCommand('economy_jobcontrol', 'economy_jobcontrol_cb');
+		$event->addCallbackButtonCommand('economy_education', 'economy_education_cb');
+		$event->addCallbackButtonCommand('economy_shop', 'economy_shop_cb');
 	}
 
 	function economy_show_user_stats($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$botModule = new BotModule($db);
 		$economy = new Economy\Main($db);
@@ -631,7 +633,7 @@ namespace{
 
 		$keyboard = vk_keyboard_inline(array(
 			array(
-				vk_callback_button("Работать", array("economy_work"), "positive")
+				vk_callback_button("Работать", array("economy_work", $data->object->from_id, 1), "positive")
 			)
 		));
 
@@ -642,11 +644,11 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$messagesModule = new Bot\Messages($db);
 		$messagesModule->setAppealID($data->object->from_id);
-		$keyboard = vk_keyboard_inline(array(array(vk_callback_button("Работать", array("economy_work"), "positive"))));
+		$keyboard = vk_keyboard_inline(array(array(vk_callback_button("Работа", array("economy_work", $data->object->from_id), "positive"))));
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, Используйте кнопку ниже для работы.", array('keyboard' => $keyboard));
 
 		/*
@@ -791,67 +793,122 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$payload = $finput->payload;
-		$db = &$finput->db;
-
-		$botModule = new BotModule($db);
-		$economy = new Economy\Main($db);
+		$db = $finput->db;
 
 		$date = time(); // Переменная времени
 
+		// Переменная тестирования пользователя
+		$testing_user_id = bot_get_array_argv($payload, 1, $data->object->user_id);
+		if($testing_user_id !== $data->object->user_id){
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
+			return;
+		}
+
+		$economy = new Economy\Main($db);
 		$user_economy = $economy->getUser($data->object->user_id);
 
-		$job_id = $user_economy->getJob();
-		if($job_id !== false){
-			if(!Economy\Job::jobExists($job_id)){
-				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Вы работаете на несуществующей профессии.");
-				return;
-			}
+		$command = bot_get_array_argv($payload, 2, 0);
 
-			$item_dependencies = Economy\Job::getJobArray()[$job_id]["item_dependencies"];
-			for($i = 0; $i < count($item_dependencies); $i++){
-				$item = Economy\Item::getItemObjectFromString($item_dependencies[$i]);
-				if($user_economy->checkItem($item->type, $item->id) === false){
-					$dependency_item_name = Economy\Item::getItemName($item->type, $item->id);
-					$job_name = Economy\Job::getNameByID($job_id);
-					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Вы не можете работать по профессии {$job_name}. Вам необходимо иметь {$dependency_item_name}.");
-					return;
-				}
-			}
-			$job = Economy\Job::getJobArray()[$job_id];
-			$last_working_time = $user_economy->getMeta("last_working_time");
-			if($last_working_time === false)
-				$last_working_time = 0;
+		switch ($command) {
+			case 0:
+			$job_id = $user_economy->getJob();
 
-			if($date - $last_working_time >= $job["rest_time"]){
-				$user_economy->setMeta("last_working_time", $date);
-				$default_salary = $job["salary"];
-				$random_number = mt_rand(0, 65535);
-				if($random_number % 4 == 0){
-					$bonus = $default_salary * 0.25;
-					$salary = $default_salary + $bonus;
-					$work_message = "✅ Вы заработали \${$default_salary} за текущую смену и \${$bonus} в качестве премии за усердную работу.";
-				}
-				else{
-					$salary = $default_salary;
-					$work_message = "✅ Вы заработали \${$salary} за текущую смену.";
-				}
-				$user_economy->changeMoney($salary);
-				$db->save();
-				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, $work_message);
+			if($job_id !== false && Economy\Job::jobExists($job_id)){
+				$job_info = Economy\Job::getJobArray()[$job_id];
+
+				$salary_formated = Economy\Main::getFormatedMoney($job_info["salary"]);
+
+				$rest_time = $job_info["rest_time"];
+				$minutes = intdiv($rest_time, 60);
+				$seconds = $rest_time % 60;
+				$rest_time_text = "";
+				if($minutes != 0)
+					$rest_time_text = "{$minutes} мин. ";
+				$rest_time_text .= "{$seconds} сек.";
+
+				$job_text = "👤Ваша профессия: {$job_info["name"]}\n💰Зарплата: \${$salary_formated}\n📅Время отдыха: {$rest_time_text}";
 			}
 			else{
-				$time = $job["rest_time"] - ($date - $last_working_time);
-				$minutes = intdiv($time, 60);
-				$seconds = $time % 60;
-				$left_time_text = "";
-				if($minutes != 0)
-					$left_time_text = "{$minutes} мин. ";
-				$left_time_text = $left_time_text."{$seconds} сек.";
-				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Вы сильно устали! Приходите через {$left_time_text}");
+				$job_text = "📌 Подсказка: Вы нигде не работаете. Устройтесь с помощью кнопки ниже.";
 			}
-		}
-		else{
-			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Вы нигде не работаете. Устройтесь на работу.");
+
+			$message = "%appeal%, Меню управления профессией.\n\n{$job_text}";
+			$keyboard = vk_keyboard_inline(array(
+				array(vk_callback_button("Работать", array('economy_work', $testing_user_id, 1), 'positive')),
+				array(vk_callback_button("Профессии", array("economy_jobcontrol", $testing_user_id), "primary")),
+				array(vk_callback_button("⬅ Назад в ЦМ", array('bot_menu', $testing_user_id), "negative"))
+			));
+
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->user_id);
+			$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $message, array('keyboard' => $keyboard));
+			break;
+
+			case 1:
+			$job_id = $user_economy->getJob();
+			if($job_id !== false){
+				if(!Economy\Job::jobExists($job_id)){
+					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Вы работаете на несуществующей профессии.");
+					return;
+				}
+
+				$item_dependencies = Economy\Job::getJobArray()[$job_id]["item_dependencies"];
+				for($i = 0; $i < count($item_dependencies); $i++){
+					$item = Economy\Item::getItemObjectFromString($item_dependencies[$i]);
+					if($user_economy->checkItem($item->type, $item->id) === false){
+						$dependency_item_name = Economy\Item::getItemName($item->type, $item->id);
+						$job_name = Economy\Job::getNameByID($job_id);
+						bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Вы не можете работать по профессии {$job_name}. Вам необходимо иметь {$dependency_item_name}.");
+						return;
+					}
+				}
+				$job = Economy\Job::getJobArray()[$job_id];
+				$last_working_time = $user_economy->getMeta("last_working_time");
+				if($last_working_time === false)
+					$last_working_time = 0;
+
+				if($date - $last_working_time >= $job["rest_time"]){
+					$user_economy->setMeta("last_working_time", $date);
+					$default_salary = $job["salary"];
+					$random_number = mt_rand(0, 65535);
+					if($random_number % 4 == 0){
+						$bonus = $default_salary * 0.25;
+						$salary = $default_salary + $bonus;
+						$salary_text = Economy\Main::getFormatedMoney($default_salary);
+						$bonus_text = Economy\Main::getFormatedMoney($bonus);
+						$work_message = "✅ Вы заработали \${$salary_text} и \${$bonus_text} в качестве премии.";
+					}
+					else{
+						$salary = $default_salary;
+						$salary_text = Economy\Main::getFormatedMoney($salary);
+						$work_message = "✅ Вы заработали \${$salary_text}.";
+					}
+					$user_economy->changeMoney($salary);
+					$db->save();
+					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, $work_message);
+				}
+				else{
+					$time = $job["rest_time"] - ($date - $last_working_time);
+					$minutes = intdiv($time, 60);
+					$seconds = $time % 60;
+					$left_time_text = "";
+					if($minutes != 0)
+						$left_time_text = "{$minutes} мин. ";
+					$left_time_text = $left_time_text."{$seconds} сек.";
+					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Вы сильно устали! Приходите через {$left_time_text}");
+				}
+			}
+			else{
+				$messagesModule = new Bot\Messages($db);
+				$messagesModule->setAppealID($data->object->user_id);
+				$keyboard = vk_keyboard_inline(array(array(vk_callback_button("Устроиться", array('economy_jobcontrol', $data->object->user_id)))));
+				$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, "⛔ Вы нигде не работаете. Устройтесь на работу.", array('keyboard' => $keyboard));
+			}
+			break;
+			
+			default:
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Internal error!');
+			break;
 		}
 	}
 
@@ -859,31 +916,34 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
+
+		$messagesModule = new Bot\Messages($db);
+		$messagesModule->setAppealID($data->object->from_id);
 
 		$botModule = new BotModule($db);
 
 		$jobs = Economy\Job::getJobArray();
 		$print_jobs = array();
 
-		$msg = ", список профессий: ";
+		$msg = "%appeal%, список профессий: ";
 
 		$index = 1;
 		foreach ($jobs as $key => $value) {
 			$spm = round($value["salary"] / ($value["rest_time"] / 60), 2); // Зарплата в минуту
-			$msg = $msg . "\n• {$index}. {$value["name"]} — \${$spm}/мин";
-			//$msg = $msg . "\n• {$index}. {$value["name"]}";
+			$msg .= "\n• {$index}. {$value["name"]} — \${$spm}/мин";
 			$index++;
 		}
 
-		$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
+		$keyboard = vk_keyboard_inline(array(array(vk_callback_button("Профессии", array("economy_jobcontrol", $data->object->from_id), "positive"))));
+		$messagesModule->sendSilentMessage($data->object->peer_id, $msg, array('keyboard' => $keyboard));
 	}
 
 	function economy_jobinfo($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
-		$db = &$finput->db;
+		$payload = $finput->payload;
+		$db = $finput->db;
 
 		$botModule = new BotModule($db);
 
@@ -966,69 +1026,386 @@ namespace{
 		}
 	}
 
-	function economy_keyboard_getjob($finput){
+	function economy_jobcontrol_cb($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$payload = $finput->payload;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$date = time(); // Переменная времени
 
-		$botModule = new BotModule($db);
-		$economy = new Economy\Main($db);
-		$user_economy = $economy->getUser($data->object->from_id);
-		$jobs = Economy\Job::getJobArray();
+		// Переменные для редактирования сообщения
+		$keyboard_buttons = array();
+		$message = "";
 
-		if(array_key_exists($payload->params->job_id, $jobs)){
-			$job_id = $payload->params->job_id;
-			$user_job = $user_economy->getJob();
-			if($user_job !== false && Economy\Job::jobExists($user_job)){
-				$current_job = Economy\Job::getJobArray()[$user_economy->getJob()];
-				$last_working_time = $user_economy->getMeta("last_working_time", 0);
-				if($date - $last_working_time < $current_job["rest_time"]){
-					$time = $current_job["rest_time"] - ($date - $last_working_time);
-					$minutes = intdiv($time, 60);
-					$seconds = $time % 60;
-					$left_time_text = "";
-					if($minutes != 0)
-						$left_time_text = "{$minutes} мин. ";
-					$left_time_text = $left_time_text."{$seconds} сек.";
-					$msg = ", Вы сильно устали и не можете поменять профессию! Приходите через {$left_time_text}";
-					$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
+		// Переменная тестирования пользователя
+		$testing_user_id = bot_get_array_argv($payload, 1, $data->object->user_id);
+		if($testing_user_id !== $data->object->user_id){
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
+			return;
+		}
+
+		$command = bot_get_array_argv($payload, 2, 0);
+
+		switch ($command) {
+			case 0:
+			$job_index = bot_get_array_argv($payload, 3, 0);
+
+			$jobs = Economy\Job::getJobArray();
+			$job_id = Economy\Job::getIDByIndex($job_index);
+
+			if($job_id !== false){
+				$time = $jobs[$job_id]["rest_time"];
+				$minutes = intdiv($time, 60);
+				$seconds = $time % 60;
+				$left_time_text = "";
+				if($minutes != 0)
+					$left_time_text = "{$minutes} мин. ";
+				$left_time_text = $left_time_text."{$seconds} сек.";
+				$item_dependencies = $jobs[$job_id]["item_dependencies"];
+				$item_dependencies_text = "";
+				if(count($item_dependencies) > 0){
+					$economy = new Economy\Main($db);
+					$user_economy = $economy->getUser($data->object->user_id);
+					$item = Economy\Item::getItemObjectFromString($item_dependencies[0]);
+					$status_char = "⛔";
+					if($user_economy->checkItem($item->type, $item->id) !== false)
+						$status_char = "✅";
+					for($i = 0; $i < count($item_dependencies); $i++){
+						$item = Economy\Item::getItemObjectFromString($item_dependencies[$i]);
+						$status_char = "⛔";
+						if($user_economy->checkItem($item->type, $item->id) !== false)
+							$status_char = "✅";
+						$item_dependencies_text .= "\n&#12288;{$status_char}".Economy\Item::getItemName($item->type, $item->id);
+					}
+				}
+				else
+					$item_dependencies_text = "Ничего";
+				$salary = Economy\Main::getFormatedMoney($jobs[$job_id]["salary"]);
+				$message = "%appeal%,\n✏Название: {$jobs[$job_id]["name"]}\n💰Зарплата: \${$salary}\n📅Время отдыха: {$left_time_text}\n💼Необходимо: {$item_dependencies_text}";
+				$jobs_count = count($jobs);
+				if($jobs_count > 0){
+					if($job_index != 0){
+						$previous_index = $job_index - 1;
+						$emoji_str = bot_int_to_emoji_str($job_index);
+						$controlButtons[] = vk_callback_button("{$emoji_str} ⬅", array('economy_jobcontrol', $testing_user_id, 0, $previous_index), 'secondary');
+					}
+					if($job_index != ($jobs_count - 1)){
+						$next_index = $job_index + 1;
+						$emoji_str = bot_int_to_emoji_str($next_index + 1);
+						$controlButtons[] = vk_callback_button("➡ {$emoji_str}", array('economy_jobcontrol', $testing_user_id, 0, $next_index), 'secondary');
+					}
+				}
+				else
+					$controlButtons = array();
+				$keyboard_buttons = array(
+					array(
+						vk_callback_button("Устроиться", array('economy_jobcontrol', $testing_user_id, 1, $job_index), "positive")
+					),
+					$controlButtons,
+					array(
+						vk_callback_button("⬅ Назад", array('economy_work', $testing_user_id), "negative")
+					)
+				);
+			}
+			else{
+				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Internal error!');
+			}
+			break;
+
+			case 1:
+			$job_index = bot_get_array_argv($payload, 3, -1);
+
+			$jobs = Economy\Job::getJobArray();
+			$job_id = Economy\Job::getIDByIndex($job_index);
+
+			if($job_id !== false){
+				$economy = new Economy\Main($db);
+				$user_economy = $economy->getUser($data->object->user_id);
+
+				$user_job = $user_economy->getJob();
+				if($user_job !== false && Economy\Job::jobExists($user_job)){
+					$current_job = Economy\Job::getJobArray()[$user_economy->getJob()];
+					$last_working_time = $user_economy->getMeta("last_working_time", 0);
+					if($date - $last_working_time < $current_job["rest_time"]){
+						$time = $current_job["rest_time"] - ($date - $last_working_time);
+						$minutes = intdiv($time, 60);
+						$seconds = $time % 60;
+						$left_time_text = "";
+						if($minutes != 0)
+							$left_time_text = "{$minutes} мин. ";
+						$left_time_text = $left_time_text."{$seconds} сек.";
+						bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Вы сильно устали и не можете поменять профессию! Приходите через {$left_time_text}");
+						return;
+					}
+				}
+
+				$item_dependencies = Economy\Job::getJobArray()[$job_id]["item_dependencies"];
+				for($i = 0; $i < count($item_dependencies); $i++){
+					$item = Economy\Item::getItemObjectFromString($item_dependencies[$i]);
+					if($user_economy->checkItem($item->type, $item->id) === false){
+						$job_name = Economy\Job::getNameByID($job_id);
+						bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Вы не можете устроиться на профессию {$job_name}.");
+						return;
+					}
+				}
+
+				$user_economy->setJob($job_id);
+				$user_economy->setMeta("last_working_time", 0);
+				$job_name = Economy\Job::getNameByID($job_id);
+				$keyboard_buttons = array(
+					array(
+						vk_callback_button("Работа", array("economy_work"), "positive")
+					),
+					array(
+						vk_callback_button("⬅ Назад в ЦМ", array('bot_menu', $testing_user_id), "negative")
+					)
+				);
+				$message = "%appeal%, Вы устроились на работу {$job_name}.";
+				$db->save();
+			}
+			else{
+				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Internal error!');
+			}
+			break;
+			
+			default:
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Internal error!');
+			break;
+		}
+
+		$messagesModule = new Bot\Messages($db);
+		$messagesModule->setAppealID($data->object->user_id);
+		$keyboard = vk_keyboard_inline($keyboard_buttons);
+		$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $message, array('keyboard' => $keyboard));
+	}
+
+	function economy_shop_cb($finput){
+		// Инициализация базовых переменных
+		$data = $finput->data; 
+		$payload = $finput->payload;
+		$db = $finput->db;
+
+		// Переменные для редактирования сообщения
+		$keyboard_buttons = array();
+		$message = "";
+
+		// Переменная тестирования пользователя
+		$testing_user_id = bot_get_array_argv($payload, 1, $data->object->user_id);
+		if($testing_user_id !== $data->object->user_id){
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
+			return;
+		}
+
+		$command = bot_get_array_argv($payload, 2, 0);
+
+		switch ($command) {
+			case 0:
+			$section_number = bot_get_array_argv($payload, 3, 0);
+
+			$config_sections = Economy\Item::getShopSectionsArray();
+
+			$sections = array();
+			// Извлекаем секции магазина из конфига
+			foreach ($config_sections as $key => $value) {
+				$sections[] = $key;
+			}
+			// Дополняем секции системными
+			$sections[] = 'e';
+
+			$section_code = $sections[$section_number];
+			if(is_numeric($section_code)){
+				if(array_key_exists($section_code, $config_sections)){
+					$section_name = $config_sections[$section_code]["name"];
+				}
+				else{
+					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Internal error!');
 					return;
 				}
 			}
+			elseif($section_code == 'e')
+				$section_name = "Бизнес";
+			else{
+				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Internal error!');
+				return;
+			}
 
-			$item_dependencies = Economy\Job::getJobArray()[$job_id]["item_dependencies"];
-			for($i = 0; $i < count($item_dependencies); $i++){
-				$item = Economy\Item::getItemObjectFromString($item_dependencies[$i]);
-				if($user_economy->checkItem($item->type, $item->id) === false){
-					$dependency_item_name = Economy\Item::getItemName($item->type, $item->id);
-					$job_name = Economy\Job::getNameByID($job_id);
-					$botModule->sendSilentMessage($data->object->peer_id, ", Вы не можете устроиться на профессию {$job_name}. Вам необходимо иметь {$dependency_item_name}.", $data->object->from_id);
-					return;
+			$controlButtons = array();
+			$sections_count = count($sections);
+			if($sections_count > 0){
+				if($section_number != 0){
+					$previous_list = $section_number - 1;
+					$emoji_str = bot_int_to_emoji_str($section_number);
+					$controlButtons[] = vk_callback_button("{$emoji_str} ⬅", array('economy_shop', $testing_user_id, 0, $previous_list), 'secondary');
+				}
+				if($section_number != ($sections_count - 1)){
+					$next_list = $section_number + 1;
+					$emoji_str = bot_int_to_emoji_str($section_number + 2);
+					$controlButtons[] = vk_callback_button("➡ {$emoji_str}", array('economy_shop', $testing_user_id, 0, $next_list), 'secondary');
 				}
 			}
-			$user_economy->setJob($job_id);
-			$job_name = Economy\Job::getNameByID($job_id);
-			$keyboard = vk_keyboard_inline(array(
+
+			$message = "%appeal%, Магазин.\n\n📝Раздел: {$section_name}";
+			$keyboard_buttons = array(
 				array(
-					vk_text_button("Работать", array("command" => "bot_runtc", "text_command" => "!работать"), "positive")
+					vk_callback_button("Каталог", array('economy_shop', $testing_user_id, 1, $section_code), 'positive')
+				),
+				$controlButtons,
+				array(
+					vk_callback_button("⬅ Назад в ЦМ", array('bot_menu', $testing_user_id), "negative")  
 				)
-			));
-			$botModule->sendSilentMessage($data->object->peer_id, ", Вы устроились на работу {$job_name}.", $data->object->from_id, array('keyboard' => $keyboard));
-			$db->save();
+			);
+			break;
+
+			case 1:
+			$section_code = bot_get_array_argv($payload, 3, 0);
+			$operation_code = bot_get_array_argv($payload, 4, 0);
+			$product_code = bot_get_array_argv($payload, 5, 0);
+
+			$economy = new Economy\Main($db);
+			$user_economy = $economy->getUser($data->object->user_id);
+
+			if(is_numeric($section_code)){
+				$config_sections = Economy\Item::getShopSectionsArray();
+				if(array_key_exists($section_code, $config_sections)){
+					$section = $config_sections[$section_code];
+
+					$all_items = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("items");
+					$items_for_buy = array(); // Предметы на продажу
+					if(gettype($section["items"]) == "string"){
+						$all_items_by_type = Economy\Item::getItemListByType($section["items"]); // Все предметы по по типу
+						foreach ($all_items_by_type as $key => $value) {
+							if($value["can_buy"])
+								$items_for_buy[] = array(
+									'type' => $section["items"],
+									'id' => $key
+								);
+						}
+						unset($all_items_by_type);
+					}
+					elseif(gettype($section["items"]) == "array"){
+						foreach ($section["items"] as $value) {
+						$item_data = explode(":", $value);
+						$item = $all_items[$item_data[0]][$item_data[1]];
+						if($item["can_buy"])
+							$items_for_buy[] = array(
+								'type' => $item_data[0],
+								'id' => $item_data[1]
+							);
+						}
+					}
+
+					if(!array_key_exists($product_code, $items_for_buy)){
+						bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Internal error!');
+						return;
+					}
+					$item_info = Economy\Item::getItemInfo($items_for_buy[$product_code]["type"], $items_for_buy[$product_code]["id"]);
+
+					if($operation_code === 0){
+						$formated_price = Economy\Main::getFormatedMoney($item_info->price);
+						$formated_money = Economy\Main::getFormatedMoney($user_economy->getMoney());
+						$message = "%appeal%, Магазин.\n\n✏Название: {$item_info->name}\n💲Стоимость: \${$formated_price}\n\n💳Ваш счёт: \${$formated_money}";
+
+						$controlButtons = array();
+						$items_for_buy_count = count($items_for_buy);
+						if($items_for_buy_count > 0){
+							if($product_code != 0){
+								$previous_list = $product_code - 1;
+								$emoji_str = bot_int_to_emoji_str($product_code);
+								$controlButtons[] = vk_callback_button("{$emoji_str} ⬅", array('economy_shop', $testing_user_id, 1, $section_code, 0, $previous_list), 'secondary');
+							}
+							else{
+								$emoji_str = bot_int_to_emoji_str($items_for_buy_count);
+								$controlButtons[] = vk_callback_button("{$emoji_str} ⬅", array('economy_shop', $testing_user_id, 1, $section_code, 0, ($items_for_buy_count - 1)), 'secondary');
+							}
+							if($product_code != ($items_for_buy_count - 1)){
+								$next_list = $product_code + 1;
+								$emoji_str = bot_int_to_emoji_str($product_code + 2);
+								$controlButtons[] = vk_callback_button("➡ {$emoji_str}", array('economy_shop', $testing_user_id, 1, $section_code, 0, $next_list), 'secondary');
+							}
+							else{
+								$emoji_str = bot_int_to_emoji_str(1);
+								$controlButtons[] = vk_callback_button("➡ {$emoji_str}", array('economy_shop', $testing_user_id, 1, $section_code, 0, 0), 'secondary');
+							}
+						}
+
+						$keyboard_buttons = array();
+
+						$user_item_info = $user_economy->checkItem($items_for_buy[$product_code]["type"], $items_for_buy[$product_code]["id"]);
+
+						if($user_item_info === false || ($user_item_info !== false && $user_item_info->count < $item_info->max_count))
+							$keyboard_buttons[] = array(vk_callback_button("Купить", array('economy_shop', $testing_user_id, 1, $section_code, 1, $product_code), 'positive'));
+						$keyboard_buttons[] = $controlButtons;
+						$keyboard_buttons[] = array(vk_callback_button("⬅ Назад", array('economy_shop', $testing_user_id, 0, $section_code), "negative")  );
+					}
+					elseif($operation_code === 1){
+						$user_item_info = $user_economy->checkItem($items_for_buy[$product_code]["type"], $items_for_buy[$product_code]["id"]);
+						if($user_item_info === false || ($user_item_info !== false && $user_item_info->count < $item_info->max_count)){
+							if($user_economy->canChangeMoney(-$item_info->price)){
+								if($user_economy->changeItem($items_for_buy[$product_code]["type"], $items_for_buy[$product_code]["id"], 1)){
+									$user_economy->changeMoney(-$item_info->price);
+									$db->save();
+									$formated_money = Economy\Main::getFormatedMoney($user_economy->getMoney());
+									$message = "%appeal%, ✅Вы успешко приобрели:\n{$item_info->name}.\n\n💳Ваш счёт: \${$formated_money}";
+									$keyboard_buttons = array(
+										array(
+											vk_callback_button("Вернуться к Каталогу", array('economy_shop', $testing_user_id, 1, $section_code, 0, $product_code), 'positive')
+										)
+									);
+								}
+								else{
+									bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Не удалось провести транзакцию.');
+									return;
+								}
+							}
+							else{
+								bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ На вашем счёту недостаточно средств.');
+								return;
+							}
+						}
+						else{
+							bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Невозможно купить ' . $item_info->name . '.');
+							return;
+						}
+
+					}
+					else{
+						bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Internal error!');
+						return;
+					}
+				}
+				else{
+					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Internal error!');
+					return;
+				}
+			}
+			elseif($section_code == 'e'){
+				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '❗ Данный раздел находится в разработке!');
+				return;
+			}
+			else{
+				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Internal error!');
+				return;
+			}
+			break;
+			
+			default:
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Internal error!');
+			return;
+			break;
 		}
-		else{
-			$botModule->sendSilentMessage($data->object->peer_id, ", Такой профессии нет!", $data->object->from_id);
-		}
+
+		$messagesModule = new Bot\Messages($db);
+		$messagesModule->setAppealID($data->object->user_id);
+		$keyboard = vk_keyboard_inline($keyboard_buttons);
+		$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $message, array('keyboard' => $keyboard));
 	}
 
 	function economy_buy($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$botModule = new BotModule($db);
 
@@ -1049,7 +1426,7 @@ namespace{
 			$section = $sections[$section_id];
 			switch ($section["type"]) {
 				case 'item':
-					$all_items = Economy\EconomyFiles::getEconomyFileData("items");
+					$all_items = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("items");
 					$items_for_buy = array(); // Предметы на продажу
 					if(gettype($section["items"]) == "string"){
 						$all_items_by_type = Economy\Item::getItemListByType($section["items"]); // Все предметы по по типу
@@ -1148,7 +1525,7 @@ namespace{
 						return;
 					}
 					$type_index = bot_get_array_argv($words, 2, 0);
-					$enterprise_types = Economy\EconomyFiles::getEconomyFileData("enterprise_types");
+					$enterprise_types = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types");
 					$types = array_keys($enterprise_types);
 					if($type_index > 0 && count($types) >= $type_index){
 						$enterprise_price = $enterprise_types[$types[$type_index-1]]["price"];
@@ -1194,7 +1571,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$botModule = new BotModule($db);
 
@@ -1255,7 +1632,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$botModule = new BotModule($db);
 		$economy = new Economy\Main($db);
@@ -1320,7 +1697,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$botModule = new BotModule($db);
 		$economy = new Economy\Main($db);
@@ -1411,7 +1788,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$botModule = new BotModule($db);
 		$economy = new Economy\Main($db);
@@ -1473,7 +1850,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$botModule = new BotModule($db);
 		$economy = new Economy\Main($db);
@@ -1528,15 +1905,111 @@ namespace{
 				$price = Economy\Main::getFormatedMoney($edu_data[$i]["price"]);
 				$msg = $msg . "\n{$index}. {$status}" . $edu_data[$i]["name"] . " — \$" . $price;
 			}
-			$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
+			$keyboard = vk_keyboard_inline(array(array(vk_callback_button("Образование", array("economy_education", $data->object->from_id), "positive"))));
+			$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id, array('keyboard' => $keyboard));
 		}
+	}
+
+	function economy_education_cb($finput){
+		// Инициализация базовых переменных
+		$data = $finput->data; 
+		$payload = $finput->payload;
+		$db = $finput->db;
+
+		// Переменные для редактирования сообщения
+		$keyboard_buttons = array();
+		$message = "";
+
+		// Переменная тестирования пользователя
+		$testing_user_id = bot_get_array_argv($payload, 1, $data->object->user_id);
+		if($testing_user_id !== $data->object->user_id){
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
+			return;
+		}
+
+		$command = bot_get_array_argv($payload, 2, 0);
+
+		$economy = new Economy\Main($db);
+		$user_economy = $economy->getUser($data->object->user_id);
+
+		$edu = Economy\Item::getItemListByType("edu");
+
+		switch ($command) {
+			case 0:
+			foreach ($edu as $key => $value) {
+				if($user_economy->checkItem("edu", $key) === false){
+					$edu_data = $value;
+					break;
+				}
+			}
+			if(isset($edu_data)){
+				$keyboard_buttons = array(
+					array(
+						vk_callback_button("Получить", array("economy_education", $testing_user_id, 1), 'positive')
+					),
+					array(
+						vk_callback_button("⬅ Назад в ЦМ", array('bot_menu', $testing_user_id), "negative")
+					)
+				);
+				$formated_price = Economy\Main::getFormatedMoney($edu_data["price"]);
+				$formated_money = Economy\Main::getFormatedMoney($user_economy->getMoney());
+				$message = "%appeal%,\n📝Название: {$edu_data["name"]}\n💰Стоимость: \${$formated_price}\n\n💳Ваш счёт: \${$formated_money}";
+			}
+			else{
+				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Вы имеете максимальное образование!");
+				return;
+			}
+			break;
+
+			case 1:
+			foreach ($edu as $key => $value) {
+				if($user_economy->checkItem("edu", $key) === false){
+					$edu_id = $key;
+					break;
+				}
+			}
+			if(isset($edu_id)){
+				$price = $edu[$edu_id]["price"];
+				if($user_economy->changeMoney(-$price)){
+					$user_economy->changeItem("edu", $edu_id, 1);
+					$db->save();
+					$keyboard_buttons = array(
+						array(
+							vk_callback_button("Вернуться", array('economy_education', $testing_user_id), "positive")
+						),
+						array(
+							vk_callback_button("⬅ Назад в ЦМ", array('bot_menu', $testing_user_id), "negative")
+						)
+					);
+					$message = "%appeal%, ✅Вы успешно получили образование уровня \"{$edu[$edu_id]["name"]}\".";
+				}
+				else{
+					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ На счету недостаточно $!");
+				return;
+				}
+			}
+			else{
+				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Вы имеете максимальное образование!");
+				return;
+			}
+			break;
+			
+			default:
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Internal error!');
+			break;
+		}
+
+		$messagesModule = new Bot\Messages($db);
+		$messagesModule->setAppealID($data->object->user_id);
+		$keyboard = vk_keyboard_inline($keyboard_buttons);
+		$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $message, array('keyboard' => $keyboard));
 	}
 
 	function economy_company($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$botModule = new BotModule($db);
 		$economy = new Economy\Main($db);
@@ -1599,7 +2072,7 @@ namespace{
 				$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$index-1]);
 
 				$current_contracts_count = count($enterprise["contracts"]);
-				$enterprise_types = Economy\EconomyFiles::getEconomyFileData("enterprise_types");
+				$enterprise_types = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types");
 				$type = $enterprise_types[$enterprise["type"]]["name"];
 				$capital = Economy\Main::getFormatedMoney($enterprise["capital"]);
 				$msg = ", информация о бизнесе:\n📎ID: {$enterprise["id"]}\n📝Название: {$enterprise["name"]}\n🔒Тип: {$type}\n💰Бюджет: \${$capital}\n👥Рабочие: {$enterprise["involved_workers"]}/{$enterprise["workers"]}\n📊Опыт: {$enterprise["exp"]}\n📄Контракты: {$current_contracts_count}/{$enterprise["max_contracts"]}";
@@ -1706,7 +2179,7 @@ namespace{
 			if($index > 0 && $user_enterprises_count >= $index){
 				$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$index-1]);
 
-				$enterprise_types = Economy\EconomyFiles::getEconomyFileData("enterprise_types");
+				$enterprise_types = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types");
 				$contracts = $enterprise_types[$enterprise["type"]]["contracts"];
 
 				$argv = intval(bot_get_array_argv($words, 2, 0));
@@ -1812,7 +2285,7 @@ namespace{
 					return;
 				}
 
-				$enterprise_types = Economy\EconomyFiles::getEconomyFileData("enterprise_types");
+				$enterprise_types = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types");
 				$improvment = $enterprise_types[$enterprise["type"]]["improvment"];
 
 				$argv = intval(bot_get_array_argv($words, 2, 0));
@@ -1888,7 +2361,7 @@ namespace{
 			if($index > 0 && $user_enterprises_count >= $index){
 				$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$index-1]);
 
-				$enterprise_types = Economy\EconomyFiles::getEconomyFileData("enterprise_types");
+				$enterprise_types = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types");
 				$improvment = $enterprise_types[$enterprise["type"]]["improvment"];
 
 				$argv = intval(bot_get_array_argv($words, 2, 0));
@@ -1979,7 +2452,7 @@ namespace{
 					return;
 				}
 
-				$enterprise_types = Economy\EconomyFiles::getEconomyFileData("enterprise_types");
+				$enterprise_types = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types");
 				$contracts = $enterprise_types[$enterprise["type"]]["contracts"];
 
 				$argv = intval(bot_get_array_argv($words, 2, 0));
@@ -2040,7 +2513,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$payload = $finput->payload;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$testing_user_id = bot_get_array_argv($payload, 1, $data->object->user_id);
 		$code = bot_get_array_argv($payload, 2, 0);
@@ -2150,7 +2623,7 @@ namespace{
 				$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$index-1]);
 
 				$current_contracts_count = count($enterprise["contracts"]);
-				$enterprise_types = Economy\EconomyFiles::getEconomyFileData("enterprise_types");
+				$enterprise_types = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types");
 				$type = $enterprise_types[$enterprise["type"]]["name"];
 				$capital = Economy\Main::getFormatedMoney($enterprise["capital"]);
 				$message = "%appeal%, информация о бизнесе:\n📎ID: {$enterprise["id"]}\n📝Название: {$enterprise["name"]}\n🔒Тип: {$type}\n💰Бюджет: \${$capital}\n👥Рабочие: {$enterprise["involved_workers"]}/{$enterprise["workers"]}\n📊Опыт: {$enterprise["exp"]}\n📄Контракты: {$current_contracts_count}/{$enterprise["max_contracts"]}";
@@ -2170,7 +2643,7 @@ namespace{
 			if($index > 0 && $user_enterprises_count >= $index){
 				$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$index-1]);
 
-				$enterprise_types = Economy\EconomyFiles::getEconomyFileData("enterprise_types");
+				$enterprise_types = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types");
 				$contracts = $enterprise_types[$enterprise["type"]]["contracts"];
 
 				$argv1 = bot_get_array_argv($payload, 3, 0);
@@ -2425,7 +2898,7 @@ namespace{
 					$formated_capital = Economy\Main::getFormatedMoney($enterprise["capital"]);
 					$formated_transaction = Economy\Main::getFormatedMoney($transaction);
 					$formated_money = Economy\Main::getFormatedMoney($user_economy->getMoney());
-					$message = "%appeal%, Информация о текущей транзакции:\n💳Ваш бюджет: \${$formated_money}\n💰Бюджет бизнеса: \${$formated_capital}\n\n💲Сумма транзакции: \${$formated_transaction}";
+					$message = "%appeal%, Информация о текущей транзакции:\n💳Ваш счёт: \${$formated_money}\n💰Бюджет бизнеса: \${$formated_capital}\n\n💲Сумма транзакции: \${$formated_transaction}";
 
 					$keyboard_buttons = array(
 
@@ -2472,7 +2945,7 @@ namespace{
 			if($index > 0 && $user_enterprises_count >= $index){
 				$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$index-1]);
 
-				$enterprise_types = Economy\EconomyFiles::getEconomyFileData("enterprise_types");
+				$enterprise_types = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types");
 				$improvment = $enterprise_types[$enterprise["type"]]["improvment"];
 
 				$argv1 = bot_get_array_argv($payload, 3, 0);
@@ -2672,7 +3145,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$botModule = new BotModule($db);
 		$economy = new Economy\Main($db);
@@ -2687,7 +3160,7 @@ namespace{
 				$user_economy = $economy->getUser($user_id);
 				$capital = $user_economy->getMoney();
 				$user_items = $user_economy->getItems();
-				$items = Economy\EconomyFiles::getEconomyFileData("items");
+				$items = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("items");
 				for($j = 0; $j < count($user_items); $j++){
 					$item_info = Economy\Item::getItemInfo($user_items[$j]->type, $user_items[$j]->id);
 					$capital += $item_info->price;
@@ -2746,7 +3219,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$botModule = new BotModule($db);
 
@@ -2887,7 +3360,7 @@ namespace{
 			// Инициализация базовых переменных
 			$data = $finput->data; 
 			$words = $finput->words;
-			$db = &$finput->db;
+			$db = $finput->db;
 
 			$botModule = new BotModule($db);
 
@@ -2963,7 +3436,7 @@ namespace{
 			// Инициализация базовых переменных
 			$data = $finput->data; 
 			$words = $finput->words;
-			$db = &$finput->db;
+			$db = $finput->db;
 
 			$botModule = new BotModule($db);
 			$chat_id = $data->object->peer_id - 2000000000;

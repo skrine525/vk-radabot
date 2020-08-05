@@ -66,7 +66,7 @@ function stats_cmd_handler($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);

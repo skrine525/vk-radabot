@@ -249,7 +249,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$botModule = new BotModule($db);
 		if (bot_check_reg($db) == false){
@@ -334,7 +334,7 @@ namespace{
 				// Инициализация базовых переменных
 				$data = $finput->data; 
 				$words = $finput->words;
-				$db = &$finput->db;
+				$db = $finput->db;
 
 				$botModule  = new BotModule($db);
 
@@ -366,11 +366,44 @@ namespace{
 					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Ошибка. Данной команды не существует.", $from_id); // Вывод ошибки
 			});
 
+			$event->addTextMessageCommand("!test-template", function ($finput){
+				// Инициализация базовых переменных
+				$data = $finput->data; 
+				$words = $finput->words;
+				$db = $finput->db;
+
+				$messagesModule = new Bot\Messages($db);
+				$messagesModule->setAppealID($data->object->from_id);
+
+				$template = json_encode(array(
+					'type' => 'carousel',
+					'elements' => array(
+						array(
+							'title' => "Назавание 1",
+							'description' => "Описание 1",
+							'buttons' => array(vk_callback_button("Кнопка 1", array('bot_menu', $data->object->from_id), 'positive'))
+						),
+						array(
+							'title' => "Назавание 2",
+							'description' => "Описание 2",
+							'buttons' => array(vk_callback_button("Кнопка 1", array('bot_menu', $data->object->from_id), 'positive'))
+						),
+						array(
+							'title' => "Назавание 3",
+							'description' => "Описание 3",
+							'buttons' => array(vk_callback_button("Кнопка 1", array('bot_menu', $data->object->from_id), 'positive'))
+						)
+					)
+				), JSON_UNESCAPED_UNICODE);
+
+				$messagesModule->sendSilentMessage($data->object->peer_id, "Template test!", array('template' => $template));
+			});
+
 			$event->addTextMessageCommand('!runcb', function ($finput){
 				// Инициализация базовых переменных
 				$data = $finput->data; 
 				$words = $finput->words;
-				$db = &$finput->db;
+				$db = $finput->db;
 
 				$botModule  = new BotModule($db);
 
@@ -394,7 +427,7 @@ namespace{
 				// Инициализация базовых переменных
 				$data = $finput->data; 
 				$payload = $finput->payload;
-				$db = &$finput->db;
+				$db = $finput->db;
 				$event = $finput->event;
 
 				$command = bot_get_array_argv($payload, 1, "");
@@ -416,7 +449,7 @@ namespace{
 				// Инициализация базовых переменных
 				$data = $finput->data; 
 				$words = $finput->words;
-				$db = &$finput->db;
+				$db = $finput->db;
 
 				$botModule  = new BotModule($db);
 
@@ -548,7 +581,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		if(array_key_exists(1, $words))
 			$command = mb_strtolower($words[1]);
@@ -576,7 +609,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		if(array_key_exists(1, $words))
 			$command = mb_strtolower($words[1]);
@@ -601,7 +634,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$member_id = 0;
 
@@ -623,7 +656,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$str_data = mb_substr($data->object->text, 8);
 		$botModule = new BotModule($db);
@@ -658,8 +691,8 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
-		$event = &$finput->event;
+		$db = $finput->db;
+		$event = $finput->event;
 
 		$messagesModule = new Bot\Messages($db);
 		$messagesModule->setAppealID($data->object->from_id);
@@ -704,12 +737,12 @@ namespace{
 			if($list_number != 1){
 				$previous_list = $list_number - 1;
 				$emoji_str = bot_int_to_emoji_str($previous_list);
-				$buttons[] = vk_callback_button("{$emoji_str} ⬅", array('bot_cmdlist', $previous_list), 'secondary');
+				$buttons[] = vk_callback_button("{$emoji_str} ⬅", array('bot_cmdlist', $data->object->from_id, $previous_list), 'secondary');
 			}
 			if($list_number != $list_max_number){
 				$next_list = $list_number + 1;
 				$emoji_str = bot_int_to_emoji_str($next_list);
-				$buttons[] = vk_callback_button("➡ {$emoji_str}", array('bot_cmdlist', $next_list), 'secondary');
+				$buttons[] = vk_callback_button("➡ {$emoji_str}", array('bot_cmdlist', $data->object->from_id, $next_list), 'secondary');
 			}
 		}
 		$keyboard = vk_keyboard_inline(array(
@@ -731,8 +764,15 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$payload = $finput->payload;
-		$db = &$finput->db;
+		$db = $finput->db;
 		$event = $finput->event;
+
+		// Переменная тестирования пользователя
+		$testing_user_id = bot_get_array_argv($payload, 1, $data->object->user_id);
+		if($testing_user_id !== $data->object->user_id){
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
+			return;
+		}
 
 		$messagesModule = new Bot\Messages($db);
 		$messagesModule->setAppealID($data->object->user_id);
@@ -742,7 +782,7 @@ namespace{
 		$list_in = $event->getMessageCommandList(); // Входной список
 		$list_out = array(); // Выходной список
 
-		$list_number = intval(bot_get_array_argv($payload, 1, 1)); // Номер текущего списка
+		$list_number = intval(bot_get_array_argv($payload, 2, 1)); // Номер текущего списка
 		$list_size = 10; // Размер списка
 		////////////////////////////////////////////////////
 		if(count($list_in) % $list_size == 0)
@@ -773,12 +813,12 @@ namespace{
 			if($list_number != 1){
 				$previous_list = $list_number - 1;
 				$emoji_str = bot_int_to_emoji_str($previous_list);
-				$buttons[] = vk_callback_button("{$emoji_str} ⬅", array('bot_cmdlist', $previous_list), 'secondary');
+				$buttons[] = vk_callback_button("{$emoji_str} ⬅", array('bot_cmdlist', $testing_user_id, $previous_list), 'secondary');
 			}
 			if($list_number != $list_max_number){
 				$next_list = $list_number + 1;
 				$emoji_str = bot_int_to_emoji_str($next_list);
-				$buttons[] = vk_callback_button("➡ {$emoji_str}", array('bot_cmdlist', $next_list), 'secondary');
+				$buttons[] = vk_callback_button("➡ {$emoji_str}", array('bot_cmdlist', $testing_user_id, $next_list), 'secondary');
 			}
 		}
 		$keyboard = vk_keyboard_inline(array(
@@ -800,7 +840,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$botModule = new BotModule($db);
 		$ranksys = new RankSystem($db);
@@ -830,7 +870,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$payload = $finput->payload;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		error_log("Data: ".$data->object->peer_id);
 
@@ -849,7 +889,7 @@ namespace{
 					'important' => false,
 					'random_id' => 0,
 					'attachments' => array(),
-					'is_hidden' => array()
+					'is_hidden' => false
 				)
 			);
 			$finput->event->runTextMessageCommand($modified_data);
@@ -860,7 +900,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$payload = $finput->payload;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		if(property_exists($payload, "text_command") && gettype($payload->text_command) == "string"){
 			$modified_data = $data;
@@ -873,7 +913,7 @@ namespace{
 	function bot_message_action_handler($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		if(property_exists($data->object, 'action')){
 			if($data->object->action->type == "chat_kick_user"){
@@ -944,7 +984,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$bot = new BotModule();
 
@@ -960,7 +1000,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$payload = $finput->payload;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		if($payload[1] == 0){
 			vk_call('messages.edit', array(
@@ -1161,7 +1201,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		$messagesModule = new Bot\Messages($db);
 		$messagesModule->setAppealID($data->object->from_id);
@@ -1175,7 +1215,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$payload = $finput->payload;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		// Переменные для редактирования сообщения
 		$keyboard_buttons = array();
@@ -1199,14 +1239,18 @@ namespace{
 			case 1:
 			$keyboard_buttons = array(
 				array(
-					vk_callback_button("Работать", array('economy_work'), 'primary'),
+					vk_callback_button("Работа", array('economy_work', $testing_user_id), 'primary'),
 					vk_callback_button("Бизнес", array('economy_company', $testing_user_id), 'primary')
 				),
 				array(
-					vk_callback_button("Список команд", array('bot_cmdlist'), 'primary')
+					vk_callback_button("Образование", array('economy_education', $testing_user_id), 'primary'),
+					vk_callback_button("Магазин", array('economy_shop', $testing_user_id), 'primary')
 				),
 				array(
-					vk_callback_button("Закрыть ЦМ", array('bot_menu', $testing_user_id, 0), 'negative')
+					vk_callback_button("Список команд", array('bot_cmdlist', $testing_user_id), 'primary')
+				),
+				array(
+					vk_callback_button("❌ Закрыть ЦМ", array('bot_menu', $testing_user_id, 0), 'negative')
 				)
 			);
 			$message = "%appeal%, Центральное Меню.";
@@ -1228,7 +1272,7 @@ namespace{
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$words = $finput->words;
-		$db = &$finput->db;
+		$db = $finput->db;
 
 		if(array_key_exists(1, $words))
 			$section = mb_strtolower($words[1]);

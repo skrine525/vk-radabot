@@ -47,8 +47,8 @@ function fun_memes_control_panel($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
-	$event = &$finput->event;
+	$db = $finput->db;
+	$event = $finput->event;
 
 	$botModule = new BotModule($db);
 
@@ -271,50 +271,6 @@ function fun_handler($data, &$db){
 	$chatModes = new chatModes($db);
 
 	$text = mb_strtolower($data->object->text);
-	/*if(!is_null(fun_db_get($db))){
-		$fun = fun_db_get($db);
-
-		if(!array_key_exists("luba", $fun)){
-			$fun["luba"] = array(
-				"hungry" => 50,
-				"thirst" => 50,
-				"happiness" => 50,
-				"isSleeping" => false,
-				"cheerfulness" => 50,
-				"last_db_update_date" => $data->object->date
-			);
-		}
-
-		if($data->object->date - $fun["luba"]["last_db_update_date"] >= 600){
-			$difference = $data->object->date - $fun["luba"]["last_db_update_date"];
-			$count = ($difference - $difference % 600) / 600;
-			$fun["luba"]["hungry"] -= 4 * $count;
-			$fun["luba"]["thirst"] -= 4 * $count;
-			$fun["luba"]["happiness"] -= 2 * $count;
-			if(array_key_exists("isSleeping", $fun["luba"])){
-				$fun["luba"]["cheerfulness"] += 8 * $count;
-			} else {
-				$fun["luba"]["cheerfulness"] -= 6 * $count;
-			}
-			$fun["luba"]["last_db_update_date"] = $data->object->date;
-
-			if($fun["luba"]["hungry"] < 0){
-				$fun["luba"]["hungry"] = 0;
-			}
-			if($fun["luba"]["thirst"] < 0){
-				$fun["luba"]["thirst"] = 0;
-			}
-			if($fun["luba"]["happiness"] < 0){
-				$fun["luba"]["happiness"] = 0;
-			}
-			if($fun["luba"]["cheerfulness"] < 0){
-				$fun["luba"]["cheerfulness"] = 0;
-			} elseif($fun["luba"]["cheerfulness"] > 100){
-				$fun["luba"]["cheerfulness"] = 100;
-			}
-			fun_db_set($db, $fun);
-		}
-	}*/
 
 	if(!SysMemes::handler($data, $text, $db))
 		fun_memes_handler($data, $db);
@@ -377,7 +333,7 @@ function fun_buzova($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
@@ -493,7 +449,7 @@ function fun_choose($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 	$options = array();
@@ -532,7 +488,7 @@ function fun_howmuch($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 	$rnd = mt_rand(0, 100);
@@ -576,7 +532,7 @@ function fun_bottle($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 	if(array_key_exists(1, $words))
@@ -632,7 +588,7 @@ function fun_whois_nom($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
@@ -662,7 +618,7 @@ function fun_whois_gen($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
@@ -692,7 +648,7 @@ function fun_whois_dat($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
@@ -722,7 +678,7 @@ function fun_tts($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$message = mb_substr($data->object->text, 4);
 	$botModule = new BotModule($db);
@@ -762,7 +718,7 @@ function fun_shrug($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule();
 	$botModule->sendSilentMessage($data->object->peer_id, "¯\_(ツ)_/¯");
@@ -772,7 +728,7 @@ function fun_tableflip($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule();
 	$botModule->sendSilentMessage($data->object->peer_id, "(╯°□°）╯︵ ┻━┻");
@@ -782,7 +738,7 @@ function fun_unflip($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 	
 	$botModule = new BotModule();
 	$botModule->sendSilentMessage($data->object->peer_id, "┬─┬ ノ( ゜-゜ノ)");
@@ -792,7 +748,7 @@ function fun_info($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
@@ -812,7 +768,7 @@ function fun_say($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
@@ -837,7 +793,7 @@ function fun_marriage($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
@@ -1019,7 +975,7 @@ function fun_show_marriage_list($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$marriages_db = $db->getValue(array("fun", "marriages"), array(
 		'user_info' => array(),
@@ -1311,7 +1267,6 @@ class SysMemes{
 			$keyboard = vk_keyboard(true, array(array(vk_text_button("Кирилл", array('command'=>'fun','meme_id'=>3,'selected'=>1), "positive")), array(vk_text_button("Керил", array('command'=>'fun','meme_id'=>3,'selected'=>1), "negative"))));
 			$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => '🌚', 'keyboard' => $keyboard), JSON_UNESCAPED_UNICODE);
 			vk_execute("API.messages.send({$json_request});");
-			//vk_call('messages.send', array('peer_id' => $data->object->peer_id, 'message' => "@id".$data->object->from_id." (Ёще раз меня так назовешь и тебе пезда!)"));
 			return 'ok';
 			break;
 
@@ -1321,12 +1276,6 @@ class SysMemes{
 
 			case 'юля':
 			vk_call('messages.send', array('peer_id' => $data->object->peer_id, 'message' => "@id477530202 (Доскаааааааааааааааааааааааа)"));
-			/*$keyboard = vk_keyboard(true, array(
-				array(
-					vk_text_button("❤", array('command'=>'fun','meme_id'=>10), "secondary")
-				)
-			));
-			vk_call('messages.send', array('peer_id' => $data->object->peer_id, 'message' => "❤", 'keyboard' => $keyboard));*/
 			return 'ok';
 
 			case 'олды тут?':

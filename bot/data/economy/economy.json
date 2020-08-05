@@ -2,8 +2,9 @@
 	"items":{
 		"special": {
 			"best_girl": {
-				"name": "⭐Сертификат Самая лучшая девочка⭐",
+				"name": "⭐Самая лучшая девочка⭐",
 				"price": 0,
+				"max_count": 1,
 				"can_sell": false,
 				"can_buy": false,
 				"hidden": false
@@ -11,6 +12,7 @@
 			"new_year_2020_1": {
 				"name": "⭐Календарь 2020⭐",
 				"price": 1000000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": false,
 				"hidden": false
@@ -18,6 +20,7 @@
 			"new_year_2020_2": {
 				"name": "⭐Магнитик 2020⭐",
 				"price": 1000000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": false,
 				"hidden": false
@@ -25,6 +28,7 @@
 			"new_year_2020_3": {
 				"name": "⭐Оливьешка 2020⭐",
 				"price": 1000000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": false,
 				"hidden": false
@@ -32,6 +36,7 @@
 			"new_year_2020_tangerine": {
 				"name": "⭐Мандаринка 2020⭐",
 				"price": 3000000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": false,
 				"hidden": false
@@ -42,6 +47,7 @@
 			"presidential_certificate":{
 				"name": "Удостоверение президента",
 				"price": 0,
+				"max_count": 1,
 				"can_sell": false,
 				"can_buy": false,
 				"hidden": false
@@ -52,6 +58,7 @@
 			"level_1": {
 				"name": "Лада-2106",
 				"price": 50000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -59,6 +66,7 @@
 			"level_2": {
 				"name": "УАЗ-452 \"Буханка\"",
 				"price": 75000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -66,6 +74,7 @@
 			"level_3": {
 				"name": "ЗАЗ-968 \"Запорожец\"",
 				"price": 100000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -73,6 +82,7 @@
 			"level_4": {
 				"name": "Mitsubishi Lancer",
 				"price": 200000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -80,6 +90,7 @@
 			"level_5": {
 				"name": "Audi A6",
 				"price": 350000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -87,6 +98,7 @@
 			"level_6": {
 				"name": "Isuzu Bighorn",
 				"price": 650000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -94,6 +106,7 @@
 			"level_7": {
 				"name": "BMW X6",
 				"price": 800000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -101,6 +114,7 @@
 			"level_8": {
 				"name": "Toyota Supra",
 				"price": 1500000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -108,6 +122,7 @@
 			"level_9": {
 				"name": "Infiniti M37",
 				"price": 2000000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -115,6 +130,7 @@
 			"level_10": {
 				"name": "Aston Martin Vantage",
 				"price": 5600000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -122,6 +138,7 @@
 			"level_11": {
 				"name": "Mercedes-Benz SLR McLaren",
 				"price": 7000000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -129,6 +146,7 @@
 			"level_12": {
 				"name": "Nissan Primera",
 				"price": 780000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": false,
 				"hidden": true
@@ -136,6 +154,7 @@
 			"level_13": {
 				"name": "Subaru Impreza WRX",
 				"price": 965000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": false,
 				"hidden": true
@@ -143,6 +162,7 @@
 			"level_14": {
 				"name": "Infinity G35",
 				"price": 1247000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": false,
 				"hidden": true
@@ -153,6 +173,7 @@
 			"level_1": {
 				"name": "Номер в мотеле",
 				"price": 5000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -160,6 +181,7 @@
 			"level_2": {
 				"name": "Комната в гетто-районе",
 				"price": 25000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -167,6 +189,7 @@
 			"level_3": {
 				"name": "Двухкомнатная квартира в городе",
 				"price": 175000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -174,6 +197,7 @@
 			"level_4": {
 				"name": "Трёхкомнатная квартира в столице",
 				"price": 900000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -181,6 +205,7 @@
 			"level_5": {
 				"name": "Шестикомнатная квартира в столице",
 				"price": 3500000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -188,6 +213,7 @@
 			"level_6": {
 				"name": "Вилла в Комо",
 				"price": 54000000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -195,6 +221,7 @@
 			"level_7": {
 				"name": "Аппартаменты во Франции",
 				"price": 186500000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -202,6 +229,7 @@
 			"level_8": {
 				"name": "Жилой комплекс в Лос Анжелесе",
 				"price": 436000000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -209,6 +237,7 @@
 			"level_80": {
 				"name": "Дом Олега",
 				"price": 10000000000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -219,6 +248,7 @@
 			"level_1": {
 				"name": "Nokia 3310",
 				"price": 2500,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -226,6 +256,7 @@
 			"level_2": {
 				"name": "Samsung X510",
 				"price": 5000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -233,6 +264,7 @@
 			"level_3": {
 				"name": "Sony Ericsson K750i",
 				"price": 8500,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -240,6 +272,7 @@
 			"level_4": {
 				"name": "Apple iPhone 2G",
 				"price": 14999,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -247,6 +280,7 @@
 			"level_5": {
 				"name": "Apple iPhone 5s",
 				"price": 24999,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -254,6 +288,7 @@
 			"level_6": {
 				"name": "Apple iPhone 6s",
 				"price": 39999,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -261,6 +296,7 @@
 			"level_7": {
 				"name": "Apple iPhone 8 Plus",
 				"price": 74999,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -268,6 +304,7 @@
 			"level_8": {
 				"name": "Apple iPhone 10 XS Max",
 				"price": 119999,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -275,6 +312,7 @@
 			"level_9": {
 				"name": "Apple iPhone 11 Pro Max",
 				"price": 239999,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -282,6 +320,7 @@
 			"level_10": {
 				"name": "Apple iPhone 12 XS Ultra Pro Max Edition",
 				"price": 889999,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -289,6 +328,7 @@
 			"level_11": {
 				"name": "Apple iPhone 13 Pro Mega",
 				"price": 5000000,
+				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
@@ -299,6 +339,7 @@
 			"level_1": {
 				"name": "Начальное образование",
 				"price": 10000,
+				"max_count": 1,
 				"can_sell": false,
 				"can_buy": true,
 				"hidden": true
@@ -306,6 +347,7 @@
 			"level_2": {
 				"name": "Полное среднее образование",
 				"price": 30000,
+				"max_count": 1,
 				"can_sell": false,
 				"can_buy": true,
 				"hidden": true
@@ -313,6 +355,7 @@
 			"level_3": {
 				"name": "Профессиональное среднее образование",
 				"price": 100000,
+				"max_count": 1,
 				"can_sell": false,
 				"can_buy": true,
 				"hidden": true
@@ -320,6 +363,7 @@
 			"level_4": {
 				"name": "Бакалавриат высшего образования",
 				"price": 250000,
+				"max_count": 1,
 				"can_sell": false,
 				"can_buy": true,
 				"hidden": true
@@ -327,6 +371,7 @@
 			"level_5": {
 				"name": "Магистр высшего образования",
 				"price": 700000,
+				"max_count": 1,
 				"can_sell": false,
 				"can_buy": true,
 				"hidden": true
@@ -334,6 +379,7 @@
 			"level_6": {
 				"name": "Кандидат наук",
 				"price": 3000000,
+				"max_count": 1,
 				"can_sell": false,
 				"can_buy": true,
 				"hidden": true
@@ -341,6 +387,7 @@
 			"level_7": {
 				"name": "Доктор наук",
 				"price": 9000000,
+				"max_count": 1,
 				"can_sell": false,
 				"can_buy": true,
 				"hidden": true
@@ -363,10 +410,6 @@
 			"name": "Телефон",
 			"type": "item",
 			"items": "phone"
-		},
-		{
-			"name": "Бизнес",
-			"type": "enterprise"
 		}
 	],
 

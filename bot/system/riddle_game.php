@@ -4,7 +4,7 @@ function riddlegame_cmd($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$words = $finput->words;
-	$db = &$finput->db;
+	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
