@@ -420,6 +420,7 @@ namespace{
 		}
 	}
 
+	// Инициалихация команд
 	function roleplay_cmdinit(&$event){
 		$event->addTextMessageCommand("!me", 'roleplay_me');
 		$event->addTextMessageCommand("!do", 'roleplay_do');

@@ -1,5 +1,9 @@
 <?php
 
+function giphy_initcmd($event){
+	$event->addTextMessageCommand("!giphy", 'giphy_handler');
+}
+
 function giphy_random($parametres){
 	$sys = array(
 		'api_key' => bot_getconfig('GIPHY_API_TOKEN')

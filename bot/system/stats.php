@@ -14,6 +14,10 @@ define('STATS_DEFAULT',array(
 		'sticker_count' => 0
 	));
 
+function stats_initcmd($event){
+	$event->addTextMessageCommand("!стата", 'stats_cmd_handler');
+}
+
 function stats_update($data, &$db){
 	$db->unsetValue(array("stats")); // Удаление старой статы 1
 	$db->unsetValue(array("user_stats")); // Удаление старой статы 2

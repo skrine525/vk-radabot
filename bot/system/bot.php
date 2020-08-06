@@ -245,6 +245,37 @@ namespace{
 		}
 	}
 
+	// Инициалихация команд
+	function bot_initcmd($event){
+		// Игнорирование отсутствие базы данных для следующих команд
+		$event->addDBIgnoreTextCommand("!reg");
+
+		// Основное
+		$event->addTextMessageCommand("!cmdlist", 'bot_cmdlist');
+		$event->addTextMessageCommand("!reg", 'bot_register');
+		$event->addTextMessageCommand("!помощь", 'bot_help');
+
+		// Система управления беседой
+		$event->addTextMessageCommand("!меню", 'bot_menu_tc');
+
+		// Прочее
+		$event->addTextMessageCommand("!лайк", 'bot_like_handler');
+		$event->addTextMessageCommand("!убрать", 'bot_remove_handler');
+		$event->addTextMessageCommand("!id", 'bot_getid');
+		$event->addTextMessageCommand("!base64", 'bot_base64');
+		$event->addTextMessageCommand("!зов", 'bot_call_all');
+		$event->addTextMessageCommand("!крестики-нолики", 'bot_tictactoe');
+
+		// Обработчик для запуска текстовых команд из под аргумента кнопки
+		$event->addTextButtonCommand("bot_runtc", 'bot_keyboard_rtct_handler'); // Запуск текстовых команд из под Text-кнопки
+
+		// Callback-кнопки
+		$event->addCallbackButtonCommand("bot_menu", 'bot_menu_cb');
+		$event->addCallbackButtonCommand("bot_cmdlist", 'bot_cmdlist_cb');
+		$event->addCallbackButtonCommand('bot_tictactoe', 'bot_tictactoe_cb');
+		//$event->addCallbackButtonCommand("bot_runtc", 'bot_keyboard_rtcc_handler'); // Запуск текстовых команд из под Callback-кнопки
+	}
+
 	function bot_register($finput){ // Регистрация чата
 		// Инициализация базовых переменных
 		$data = $finput->data; 
@@ -327,8 +358,8 @@ namespace{
 		$botModule->sendMessage(bot_getconfig('DEBUG_USER_ID'), "DEBUG: {$str}");
 	}
 
+	// Инициалихация команд
 	function bot_debug_cmdinit($event){ // Добавление DEBUG-команд специальному пользователю
-
 		// Проверка на доступ
 		$data = $event->getData();
 		if($data->type == "message_new" && $data->object->from_id === bot_getconfig('DEBUG_USER_ID'))

@@ -240,107 +240,38 @@ function event_handle($data){
 		/// Обработка бота в Беседе
 		///////////////////////////
 
-		$event = new Event($data); // Инициализирует класс
+		// Инициализирует класс
+		$event = new Event($data);
 
-		bot_pre_handle_function($event); // Функция предварительной обработки
+		// Функция предварительной обработки
+		bot_pre_handle_function($event);
 
-		///// Игнорирование отсутствие базы данных для следующих комманд
-		$event->addDBIgnoreTextCommand("!reg");
-
-		///// Комманды
-
-		// Template - $event->addTextMessageCommand("command", "callback");
-
-		// Команды отладочного режима
+		// Инициализация команд отладочного режима
 		bot_debug_cmdinit($event);
 
-		// Основное
-		$event->addTextMessageCommand("!cmdlist", 'bot_cmdlist');
-		$event->addTextMessageCommand("!reg", 'bot_register');
-		$event->addTextMessageCommand("!помощь", 'bot_help');
+		// Инициализация команд модуля bot
+		bot_initcmd($event);
 
-		// Правительство
-		$event->addTextMessageCommand("!конституция", 'goverment_constitution');
-		$event->addTextMessageCommand("!президент", 'goverment_president');
-		$event->addTextMessageCommand("!строй", 'goverment_socorder');
-		$event->addTextMessageCommand("!стройлист", 'goverment_socorderlist');
-		$event->addTextMessageCommand("!законы", 'goverment_show_laws');
-		$event->addTextMessageCommand("!закон", 'goverment_laws_cpanel');
-		$event->addTextMessageCommand("!партия", 'goverment_batch');
-		$event->addTextMessageCommand("!столица", 'goverment_capital');
-		$event->addTextMessageCommand("!гимн", 'goverment_anthem');
-		$event->addTextMessageCommand("!флаг", 'goverment_flag');
+		// Инициализация команд Гос. устройства
+		goverment_initcmd($event);
 
-		// Система выборов
-		$event->addTextMessageCommand("!votestart", 'goverment_referendum_start');
-		$event->addTextMessageCommand("!votestop", 'goverment_referendum_stop');
-		$event->addTextMessageCommand("!candidate", 'goverment_referendum_candidate');
-		$event->addTextMessageCommand("!vote", 'goverment_referendum_vote_cmd');
-		$event->addTextButtonCommand("referendum_vote", "goverment_referendum_vote");
+		// Инициализация команд модуля manager
+		manager_initcmd($event);
 
-		// Система управления беседой
-		$event->addTextMessageCommand("!меню", 'bot_menu_tc');
-		$event->addTextMessageCommand("!онлайн", 'manager_online_list');
-		$event->addTextMessageCommand("!ban", 'manager_ban_user');
-		$event->addTextMessageCommand("!unban", 'manager_unban_user');
-		$event->addTextMessageCommand("!baninfo", 'manager_baninfo_user');
-		$event->addTextMessageCommand("!banlist", 'manager_banlist_user');
-		$event->addTextMessageCommand("!kick", 'manager_kick_user');
-		$event->addTextMessageCommand("!ник", 'manager_nick');
-		$event->addTextMessageCommand("!ранг", 'manager_rank');
-		$event->addTextMessageCommand("!ранглист", 'manager_rank_list');
-		$event->addTextMessageCommand("!ранги", 'manager_show_user_ranks');
-		$event->addTextMessageCommand("!приветствие", 'manager_greeting');
-		$event->addTextMessageCommand("!стата", 'stats_cmd_handler');
-		$event->addTextMessageCommand("!modes", "manager_mode_list");
-		$event->addTextMessageCommand("!mode", "manager_mode_cpanel");
-		$event->addTextMessageCommand("!панель", "manager_panel_control");
-		$event->addTextMessageCommand("панель", "manager_panel_show");
+		// Инициализация команд модуля stats
+		stats_initcmd($event);
 
 		// RP-команды
 		roleplay_cmdinit($event);
 
-		// Fun
-		$event->addTextMessageCommand("!выбери", 'fun_choose');
-		$event->addTextMessageCommand("!сколько", 'fun_howmuch');
-		fun_whois_initcmd($event); // Инициализация команд [кто/кого/кому]
-		$event->addTextMessageCommand("!инфа", "fun_info");
-		$event->addTextMessageCommand("!бузова", 'fun_buzova');
-		$event->addTextMessageCommand("!карина", 'fun_karina_cmd');
-		$event->addTextMessageCommand("!амина", 'fun_amina_cmd');
-		$event->addTextMessageCommand("!memes", 'fun_memes_control_panel');
-		$event->addTextMessageCommand("!чулки", 'fun_stockings_cmd');
-		$event->addTextMessageCommand("!бутылочка", 'fun_bottle');
-		$event->addTextMessageCommand("!tts", 'fun_tts');
-		$event->addTextMessageCommand("!say", "fun_say");
-		$event->addTextMessageCommand("!брак", "fun_marriage");
-		$event->addTextMessageCommand("!браки", "fun_show_marriage_list");
+		// Fun-команды
+		fun_initcmd($event);
 
-		// Прочее
-		$event->addTextMessageCommand("!лайк", 'bot_like_handler');
-		$event->addTextMessageCommand("!убрать", 'bot_remove_handler');
-		$event->addTextMessageCommand("!id", 'bot_getid');
-		$event->addTextMessageCommand("!ники", 'manager_show_nicknames');
-		$event->addTextMessageCommand("!base64", 'bot_base64');
-		$event->addTextMessageCommand("!shrug", 'fun_shrug');
-		$event->addTextMessageCommand("!tableflip", 'fun_tableflip');
-		$event->addTextMessageCommand("!unflip", 'fun_unflip');
-		$event->addTextMessageCommand("!giphy", 'giphy_handler');
-		$event->addTextMessageCommand("!зов", 'bot_call_all');
-		$event->addTextMessageCommand("!слова", 'wordgame_cmd');
-		$event->addTextMessageCommand("!крестики-нолики", 'bot_tictactoe');
-		//$event->addTextMessageCommand("words", 'wordgame_eng_cmd');
-		//$event->addTextMessageCommand("загадки", "riddlegame_cmd");
+		// Инициализация команд модуля giphy
+		giphy_initcmd($event);
 
-		// Обработчик для запуска текстовых команд из под аргумента кнопки
-		$event->addTextButtonCommand("bot_runtc", 'bot_keyboard_rtct_handler'); // Запуск текстовых команд из под Text-кнопки
-		$event->addCallbackButtonCommand("manager_panel", 'manager_panel_keyboard_handler'); // Обработка персональной панели
-
-		// Callback-кнопки
-		$event->addCallbackButtonCommand("bot_menu", 'bot_menu_cb');
-		$event->addCallbackButtonCommand("bot_cmdlist", 'bot_cmdlist_cb');
-		$event->addCallbackButtonCommand('bot_tictactoe', 'bot_tictactoe_cb');
-		//$event->addCallbackButtonCommand("bot_runtc", 'bot_keyboard_rtcc_handler'); // Запуск текстовых команд из под Callback-кнопки
+		// Игра Слова
+		wordgame_initcmd($event);
 
 		// Economy
 		economy_initcmd($event);
@@ -359,7 +290,6 @@ function event_handle($data){
 			stats_update($data, $db); // Ведение статистики в беседе
 			wordgame_gameplay($data, $db); // Освновной обработчик игры Слова
 			//wordgame_eng_gameplay($data, $db); // Освновной обработчик игры Words
-			//riddlegame_gameplay($data, $db); // Основной обработчик игры Загадки
 
 			$db->save();
 		});

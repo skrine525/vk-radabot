@@ -1,5 +1,29 @@
 <?php
 
+function fun_initcmd($event){
+	$event->addTextMessageCommand("!выбери", 'fun_choose');
+	$event->addTextMessageCommand("!сколько", 'fun_howmuch');
+	$event->addTextMessageCommand("!инфа", "fun_info");
+	$event->addTextMessageCommand("!бузова", 'fun_buzova');
+	$event->addTextMessageCommand("!карина", 'fun_karina_cmd');
+	$event->addTextMessageCommand("!амина", 'fun_amina_cmd');
+	$event->addTextMessageCommand("!memes", 'fun_memes_control_panel');
+	$event->addTextMessageCommand("!чулки", 'fun_stockings_cmd');
+	$event->addTextMessageCommand("!бутылочка", 'fun_bottle');
+	$event->addTextMessageCommand("!tts", 'fun_tts');
+	$event->addTextMessageCommand("!say", "fun_say");
+	$event->addTextMessageCommand("!брак", "fun_marriage");
+	$event->addTextMessageCommand("!браки", "fun_show_marriage_list");
+	$event->addTextMessageCommand("!shrug", 'fun_shrug');
+	$event->addTextMessageCommand("!tableflip", 'fun_tableflip');
+	$event->addTextMessageCommand("!unflip", 'fun_unflip');
+
+	// Инициализация команд [кто/кого/кому]
+	$event->addTextMessageCommand("!кто", 'fun_whois_nom');
+	$event->addTextMessageCommand("!кого", 'fun_whois_gen');
+	$event->addTextMessageCommand("!кому", 'fun_whois_dat');
+}
+
 function fun_db_get($db){
 	if(array_key_exists('fun', $db))
 		return $db["fun"];
@@ -576,12 +600,6 @@ function fun_bottle($finput){
 			'Бутылочка пара - Выводит идеальную пару беседы'
 		));
 	}
-}
-
-function fun_whois_initcmd($event){
-	$event->addTextMessageCommand("!кто", 'fun_whois_nom');
-	$event->addTextMessageCommand("!кого", 'fun_whois_gen');
-	$event->addTextMessageCommand("!кому", 'fun_whois_dat');
 }
 
 function fun_whois_nom($finput){

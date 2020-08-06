@@ -2,11 +2,17 @@
 
 // Русская часть игры
 
+function wordgame_initcmd($event){
+	$event->addTextMessageCommand("!слова", 'wordgame_cmd');
+	//$event->addTextMessageCommand("words", 'wordgame_eng_cmd');
+	$event->addCallbackButtonCommand('word_game', 'wordgame_gameplay_cb');
+}
+
 function wordgame_cmd($finput){
 	wordgame_main($finput->data, $finput->words, $finput->db);
 }
 
-function wordgame_main($data, $words, &$db){
+function wordgame_main($data, $words, $db){
 	$session = wordgame_get_session($data->object->peer_id);
 	if(array_key_exists(1, $words) && mb_strtolower($words[1]) == 'старт'){
 		if(!array_key_exists('word_game', $session)){
@@ -19,13 +25,13 @@ function wordgame_main($data, $words, &$db){
 			$msg = "[Слова] Игра запущена. Слово ({$wordlen} б.): {$new_word}.\nОписание: {$explanation}.";
 			$keyboard = vk_keyboard(false, array(
 				array(
-					vk_text_button("Подсказка", array('command'=>'word_game','act'=>1), "positive")
+					vk_callback_button("Подсказка", array('word_game', 2), "positive")
 				),
 				array(
-					vk_text_button("Слово", array('command'=>'word_game','act'=>4), "primary")
+					vk_callback_button("Слово", array('word_game', 3), "primary")
 				),
 				array(
-					vk_text_button("Остановить игру", array('command'=>'word_game','act'=>2), "negative")
+					vk_callback_button("Остановить игру", array('word_game', 1), "negative")
 				)
 			));
 			$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'keyboard' => $keyboard), JSON_UNESCAPED_UNICODE);
@@ -34,35 +40,30 @@ function wordgame_main($data, $words, &$db){
 				");
 		}
 		else{
-			$botModule = new BotModule($db);
-			$botModule->sendSilentMessage($data->object->peer_id, "[Слова] Игра уже запущена.");
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->sendMessage($data->object->peer_id, "[Слова] Игра уже запущена.");
 		}
 	} elseif (mb_strtolower($words[1]) == 'стоп') {
 		if(array_key_exists('word_game', $session)){
 			if($session["word_game"]["started_by"] != $data->object->from_id){
 				$ranksys = new RankSystem($db);
 				if(!$ranksys->checkRank($data->object->from_id, 2)){ // Проверка ранга (Президент)
-					$botModule = new BotModule($db);
-					$botModule->sendSilentMessage($data->object->peer_id, "[Слова] Вы не имеете права останавливать игру, запущенную другим пользователем.");
+					$messagesModule = new Bot\Messages($db);
+					$messagesModule->sendMessage($data->object->peer_id, "[Слова] Вы не имеете права останавливать игру, запущенную другим пользователем.");
 					return;
 				}
 			}
 			$empty_keyboard = vk_keyboard(true, array());
 			wordgame_del_session($data->object->peer_id);
-			$msg = "";
-			if(!$session["word_game"]["current_word"]["can_reset"]){
-				$msg = "[Слова] Игра остановлена. Было загадано слово: {$session["word_game"]["current_word"]["word"]}.";
-			} else {
-				$msg = "[Слова] Игра остановлена.";
-			}
+			$msg = "[Слова] Игра остановлена.";
 			$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'keyboard' => $empty_keyboard), JSON_UNESCAPED_UNICODE);
 			vk_execute("
 				return API.messages.send({$json_request});
 				");
 		}
 		else{
-			$botModule = new BotModule($db);
-			$botModule->sendSilentMessage($data->object->peer_id, "[Слова] Игра не запущена.");
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->sendMessage($data->object->peer_id, "[Слова] Игра не запущена.");
 		}
 	} elseif (mb_strtolower($words[1]) == 'рейтинг') {
 		$array = $db->getValue(array("games", "word_game_rating"), array());
@@ -118,11 +119,9 @@ function wordgame_main($data, $words, &$db){
 				");
 		}
 	} else {
-		$botModule = new BotModule($db);
-		$msg = ", используйте \\\"Слова старт/стоп/рейтинг\\\".";
-		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
-			");
+		$messagesModule = new Bot\Messages($db);
+		$msg = ", используйте \"Слова старт/стоп/рейтинг\".";
+		$messagesModule->sendMessage($data->object->peer_id, $msg);
 	}
 }
 
@@ -190,43 +189,191 @@ function wordgame_reset_word(&$db, $date, $user_id){
 	}
 }
 
+function wordgame_gameplay_cb($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$payload = $finput->payload;
+	$db = $finput->db;
+
+	$session = wordgame_get_session($data->object->peer_id);
+
+	$date = time(); // Переменная времени
+
+	if(array_key_exists('word_game', $session)){
+		$date = time(); // Переменная времени
+		if($date - $session["word_game"]["current_word"]["word_guessing_time"] >= 600 && !$session["word_game"]["current_word"]["can_reset"]){
+			$empty_keyboard = vk_keyboard(true, array());
+			wordgame_del_session($data->object->peer_id);
+			$msg = "[Слова] Игра остановлена.";
+			$snackbar_json_request = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "✅ Выполнено!"), JSON_UNESCAPED_UNICODE)));
+			vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}','keyboard':'{$empty_keyboard}'});");
+		}
+		else{
+			$act = bot_get_array_argv($payload, 1, 0);
+
+			switch ($act) {
+				case 1:
+				if($session["word_game"]["started_by"] != $data->object->user_id){
+					$ranksys = new RankSystem($db);
+					if(!$ranksys->checkRank($data->object->from_id, 2)){ // Проверка ранга (Президент)
+						bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Вы не имеете права останавливать игру, запущенную другим пользователем.');
+						return;
+					}
+				}
+				$empty_keyboard = vk_keyboard(true, array());
+				wordgame_del_session($data->object->peer_id);
+				$msg = "[Слова] Игра остановлена.";
+				$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'keyboard' => $empty_keyboard), JSON_UNESCAPED_UNICODE);
+				$snackbar_json_request = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "✅ Выполнено!"), JSON_UNESCAPED_UNICODE)));
+				vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}','keyboard':'{$empty_keyboard}'});");
+				break;
+
+				case 2:
+				if(!$session["word_game"]["current_word"]["can_reset"]){
+					$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
+					if($wordlen - $session["word_game"]["current_word"]["used_hints"] > 3){
+						if(($date - $session["word_game"]["current_word"]["last_using_hints_time"]) >= 20){
+							$session["word_game"]["current_word"]["used_hints"] = $session["word_game"]["current_word"]["used_hints"] + 1;
+							$session["word_game"]["current_word"]["last_using_hints_time"] = $date;
+							while(true){
+								$rnd = mt_rand(0, $wordlen-1);
+								$end = true;
+								for($i = 0; $i < sizeof($session["word_game"]["current_word"]["opened_symbols"]); $i++){
+									if($session["word_game"]["current_word"]["opened_symbols"][$i] == $rnd)
+										$end = false;
+								}
+								if($end){
+									$session["word_game"]["current_word"]["opened_symbols"][] = $rnd;
+									break;
+								}
+							}
+							wordgame_set_session($data->object->peer_id, $session);
+							$word = wordgame_get_encoded_word($session);
+							$explanation = $session["word_game"]["current_word"]["explanation"];
+							if ($wordlen - $session["word_game"]["current_word"]["used_hints"] <= 3){
+								$keyboard = vk_keyboard(false, array(
+									array(
+										vk_callback_button("Сдаться", array('word_game', 4), "negative")
+									),
+									array(
+										vk_callback_button("Слово", array('word_game', 3), "primary")
+									),
+									array(
+										vk_callback_button("Остановить игру", array('word_game', 1), "negative")
+									)
+								));
+								$msg = "[Слова] Больше подсказок нет! Слово ({$wordlen} б.): {$word}.\nОписание: {$explanation}.";
+								$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'keyboard' => $keyboard), JSON_UNESCAPED_UNICODE);
+								$snackbar_json_request = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "✅ Подсказка использована!"), JSON_UNESCAPED_UNICODE)));
+								vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
+							}
+							else {
+								$msg = "[Слова] Подсказка использована. Слово ({$wordlen} б.): {$word}.\nОписание: {$explanation}.";
+								$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg), JSON_UNESCAPED_UNICODE);
+								$snackbar_json_request = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "✅ Подсказка использована!"), JSON_UNESCAPED_UNICODE)));
+								vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
+							}
+						}
+						else {
+							$left_time = 20 - ($date - $session["word_game"]["current_word"]["last_using_hints_time"]);
+							bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Подсказку можно использовать повторно через {$left_time} с.");
+						}
+					}
+					else
+						bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Больше подсказок нет.');
+				}
+				else
+				 	bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Необходимо Продолжить игру!');
+				break;
+
+				case 3:
+				if(!$session["word_game"]["current_word"]["can_reset"]){
+					$word = wordgame_get_encoded_word($session);
+					$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
+					$explanation = $session["word_game"]["current_word"]["explanation"];
+					$msg = "[Слова] Слово ({$wordlen} б.): {$word}.\nОписание: {$explanation}.";
+					$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg), JSON_UNESCAPED_UNICODE);
+					$snackbar_json_request = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "✅ Слово отображено!"), JSON_UNESCAPED_UNICODE)));
+					vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
+				}
+				else
+				 	bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Необходимо Продолжить игру!');
+				break;
+
+				case 4:
+				if(!$session["word_game"]["current_word"]["can_reset"]){
+					$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
+					if($wordlen - $session["word_game"]["current_word"]["used_hints"] <= 3){
+						if(($date - $session["word_game"]["current_word"]["last_using_hints_time"]) >= 20){
+							$msg = "[Слова] Слово \"{$session["word_game"]["current_word"]["word"]}\" не было откадано!\nЕсли желаете дальше играть, напишите \"Продолжить\".";
+							$session["word_game"]["current_word"]["can_reset"] = true;
+							wordgame_set_session($data->object->peer_id, $session);
+							$keyboard = vk_keyboard(false, array(
+								array(
+									vk_callback_button("Продолжить", array('word_game', 5), "primary")
+								),
+								array(
+									vk_callback_button("Остановить игру", array('word_game', 1), "negative")
+								)
+							));
+							$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'keyboard' => $keyboard), JSON_UNESCAPED_UNICODE);
+							$snackbar_json_request = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "✅ Выполнено."), JSON_UNESCAPED_UNICODE)));
+							vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
+						}
+						else
+							bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Нельзя сдаться раньше 20 секунд после использования всех подсказок');
+					}
+					else
+						bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Пока нельзя сдаться.');
+				}
+				else
+				 	bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Необходимо Продолжить партию!');
+				break;
+
+				case 5:
+				if($session["word_game"]["current_word"]["can_reset"]){
+					wordgame_reset_word($session, $date, $session["word_game"]["started_by"]);
+					wordgame_set_session($data->object->peer_id, $session);
+					$new_word = wordgame_get_encoded_word($session);
+					$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
+					$explanation = $session["word_game"]["current_word"]["explanation"];
+					$msg = "[Слова] Новое слово ({$wordlen} б.): {$new_word}.\nОписание: {$explanation}.";
+					$keyboard = vk_keyboard(false, array(
+						array(
+							vk_callback_button("Подсказка", array('word_game', 2), "positive")
+						),
+						array(
+							vk_callback_button("Слово", array('word_game', 3), "primary")
+						),
+						array(
+							vk_callback_button("Остановить игру", array('word_game', 1), "negative")
+						)
+					));
+					$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'keyboard' => $keyboard), JSON_UNESCAPED_UNICODE);
+					$snackbar_json_request = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "✅ Выполнено."), JSON_UNESCAPED_UNICODE)));
+					vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
+				}
+				else
+					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Необходимо Завершить партию!');
+				break;
+
+				default:
+				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Internal error!');
+				break;
+			}
+		}
+	}
+	else
+		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "[Слова] Игра не запущена!");
+
+}
+
 function wordgame_gameplay($data, &$db){
 	$session = wordgame_get_session($data->object->peer_id);
 
 	$date = time(); // Переменная времени
 
-	$message_text = "";
-	if(property_exists($data->object, "payload")){
-		$payload = json_decode($data->object->payload);
-		if($payload->command == "word_game"){
-			switch ($payload->act) {
-				case 1:
-					$message_text = "подсказка";
-					break;
-
-				case 2:
-					wordgame_main($data, array('null', 'стоп'), $db);
-					break;
-
-				case 3:
-					$message_text = "продолжить";
-					break;
-
-				case 4:
-					$message_text = "слово";
-					break;
-
-				case 5:
-					$message_text = "сдаться";
-					break;
-			}
-		} else {
-			$message_text = mb_strtolower($data->object->text);
-		}
-	}
-	else{
-		$message_text = mb_strtolower($data->object->text);
-	}
+	$message_text = mb_strtolower($data->object->text);
 
 	if(array_key_exists('word_game', $session)){
 		$date = time(); // Переменная времени
@@ -264,13 +411,13 @@ function wordgame_gameplay($data, &$db){
 		elseif ($message_text == "слово" && !$session["word_game"]["current_word"]["can_reset"]){
 			$word = wordgame_get_encoded_word($session);
 			$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
-			$msg = "[Слова] Слово ({$wordlen} б.): {$word}.";
 			$explanation = $session["word_game"]["current_word"]["explanation"];
 			$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "[Слова] Слово ({$wordlen} б.): {$word}.\nОписание: {$explanation}."), JSON_UNESCAPED_UNICODE);
 			vk_execute("
 				return API.messages.send({$json_request});
 				");
-		} elseif ($message_text == 'подсказка' && !$session["word_game"]["current_word"]["can_reset"]) {
+		}
+		elseif ($message_text == 'подсказка' && !$session["word_game"]["current_word"]["can_reset"]) {
 			$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
 			if($wordlen - $session["word_game"]["current_word"]["used_hints"] > 3){
 				if(($date - $session["word_game"]["current_word"]["last_using_hints_time"]) >= 20){
@@ -313,20 +460,23 @@ function wordgame_gameplay($data, &$db){
 							return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});
 							");
 					}
-				} else {
+				}
+				else {
 					$left_time = 20 - ($date - $session["word_game"]["current_word"]["last_using_hints_time"]);
 					$msg = "[Слова] Подсказку можно использовать повторно через {$left_time} с.";
 					vk_execute("
 						return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});
 						");
 				}
-			} else {
+			}
+			else {
 				$msg = "[Слова] Больше подсказок нет.";
 				vk_execute("
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});
 					");
 			}
-		} elseif($message_text == 'сдаться' && !$session["word_game"]["current_word"]["can_reset"]){
+		}
+		elseif($message_text == 'сдаться' && !$session["word_game"]["current_word"]["can_reset"]){
 			$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
 			if($wordlen - $session["word_game"]["current_word"]["used_hints"] <= 3){
 				if(($date - $session["word_game"]["current_word"]["last_using_hints_time"]) >= 20){
@@ -352,13 +502,15 @@ function wordgame_gameplay($data, &$db){
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});
 					");
 				}
-			} else {
+			}
+			else {
 				$msg = "[Слова] Пока нельзя сдаться.";
 				vk_execute("
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});
 					");
 			}
-		} elseif (strcasecmp($message_text, $session["word_game"]["current_word"]["word"]) == 0 && !$session["word_game"]["current_word"]["can_reset"]){
+		}
+		elseif (strcasecmp($message_text, $session["word_game"]["current_word"]["word"]) == 0 && !$session["word_game"]["current_word"]["can_reset"]){
 			$word = $session["word_game"]["current_word"]["word"];
 			$session["word_game"]["current_word"]["can_reset"] = true;
 			$score = mb_strlen($word) - $session["word_game"]["current_word"]["used_hints"] - 2;
@@ -388,6 +540,8 @@ function wordgame_gameplay($data, &$db){
 		}
 	}
 }
+
+/*
 
 // Английская часть игры
 
@@ -773,5 +927,7 @@ function wordgame_eng_gameplay($data, &$db){
 		}
 	}
 }
+
+*/
 
 ?>

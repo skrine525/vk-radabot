@@ -35,6 +35,28 @@ class SocOrderClass{ // Класс данных социальных строё�
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Handlers
 
+// Инициалихация команд
+function goverment_initcmd($event){
+	// Правительство
+	$event->addTextMessageCommand("!конституция", 'goverment_constitution');
+	$event->addTextMessageCommand("!президент", 'goverment_president');
+	$event->addTextMessageCommand("!строй", 'goverment_socorder');
+	$event->addTextMessageCommand("!стройлист", 'goverment_socorderlist');
+	$event->addTextMessageCommand("!законы", 'goverment_show_laws');
+	$event->addTextMessageCommand("!закон", 'goverment_laws_cpanel');
+	$event->addTextMessageCommand("!партия", 'goverment_batch');
+	$event->addTextMessageCommand("!столица", 'goverment_capital');
+	$event->addTextMessageCommand("!гимн", 'goverment_anthem');
+	$event->addTextMessageCommand("!флаг", 'goverment_flag');
+
+	// Система выборов
+	$event->addTextMessageCommand("!votestart", 'goverment_referendum_start');
+	$event->addTextMessageCommand("!votestop", 'goverment_referendum_stop');
+	$event->addTextMessageCommand("!candidate", 'goverment_referendum_candidate');
+	$event->addTextMessageCommand("!vote", 'goverment_referendum_vote_cmd');
+	$event->addTextButtonCommand("referendum_vote", "goverment_referendum_vote");
+}
+
 function goverment_constitution($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 

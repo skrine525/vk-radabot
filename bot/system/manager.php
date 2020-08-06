@@ -281,6 +281,31 @@ class AntiFlood{
 /////////////////////////////////////////////
 /// Handlers
 
+function manager_initcmd($event){
+	// Управление беседой
+	$event->addTextMessageCommand("!онлайн", 'manager_online_list');
+	$event->addTextMessageCommand("!ban", 'manager_ban_user');
+	$event->addTextMessageCommand("!unban", 'manager_unban_user');
+	$event->addTextMessageCommand("!baninfo", 'manager_baninfo_user');
+	$event->addTextMessageCommand("!banlist", 'manager_banlist_user');
+	$event->addTextMessageCommand("!kick", 'manager_kick_user');
+	$event->addTextMessageCommand("!ник", 'manager_nick');
+	$event->addTextMessageCommand("!ранг", 'manager_rank');
+	$event->addTextMessageCommand("!ранглист", 'manager_rank_list');
+	$event->addTextMessageCommand("!ранги", 'manager_show_user_ranks');
+	$event->addTextMessageCommand("!приветствие", 'manager_greeting');
+	$event->addTextMessageCommand("!modes", "manager_mode_list");
+	$event->addTextMessageCommand("!mode", "manager_mode_cpanel");
+	$event->addTextMessageCommand("!панель", "manager_panel_control");
+	$event->addTextMessageCommand("панель", "manager_panel_show");
+
+	// Прочее
+	$event->addTextMessageCommand("!ники", 'manager_show_nicknames');
+
+	// Обработка персональной панели
+	$event->addCallbackButtonCommand("manager_panel", 'manager_panel_keyboard_handler');
+}
+
 function manager_mode_list($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
