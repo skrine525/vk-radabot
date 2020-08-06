@@ -328,8 +328,17 @@ namespace{
 	}
 
 	function bot_debug_cmdinit($event){ // Добавление DEBUG-команд специальному пользователю
-		if((property_exists($event->getData()->object, 'from_id') && $event->getData()->object->from_id === bot_getconfig('DEBUG_USER_ID')) || (property_exists($event->getData()->object, 'user_id') && $event->getData()->object->user_id === bot_getconfig('DEBUG_USER_ID'))){
 
+		// Проверка на доступ
+		$data = $event->getData();
+		if($data->type == "message_new" && $data->object->from_id === bot_getconfig('DEBUG_USER_ID'))
+			$access = true;
+		elseif($data->type == "message_event" && $data->object->user_id === bot_getconfig('DEBUG_USER_ID'))
+			$access = true;
+		else
+			$access = false;
+
+		if($access){
 			$event->addTextMessageCommand("!docmd", function ($finput){
 				// Инициализация базовых переменных
 				$data = $finput->data; 

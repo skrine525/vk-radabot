@@ -39,8 +39,6 @@ namespace Roleplay{
 			$this->femaleMessageToMyself = null;
 			$this->maleMessageToAll = null;
 			$this->femaleMessageToAll = null;
-			$this->maleMessageToOnline = null;
-			$this->femaleMessageToOnline = null;
 
 			$this->permittedMemberGender = 0;
 			$this->memberGenderErrorMessage = "";
@@ -48,54 +46,65 @@ namespace Roleplay{
 
 		private function getTextUserInfo(){
 			$word_count_in_text_command = count(explode(' ', $this->text_command));
-			return bot_get_array_argv($this->words, $word_count_in_text_command, "") . bot_get_array_argv($words, $word_count_in_text_command+1, "");
+			$first_name = bot_get_array_argv($this->words, $word_count_in_text_command, "");
+			$last_name = bot_get_array_argv($this->words, $word_count_in_text_command+1, "");
+			if($first_name !== "" && $last_name !== "")
+				return "{$first_name} {$last_name}";
+			else
+				return $first_name;
 		}
 
 		public function setPermittedMemberGender($gender, $message){
 			if($gender != ActWithHandler::GENDER_FEMALE && $gender != ActWithHandler::GENDER_MALE){
 				$debug_backtrace = debug_backtrace();
 				error_log("Parameter gender is invalid in function {$debug_backtrace[0]["function"]} in {$debug_backtrace[0]["file"]} on line {$debug_backtrace[0]["line"]}");
-				exit;
+				return false;
 			}
 			$this->permittedMemberGender = $gender;
 			$this->memberGenderErrorMessage = $message;
 		}
 
 		public function handle(){
+			// Проверка главных переменных
 			if(is_null($this->maleMessage)){
 				$debug_backtrace = debug_backtrace();
 				error_log("Invalid parameter maleMessage while handling in {$debug_backtrace[0]["file"]} on line {$debug_backtrace[0]["line"]}");
-				exit;
+				return false;
 			}
 			elseif(is_null($this->femaleMessage)){
 				$debug_backtrace = debug_backtrace();
 				error_log("Invalid parameter femaleMessage while handling in {$debug_backtrace[0]["file"]} on line {$debug_backtrace[0]["line"]}");
-				exit;
+				return false;
 			}
 			elseif(is_null($this->maleMessageToMyself)){
 				$debug_backtrace = debug_backtrace();
 				error_log("Invalid parameter maleMessageToMyself while handling in {$debug_backtrace[0]["file"]} on line {$debug_backtrace[0]["line"]}");
-				exit;
+				return false;
 			}
 			elseif(is_null($this->femaleMessageToMyself)){
 				$debug_backtrace = debug_backtrace();
 				error_log("Invalid parameter femaleMessageToMyself while handling in {$debug_backtrace[0]["file"]} on line {$debug_backtrace[0]["line"]}");
-				exit;
+				return false;
 			}
 
-			$user_info = $this->getTextUserInfo();
-			$botModule = new BotModule($db);
-			if($user_info == "" && !array_key_exists(0, $data->object->fwd_messages)){
-				$msg = ", используйте \"{$command} <имя/фамилия/id/упоминание/перес. сообщение>\".";
-				$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%__appeal__%, используйте \"{$command} <имя/фамилия/id/упоминание/перес. сообщение>\"."), JSON_UNESCAPED_UNICODE);
-				$request = vk_parse_var($request, "__appeal__");
-				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."var __appeal__ = appeal;appeal = null;return API.messages.send({$request});");
+			$user_info = $this->getTextUserInfo(); // Получаем информацию о пользователе из сообщения
+			$messagesModule = new \Bot\Messages($this->db);
+			if($user_info == "" && !array_key_exists(0, $this->data->object->fwd_messages)){
+				$messagesModule->setAppealID($this->data->object->from_id);
+				$messagesModule->sendSilentMessageWithListFromArray($this->data->object->peer_id, "%appeal%, Используйте:", array(
+					"{$this->text_command} <имя>",
+					"{$this->text_command} <фамилия>",
+					"{$this->text_command} <имя и фамилия>",
+					"{$this->text_command} <id>",
+					"{$this->text_command} <упоминание>",
+					"{$this->text_command} <перес. сообщение>"
+				));
 				return false;
 			}
 
 			$member_id = 0;
-			if(array_key_exists(0, $data->object->fwd_messages))
-				$member_id = $data->object->fwd_messages[0]->from_id;
+			if(array_key_exists(0, $this->data->object->fwd_messages))
+				$member_id = $this->data->object->fwd_messages[0]->from_id;
 			elseif(!is_null($user_info) && bot_is_mention($user_info))
 				$member_id = bot_get_id_from_mention($user_info);
 			elseif(!is_null($user_info) && is_numeric($user_info))
@@ -113,69 +122,57 @@ namespace Roleplay{
 				$messagesJson = vk_parse_vars($messagesJson, array("FROM_USERNAME", "MEMBER_USERNAME", "MEMBER_USERNAME_GEN", "MEMBER_USERNAME_DAT", "MEMBER_USERNAME_ACC", "MEMBER_USERNAME_INS", "MEMBER_USERNAME_ABL", "appeal"));
 
 				if($this->permittedMemberGender != 0)
-					$permittedMemberGender_VKScript = "if(member.sex != {$sexOnly}){API.messages.send({'peer_id':{$data->object->peer_id},'message':messages.memberGenderErrorMessage});return {'result':false};}";
+					$permittedMemberGender_VKScript = "if(member.sex != {$this->permittedMemberGender}){API.messages.send({'peer_id':{$this->data->object->peer_id},'message':messages.memberGenderErrorMessage});return{'result':false};}";
 				else
 					$permittedMemberGender_VKScript = "";
 
-
-				$res = (object) json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-					var users = API.users.get({'user_ids':[{$member_id},{$data->object->from_id}],'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});
-					var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id}});
-					var from_user = users[1];
-					var member = users[0];
-					if({$member_id} == {$data->object->from_id}){ from_user = users[0]; }
-
-					var isContinue = false;
-					var i = 0; while(i < members.profiles.length){
-						if(members.profiles[i].id == {$member_id}){
-							isContinue = true;
-						}
-						i = i + 1;
-					}
-					if(!isContinue){
-						API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});
-						return {'result':false};
-					}
-
-					var FROM_USERNAME = '@'+from_user.screen_name+' ('+from_user.first_name.substr(0, 2)+'. '+from_user.last_name+')';
-
-					var MEMBER_USERNAME = '@'+member.screen_name+' ('+member.first_name.substr(0, 2)+'. '+member.last_name+')';
-					var MEMBER_USERNAME_GEN = '@'+member.screen_name+' ('+member.first_name_gen.substr(0, 2)+'. '+member.last_name_gen+')';
-					var MEMBER_USERNAME_DAT = '@'+member.screen_name+' ('+member.first_name_dat.substr(0, 2)+'. '+member.last_name_dat+')';
-					var MEMBER_USERNAME_ACC = '@'+member.screen_name+' ('+member.first_name_acc.substr(0, 2)+'. '+member.last_name_acc+')';
-					var MEMBER_USERNAME_INS = '@'+member.screen_name+' ('+member.first_name_ins.substr(0, 2)+'. '+member.last_name_ins+')';
-					var MEMBER_USERNAME_ABL = '@'+member.screen_name+' ('+member.first_name_abl.substr(0, 2)+'. '+member.last_name_abl+')';
-
-					var messages = {$messagesJson};
-
-					{$permittedMemberGender_VKScript}
-
-					var msg = '';
-
-					if ({$member_id} == {$data->object->from_id}){
-						if(member.sex == 1){
-							msg = messages.femaleToMyself;
-						} else {
-							msg = messages.maleToMyself;
-						}
-					} else {
-						if(from_user.sex == 1){
-							msg = messages.female;
-						} else {
-							msg = messages.male;
-						};
-					};
-
-					API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-					return {'result':true,'member_id':member.id};
-					"))->response;
+				$res = (object) json_decode(vk_execute($messagesModule->makeExeAppealByID($this->data->object->from_id)."var users=API.users.get({'user_ids':[{$member_id},{$this->data->object->from_id}],'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});var members=API.messages.getConversationMembers({'peer_id':{$this->data->object->peer_id}});var from_user=users[1];var member=users[0];if({$member_id}=={$this->data->object->from_id}){from_user=users[0];}var isContinue=false;var i=0;while(i<members.profiles.length){if(members.profiles[i].id=={$member_id}){isContinue=true;}i=i+1;}if(!isContinue){API.messages.send({'peer_id':{$this->data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});return{'result':false};}var FROM_USERNAME='@'+from_user.screen_name+' ('+from_user.first_name.substr(0,2)+'. '+from_user.last_name+')';var MEMBER_USERNAME='@'+member.screen_name+' ('+member.first_name.substr(0,2)+'. '+member.last_name+')';var MEMBER_USERNAME_GEN='@'+member.screen_name+' ('+member.first_name_gen.substr(0,2)+'. '+member.last_name_gen+')';var MEMBER_USERNAME_DAT='@'+member.screen_name+' ('+member.first_name_dat.substr(0,2)+'. '+member.last_name_dat+')';var MEMBER_USERNAME_ACC='@'+member.screen_name+' ('+member.first_name_acc.substr(0,2)+'. '+member.last_name_acc+')';var MEMBER_USERNAME_INS='@'+member.screen_name+' ('+member.first_name_ins.substr(0,2)+'. '+member.last_name_ins+')';var MEMBER_USERNAME_ABL='@'+member.screen_name+' ('+member.first_name_abl.substr(0,2)+'. '+member.last_name_abl+')';var messages={$messagesJson};{$permittedMemberGender_VKScript}var msg='';if({$member_id}=={$this->data->object->from_id}){if(member.sex==1){msg=messages.femaleToMyself;}else{msg=messages.maleToMyself;}}else{if(from_user.sex==1){msg=messages.female;}else{msg=messages.male;};};API.messages.send({'peer_id':{$this->data->object->peer_id},'message':msg});return{'result':true,'member_id':member.id};"))->response;
 				if($res->result)
 					return $res->member_id;
 				else
 					return false;
 			}
 			else{
+				if(isset($this->maleMessageToAll, $this->femaleMessageToAll) && array_search(mb_strtolower($user_info), array('всем', 'всех', 'у всех', 'со всеми', 'на всех')) !== false){ 
+					// Выполнение действия над всеми
+					$messagesJson = json_encode(array(
+						'male' => $this->maleMessageToAll,
+						'female' => $this->femaleMessageToAll
+					), JSON_UNESCAPED_UNICODE);
+					$messagesJson = vk_parse_var($messagesJson, "FROM_USERNAME");
+					$res = json_decode(vk_execute($messagesModule->makeExeAppealByID($this->data->object->from_id)."var from_user=API.users.get({'user_ids':[{$this->data->object->from_id}],'fields':'sex,screen_name'})[0];var FROM_USERNAME='@'+from_user.screen_name+' ('+from_user.first_name.substr(0,2)+'. '+from_user.last_name+')';var messages={$messagesJson};var msg='';if(from_user.sex==1){msg=messages.female;}else{msg=messages.male;};API.messages.send({'peer_id':{$this->data->object->peer_id},'message':msg});return {'result':true,'member_id':0};"))->response;
+					return (object) $res;
+				}
 
+				$messagesJson = json_encode(
+					array(
+						'male' => $this->maleMessage,
+						'female' => $this->femaleMessage,
+						'maleToMyself' => $this->maleMessageToMyself,
+						'femaleToMyself' => $this->femaleMessageToMyself,
+						'memberGenderErrorMessage' => $this->memberGenderErrorMessage
+					), JSON_UNESCAPED_UNICODE);
+				$messagesJson = vk_parse_vars($messagesJson, array("FROM_USERNAME", "MEMBER_USERNAME", "MEMBER_USERNAME_GEN", "MEMBER_USERNAME_DAT", "MEMBER_USERNAME_ACC", "MEMBER_USERNAME_INS", "MEMBER_USERNAME_ABL", "appeal"));
+
+				if($this->permittedMemberGender != 0)
+					$permittedMemberGender_VKScript = "if(member.sex != {$this->permittedMemberGender}){API.messages.send({'peer_id':{$this->data->object->peer_id},'message':messages.memberGenderErrorMessage});return {'result':false};}";
+				else
+					$permittedMemberGender_VKScript = "";
+
+				$user_info_words = explode(" ", $user_info);
+				$word = array();
+				for($i = 0; $i < 2; $i++){
+					if(array_key_exists($i, $user_info_words)){
+						$first_letter = mb_strtoupper(mb_substr($user_info_words[$i], 0, 1));
+						$other_letters = mb_strtolower(mb_substr($user_info_words[$i], 1));
+						$word[$i] = "{$first_letter}{$other_letters}";
+					}
+					else
+						$word[$i] = "";
+				}
+
+				$res = json_decode(vk_execute($messagesModule->makeExeAppealByID($this->data->object->from_id)."var members=API.messages.getConversationMembers({'peer_id':{$this->data->object->peer_id},'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});var from_user= API.users.get({'user_ids':[{$this->data->object->from_id}],'fields':'sex,screen_name'})[0];var word1='{$word[0]}';var word2='{$word[1]}';var member_index=-1;var i=0;while(i<members.profiles.length){if(members.profiles[i].first_name==word1){if(word2==''){member_index=i;i=members.profiles.length;}else if(members.profiles[i].last_name==word2){member_index=i;i=members.profiles.length;}}else if(members.profiles[i].last_name==word1){member_index=i;i=members.profiles.length;}i=i+1;};if(member_index==-1){API.messages.send({'peer_id':{$this->data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});return{'result':false};}var member = members.profiles[member_index];var FROM_USERNAME='@'+from_user.screen_name+' ('+from_user.first_name.substr(0, 2)+'. '+from_user.last_name+')';var MEMBER_USERNAME='@'+member.screen_name+' ('+member.first_name.substr(0,2)+'. '+member.last_name+')';var MEMBER_USERNAME_GEN='@'+member.screen_name+' ('+member.first_name_gen.substr(0,2)+'. '+member.last_name_gen+')';var MEMBER_USERNAME_DAT='@'+member.screen_name+' ('+member.first_name_dat.substr(0,2)+'. '+member.last_name_dat+')';var MEMBER_USERNAME_ACC='@'+member.screen_name+' ('+member.first_name_acc.substr(0,2)+'. '+member.last_name_acc+')';var MEMBER_USERNAME_INS='@'+member.screen_name+' ('+member.first_name_ins.substr(0,2)+'. '+member.last_name_ins+')';var MEMBER_USERNAME_ABL='@'+member.screen_name+' ('+member.first_name_abl.substr(0,2)+'. '+member.last_name_abl+')';var messages={$messagesJson};{$permittedMemberGender_VKScript}var msg='';if(member.id=={$this->data->object->from_id}){if(member.sex==1){msg=messages.femaleToMyself;}else{msg=messages.maleToMyself;}}else{if(from_user.sex==1){msg=messages.female;}else{msg=messages.male;};};API.messages.send({'peer_id':{$this->data->object->peer_id},'message':msg});return{'result':true,'member_id':member.id};"))->response;
+				return (object) $res;
 			}
 		}
 	}
@@ -940,7 +937,6 @@ namespace{
 		$handler->femaleMessageToMyself = "%FROM_USERNAME% облевала себя.🤢";
 		$handler->maleMessageToAll = "%FROM_USERNAME% облевал всех.🤢";
 		$handler->femaleMessageToAll = "%FROM_USERNAME% облевала всех.🤢";
-		$handler->setPermittedMemberGender(Roleplay\ActWithHandler::GENDER_MALE, "suka");
 
 		$handler->handle();
 	}

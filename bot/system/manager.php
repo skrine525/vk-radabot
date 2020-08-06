@@ -1632,9 +1632,10 @@ function manager_panel_keyboard_handler($finput){
 				)
 			);
 		$result = $finput->event->runTextMessageCommand($modified_data);
-		if($result == 1){
+		if($result == 0)
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "✅ Команда выполнена!");
+		elseif($result == 1)
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Ошибка. Данной команды не существует.");
-		}
 	}
 	else{
 		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Данного элемента не существует.");
