@@ -12,7 +12,6 @@ namespace Roleplay{
 		// Базовые переменные
 		private $db;
 		private $data;
-		private $words;
 		private $text_command;
 
 		// Переменные параметров
@@ -27,10 +26,9 @@ namespace Roleplay{
 		private $permittedMemberGender;
 		private $memberGenderErrorMessage;
 
-		function __construct($db, $data, $words, $text_command){
+		function __construct($db, $data, $text_command){
 			$this->db = $db;
 			$this->data = $data;
-			$this->words = $words;
 			$this->text_command = $text_command;
 
 			$this->maleMessage = null;
@@ -44,10 +42,10 @@ namespace Roleplay{
 			$this->memberGenderErrorMessage = "";
 		}
 
-		private function getTextUserInfo(){
-			$word_count_in_text_command = count(explode(' ', $this->text_command));
-			$first_name = bot_get_array_argv($this->words, $word_count_in_text_command, "");
-			$last_name = bot_get_array_argv($this->words, $word_count_in_text_command+1, "");
+		private function getTextUserInfo($argv){
+			$argv_from_text_command_count = count(explode(' ', $this->text_command));
+			$first_name = bot_get_array_argv($argv, $argv_from_text_command_count, "");
+			$last_name = bot_get_array_argv($argv, $argv_from_text_command_count+1, "");
 			if($first_name !== "" && $last_name !== "")
 				return "{$first_name} {$last_name}";
 			else
@@ -87,7 +85,9 @@ namespace Roleplay{
 				return false;
 			}
 
-			$user_info = $this->getTextUserInfo(); // Получаем информацию о пользователе из сообщения
+			$argv = explode(' ', $this->data->object->text);
+
+			$user_info = $this->getTextUserInfo($argv); // Получаем информацию о пользователе из сообщения
 			$messagesModule = new \Bot\Messages($this->db);
 			if($user_info == "" && !array_key_exists(0, $this->data->object->fwd_messages)){
 				$messagesModule->setAppealID($this->data->object->from_id);
@@ -927,11 +927,11 @@ namespace{
 
 	function roleplay_puckingup($finput){
 		// Инициализация базовых переменных
-		$data = $finput->data; 
+		$data = $finput->data;
 		$words = $finput->words;
 		$db = $finput->db;
 
-		$handler = new Roleplay\ActWithHandler($db, $data, $words, "Облевать");
+		$handler = new Roleplay\ActWithHandler($db, $data, "Облевать");
 		$handler->maleMessage = "%FROM_USERNAME% облевал %MEMBER_USERNAME_ACC%.🤢";
 		$handler->femaleMessage = "%FROM_USERNAME% облевала %MEMBER_USERNAME_ACC%.🤢";
 		$handler->maleMessageToMyself = "%FROM_USERNAME% облевал себя.🤢";

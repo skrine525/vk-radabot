@@ -1,5 +1,6 @@
 <?php
 
+// Инициалихация команд
 function giphy_initcmd($event){
 	$event->addTextMessageCommand("!giphy", 'giphy_handler');
 }

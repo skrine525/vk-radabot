@@ -2,6 +2,7 @@
 
 // Русская часть игры
 
+// Инициалихация команд
 function wordgame_initcmd($event){
 	$event->addTextMessageCommand("!слова", 'wordgame_cmd');
 	//$event->addTextMessageCommand("words", 'wordgame_eng_cmd');

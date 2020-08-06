@@ -14,6 +14,7 @@ define('STATS_DEFAULT',array(
 		'sticker_count' => 0
 	));
 
+// Инициалихация команд
 function stats_initcmd($event){
 	$event->addTextMessageCommand("!стата", 'stats_cmd_handler');
 }
