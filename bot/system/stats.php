@@ -104,7 +104,7 @@ function stats_cmd_handler($finput){
 			$member_id = $data->object->fwd_messages[0]->from_id;
 		} else $member_id = $data->object->from_id;
 
-		$stats = stats_api_getuser($db, $data->object->from_id);
+		$stats = stats_api_getuser($db, $member_id);
 
 		$all_stats = $db->getValue(array("chat_stats", "users"), array());
 
@@ -142,7 +142,7 @@ function stats_cmd_handler($finput){
 	else{
 		$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, "%appeal%, используйте:", array(
 			'!cтата <пользователь> - Показать статистику',
-			'!cтата <пересланное> - Показывает статистику пользователя',
+			'!cтата <пересланное сообщение> - Показывает статистику пользователя',
 			'!cтата обнулить - Обнуляит статистику беседы' 
 		));
 	}

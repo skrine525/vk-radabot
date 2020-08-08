@@ -187,23 +187,13 @@ class Event{
 
 			// Обработка не командный сообщений
 			if(!is_null($this->defaultFunc)){
-				$argv = explode(' ', $this->data->object->text); // Извлекаем слова из сообщения
 				if(!bot_check_reg($this->db)){ // Проверка на регистрацию в системе
-					$ignore = false;
-					for($i = 0; $i < count($this->dbIgnoreCommandList); $i++){
-						if($argv[0] == $this->dbIgnoreCommandList[$i]){
-							$ignore = true;
-							break;
-						}
-					}
-					if(!$ignore){
-						return false;
-					}
+					return false;
 				}
 				$finput = (object) array(
 					'data' => $this->data,
-					'db' => &$this->db,
-					'event' => &$this
+					'db' => $this->db,
+					'event' => $this
 				);
 				$method = $this->defaultFunc; // Получение значения Callback'а
 				call_user_func_array($method, array($finput)); // Выполнение Callback'а
