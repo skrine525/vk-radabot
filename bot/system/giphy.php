@@ -26,7 +26,7 @@ function giphy_translate($parametres){
 function giphy_handler($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$name = mb_substr($data->object->text, 7, mb_strlen($data->object->text));

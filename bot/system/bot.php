@@ -279,7 +279,7 @@ namespace{
 	function bot_register($finput){ // Регистрация чата
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$botModule = new BotModule($db);
@@ -316,6 +316,11 @@ namespace{
 				return API.messages.send({'peer_id':{$data->object->peer_id}, 'message':appeal+'{$msg}','disable_mentions':true});
 				");
 		}
+	}
+
+	function bot_parse_argv($text){
+		$argv = str_getcsv($text, ' ');
+		return $argv;
 	}
 
 	function bot_pre_handle_function($event){
@@ -373,12 +378,12 @@ namespace{
 			$event->addTextMessageCommand("!docmd", function ($finput){
 				// Инициализация базовых переменных
 				$data = $finput->data; 
-				$words = $finput->words;
+				$argv = $finput->argv;
 				$db = $finput->db;
 
 				$botModule  = new BotModule($db);
 
-				$member = bot_get_array_argv($words, 1 , "");
+				$member = bot_get_array_value($argv, 1 , "");
 
 				if(is_numeric($member)){
 					$member_id = intval($member);
@@ -409,7 +414,7 @@ namespace{
 			$event->addTextMessageCommand("!test-template", function ($finput){
 				// Инициализация базовых переменных
 				$data = $finput->data; 
-				$words = $finput->words;
+				$argv = $finput->argv;
 				$db = $finput->db;
 
 				$messagesModule = new Bot\Messages($db);
@@ -442,7 +447,7 @@ namespace{
 			$event->addTextMessageCommand('!runcb', function ($finput){
 				// Инициализация базовых переменных
 				$data = $finput->data; 
-				$words = $finput->words;
+				$argv = $finput->argv;
 				$db = $finput->db;
 
 				$botModule  = new BotModule($db);
@@ -470,7 +475,7 @@ namespace{
 				$db = $finput->db;
 				$event = $finput->event;
 
-				$command = bot_get_array_argv($payload, 1, "");
+				$command = bot_get_array_value($payload, 1, "");
 				if($command == ""){
 					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ [bot_runcb]: Требуется аргумент.");
 					return;
@@ -488,7 +493,7 @@ namespace{
 			$event->addTextMessageCommand("!kick-all", function ($finput){
 				// Инициализация базовых переменных
 				$data = $finput->data; 
-				$words = $finput->words;
+				$argv = $finput->argv;
 				$db = $finput->db;
 
 				$botModule  = new BotModule($db);
@@ -587,7 +592,7 @@ namespace{
 	// Прочее
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	function bot_get_array_argv($array, $index, $default = ""){
+	function bot_get_array_value($array, $index, $default = ""){
 		if(array_key_exists($index, $array))
 			return $array[$index];
 		else
@@ -620,11 +625,11 @@ namespace{
 	function bot_like_handler($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
-		if(array_key_exists(1, $words))
-			$command = mb_strtolower($words[1]);
+		if(array_key_exists(1, $argv))
+			$command = mb_strtolower($argv[1]);
 		else
 			$command = "";
 		if($command == "аву")
@@ -648,11 +653,11 @@ namespace{
 	function bot_remove_handler($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
-		if(array_key_exists(1, $words))
-			$command = mb_strtolower($words[1]);
+		if(array_key_exists(1, $argv))
+			$command = mb_strtolower($argv[1]);
 		else
 			$command = "";
 		if($command == "кнопки")
@@ -673,7 +678,7 @@ namespace{
 	function bot_getid($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$member_id = 0;
@@ -682,8 +687,8 @@ namespace{
 
 		if(array_key_exists(0, $data->object->fwd_messages)){
 			$member_id = $data->object->fwd_messages[0]->from_id;
-		} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
-			$member_id = bot_get_id_from_mention($words[1]);
+		} elseif(array_key_exists(1, $argv) && bot_is_mention($argv[1])){
+			$member_id = bot_get_id_from_mention($argv[1]);
 		} else {
 			$botModule->sendSilentMessage($data->object->peer_id, ", Ваш ID: {$data->object->from_id}.", $data->object->from_id);
 			return;
@@ -695,7 +700,7 @@ namespace{
 	function bot_base64($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$str_data = mb_substr($data->object->text, 8);
@@ -730,14 +735,14 @@ namespace{
 	function bot_cmdlist($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 		$event = $finput->event;
 
 		$messagesModule = new Bot\Messages($db);
 		$messagesModule->setAppealID($data->object->from_id);
-		if(array_key_exists(1, $words))
-			$list_number_from_word = intval($words[1]);
+		if(array_key_exists(1, $argv))
+			$list_number_from_word = intval($argv[1]);
 		else
 			$list_number_from_word = 1;
 
@@ -808,7 +813,7 @@ namespace{
 		$event = $finput->event;
 
 		// Переменная тестирования пользователя
-		$testing_user_id = bot_get_array_argv($payload, 1, $data->object->user_id);
+		$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
 		if($testing_user_id !== $data->object->user_id){
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
 			return;
@@ -822,7 +827,7 @@ namespace{
 		$list_in = $event->getMessageCommandList(); // Входной список
 		$list_out = array(); // Выходной список
 
-		$list_number = intval(bot_get_array_argv($payload, 2, 1)); // Номер текущего списка
+		$list_number = intval(bot_get_array_value($payload, 2, 1)); // Номер текущего списка
 		$list_size = 10; // Размер списка
 		////////////////////////////////////////////////////
 		if(count($list_in) % $list_size == 0)
@@ -879,7 +884,7 @@ namespace{
 	function bot_call_all($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$botModule = new BotModule($db);
@@ -1023,7 +1028,7 @@ namespace{
 	function bot_tictactoe($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$bot = new BotModule();
@@ -1050,8 +1055,8 @@ namespace{
 			));
 		}
 		elseif($payload[1] == 10){
-			$player1 = bot_get_array_argv($payload, 2, 0);
-			$player2 = bot_get_array_argv($payload, 3, 0);
+			$player1 = bot_get_array_value($payload, 2, 0);
+			$player2 = bot_get_array_value($payload, 3, 0);
 			$messageUpdateRequired = false;
 			$playButtonColor = "";
 			if($player1 == 0){
@@ -1240,7 +1245,7 @@ namespace{
 	function bot_menu_tc($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$messagesModule = new Bot\Messages($db);
@@ -1262,14 +1267,14 @@ namespace{
 		$message = "";
 
 		// Переменная тестирования пользователя
-		$testing_user_id = bot_get_array_argv($payload, 1, $data->object->user_id);
+		$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
 		if($testing_user_id !== $data->object->user_id){
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
 			return;
 		}
 
 		// Переменная команды меню
-		$code = bot_get_array_argv($payload, 2, 1);
+		$code = bot_get_array_value($payload, 2, 1);
 
 		switch ($code) {
 			case 0:
@@ -1311,14 +1316,15 @@ namespace{
 	function bot_help($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
-		if(array_key_exists(1, $words))
-			$section = mb_strtolower($words[1]);
+		if(array_key_exists(1, $argv))
+			$section = mb_strtolower($argv[1]);
 		else
 			$section = "";
-		$botModule = new BotModule($db);
+		$messagesModule = new Bot\Messages($db);
+		$messagesModule->setAppealID($data->object->from_id);
 		switch ($section) {
 			case 'основное':
 				$commands = array(
@@ -1331,7 +1337,7 @@ namespace{
 					'!Онлайн - Показать online пользователей'
 				);
 
-				$botModule->sendCommandListFromArray($data, ', 📰Основные команды:', $commands);
+				$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, '%appeal%, 📰Основные команды:', $commands);
 				break;
 
 			case 'рп':
@@ -1354,10 +1360,11 @@ namespace{
 					'Пожать руку <пользователь> - Жмет руку пользователю',
 					'Лизнуть <пользователь> - Лизнуть пользователя',
 					'Обосрать <пользователь> - Обосрать пользователя',
-					'Облевать <пользователь> - Испачкать в рвоте пользователя'
+					'Облевать <пользователь> - Испачкать в рвоте пользователя',
+					'Отшлёпать <пользователь> - Отшлепать пользователя'
 				);
 
-				$botModule->sendCommandListFromArray($data, ', 📰Roleplay команды:', $commands);
+				$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, '%appeal%, 📰Roleplay команды:', $commands);
 				break;
 
 			case 'гос':
@@ -1378,7 +1385,7 @@ namespace{
 					'!vote - Меню голосования'
 				);
 
-				$botModule->sendCommandListFromArray($data, ', 📰Государственные команды:', $commands);
+				$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, '%appeal%, 📰Государственные команды:', $commands);
 				break;
 
 			case 'управление':
@@ -1397,7 +1404,7 @@ namespace{
 					'Панель - Отобразить персональную панель'
 				);
 
-				$botModule->sendCommandListFromArray($data, ', 📰Команды управления беседой:', $commands);
+				$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, '%appeal%, 📰Команды управления беседой:', $commands);
 				break;
 
 			case 'экономика':
@@ -1418,7 +1425,7 @@ namespace{
 					'Подарить - Дарит имущество пользователю'
 				);
 
-				$botModule->sendCommandListFromArray($data, ', 📰Команды управления беседой:', $commands);
+				$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, '%appeal%, 📰Команды управления беседой:', $commands);
 				break;
 
 			case 'другое':
@@ -1451,11 +1458,11 @@ namespace{
 					'!Браки история - Список всех браков беседы'
 				);
 
-				$botModule->sendCommandListFromArray($data, ', 📰Другие команды:', $commands);
+				$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, '%appeal%, 📰Другие команды:', $commands);
 				break;
 			
 			default:
-				$botModule->sendCommandListFromArray($data, ', ✅Используйте:', array(
+				$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, '%appeal%, ✅Используйте:', array(
 					'!помощь основное - Базовый раздел',
 					'!помощь рп - Roleplay раздел',
 					'!помощь гос - Гос. раздел',

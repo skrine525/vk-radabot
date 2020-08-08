@@ -1,30 +1,52 @@
 <?php
 
-define('STATS_SWEAR_WORDS', array("педик","гандон","идиот","ебл","ёб","ублюд","шлюх","шалав","твар","дерьмо","хуе","урод","еба","ёба","сук","пидр","пидар","бля","пизд","хуи","хуй","манд")); // Константа корней матных слов
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Stats API
 
 // Стандартное значение статистики пользователя
 define('STATS_DEFAULT',array(
-		'msg_count' => 0,
-		'msg_count_in_succession' => 0,
-		'simbol_count' => 0,
-		'audio_msg_count' => 0,
-		'photo_count' => 0,
-		'audio_count' => 0,
-		'video_count' => 0,
-		'sticker_count' => 0
-	));
+	'msg_count' => 0,
+	'msg_count_in_succession' => 0,
+	'simbol_count' => 0,
+	'audio_msg_count' => 0,
+	'photo_count' => 0,
+	'audio_count' => 0,
+	'video_count' => 0,
+	'sticker_count' => 0,
+	'bump_count' => 0
+));
+
+// Получение статистики пользователя
+function stats_api_getuser($db, $user_id){
+	$db_stats = $db->getValue(array("chat_stats", "users", "id{$user_id}"), array());
+	$stats = array();
+	foreach (STATS_DEFAULT as $key => $value) {
+		if(array_key_exists($key, $db_stats))
+			$stats[$key] = $db_stats[$key];
+		else
+			$stats[$key] = $value;
+	}
+	return $stats;
+}
+
+// Сохранение статистики пользователя
+function stats_api_setuser($db, $user_id, $value){
+	return $db->setValue(array("chat_stats", "users", "id{$user_id}"), $value);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Инициалихация команд
 function stats_initcmd($event){
 	$event->addTextMessageCommand("!стата", 'stats_cmd_handler');
 }
 
-function stats_update($data, &$db){
+function stats_update($data, $db){
 	$db->unsetValue(array("stats")); // Удаление старой статы 1
 	$db->unsetValue(array("user_stats")); // Удаление старой статы 2
 	$db->unsetValue(array("bot_manager", "chat_modes", "stats_enabled"));
 
-	$stats = $db->getValue(array("chat_stats", "users", "id{$data->object->from_id}"), STATS_DEFAULT);
+	$stats = stats_api_getuser($db, $data->object->from_id);
 	$last_message_user_id = $db->getValue(array("chat_stats", "last_message_user_id"), 0);
 
 	foreach (STATS_DEFAULT as $key => $value) {
@@ -64,25 +86,25 @@ function stats_update($data, &$db){
 		}
 	}
 
-	$db->setValue(array("chat_stats", "users", "id{$data->object->from_id}"), $stats);
+	stats_api_setuser($db, $data->object->from_id, $stats);
 }
 
 function stats_cmd_handler($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
 
-	$command = mb_strtolower(bot_get_array_argv($words, 1, ""));
+	$command = mb_strtolower(bot_get_array_value($argv, 1, ""));
 	if($command == ""){
 		if(array_key_exists(0, $data->object->fwd_messages)){
 			$member_id = $data->object->fwd_messages[0]->from_id;
 		} else $member_id = $data->object->from_id;
 
-		$stats = $db->getValue(array("chat_stats", "users", "id{$member_id}"), STATS_DEFAULT);
+		$stats = stats_api_getuser($db, $data->object->from_id);
 
 		$all_stats = $db->getValue(array("chat_stats", "users"), array());
 
@@ -100,9 +122,9 @@ function stats_cmd_handler($finput){
 			$rating_text = "Нет данных";
 
 		if($data->object->from_id == $member_id)
-			$msg = "%appeal%, статистика:\n📧Сообщений: {$stats["msg_count"]}\n&#12288;📝Подряд: {$stats["msg_count_in_succession"]}\n🔍Символов: {$stats["simbol_count"]}\n📟Гол. сообщений: {$stats["audio_msg_count"]}\n\n📷Фотографий: {$stats["photo_count"]}\n📹Видео: {$stats["video_count"]}\n🎧Аудиозаписей: {$stats["audio_count"]}\n🤡Стикеров: {$stats["sticker_count"]}\n\n👑Активность: {$rating_text}";
+			$msg = "%appeal%, статистика:\n📧Сообщений: {$stats["msg_count"]}\n&#12288;📝Подряд: {$stats["msg_count_in_succession"]}\n🔍Символов: {$stats["simbol_count"]}\n📟Гол. сообщений: {$stats["audio_msg_count"]}\n\n📷Фотографий: {$stats["photo_count"]}\n📹Видео: {$stats["video_count"]}\n🎧Аудиозаписей: {$stats["audio_count"]}\n🤡Стикеров: {$stats["sticker_count"]}\n\n👊🏻Получено люлей: {$stats["bump_count"]} р.\n\n👑Активность: {$rating_text}";
 		else
-			$msg = "%appeal%, статистика @id{$member_id} (пользователя):\n📧Сообщений: {$stats["msg_count"]}\n&#12288;📝Подряд: {$stats["msg_count_in_succession"]}\n🔍Символов: {$stats["simbol_count"]}\n📟Гол. сообщений: {$stats["audio_msg_count"]}\n\n📷Фотографий: {$stats["photo_count"]}\n📹Видео: {$stats["video_count"]}\n🎧Аудиозаписей: {$stats["audio_count"]}\n🤡Стикеров: {$stats["sticker_count"]}\n\n👑Активность: {$rating_text}";
+			$msg = "%appeal%, статистика @id{$member_id} (пользователя):\n📧Сообщений: {$stats["msg_count"]}\n&#12288;📝Подряд: {$stats["msg_count_in_succession"]}\n🔍Символов: {$stats["simbol_count"]}\n📟Гол. сообщений: {$stats["audio_msg_count"]}\n\n📷Фотографий: {$stats["photo_count"]}\n📹Видео: {$stats["video_count"]}\n🎧Аудиозаписей: {$stats["audio_count"]}\n🤡Стикеров: {$stats["sticker_count"]}\n\n👊🏻Получено люлей: {$stats["bump_count"]} р.\n\n👑Активность: {$rating_text}";
 
 		$messagesModule->sendSilentMessage($data->object->peer_id, $msg);
 	}

@@ -309,14 +309,14 @@ function manager_initcmd($event){
 function manager_mode_list($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 	$chatModes = new ChatModes($db);
 
-	if(array_key_exists(1, $words))
-		$list_number_from_word = intval($words[1]);
+	if(array_key_exists(1, $argv))
+		$list_number_from_word = intval($argv[1]);
 	else
 		$list_number_from_word = 1;
 
@@ -364,7 +364,7 @@ function manager_mode_list($finput){
 function manager_mode_cpanel($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
@@ -376,13 +376,13 @@ function manager_mode_cpanel($finput){
 		return;
 	}
 
-	if(array_key_exists(1, $words))
-		$modeName = mb_strtolower($words[1]);
+	if(array_key_exists(1, $argv))
+		$modeName = mb_strtolower($argv[1]);
 	else
 		$modeName = "";
 
-	if(array_key_exists(2, $words))
-		$modeValue = mb_strtolower($words[2]);
+	if(array_key_exists(2, $argv))
+		$modeValue = mb_strtolower($argv[2]);
 	else
 		$modeValue = "";
 
@@ -420,7 +420,7 @@ function manager_mode_cpanel($finput){
 function manager_ban_user($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$ranksys = new RankSystem($db);
@@ -434,12 +434,12 @@ function manager_ban_user($finput){
 	if(array_key_exists(0, $data->object->fwd_messages)){
 		$member_id = $data->object->fwd_messages[0]->from_id;
 		$reason = mb_substr($data->object->text, 5);
-	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
-		$member_id = bot_get_id_from_mention($words[1]);
-		$reason = mb_substr($data->object->text, 6 + mb_strlen($words[1]));
-	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
-		$member_id = intval($words[1]);
-		$reason = mb_substr($data->object->text, 6 + mb_strlen($words[1]));
+	} elseif(array_key_exists(1, $argv) && bot_is_mention($argv[1])){
+		$member_id = bot_get_id_from_mention($argv[1]);
+		$reason = mb_substr($data->object->text, 6 + mb_strlen($argv[1]));
+	} elseif(array_key_exists(1, $argv) && is_numeric($argv[1])) {
+		$member_id = intval($argv[1]);
+		$reason = mb_substr($data->object->text, 6 + mb_strlen($argv[1]));
 	} else $member_id = 0;
 
 	if($member_id == 0){
@@ -510,7 +510,7 @@ function manager_ban_user($finput){
 function manager_unban_user($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
@@ -534,9 +534,9 @@ function manager_unban_user($finput){
 			$member_ids[] = $data->object->fwd_messages[$i]->from_id;
 		}
 	}
-	for($i = 1; $i < sizeof($words); $i++){
-		if(bot_is_mention($words[$i])){
-			$member_id = bot_get_id_from_mention($words[$i]);
+	for($i = 1; $i < sizeof($argv); $i++){
+		if(bot_is_mention($argv[$i])){
+			$member_id = bot_get_id_from_mention($argv[$i]);
 			$isContinue = true;
 			for($j = 0; $j < sizeof($member_ids); $j++){
 				if($member_ids[$j] == $member_id){
@@ -547,8 +547,8 @@ function manager_unban_user($finput){
 			if($isContinue){
 				$member_ids[] = $member_id;
 			}
-		} elseif(is_numeric($words[$i])) {
-			$member_id = intval($words[$i]);
+		} elseif(is_numeric($argv[$i])) {
+			$member_id = intval($argv[$i]);
 			$isContinue = true;
 			for($j = 0; $j < sizeof($member_ids); $j++){
 				if($member_ids[$j] == $member_id){
@@ -631,13 +631,13 @@ function manager_unban_user($finput){
 function manager_banlist_user($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
-	if(array_key_exists(1, $words))
-		$list_number_from_word = intval($words[1]);
+	if(array_key_exists(1, $argv))
+		$list_number_from_word = intval($argv[1]);
 	else
 		$list_number_from_word = 1;
 
@@ -702,7 +702,7 @@ function manager_banlist_user($finput){
 function manager_baninfo_user($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
@@ -710,12 +710,12 @@ function manager_baninfo_user($finput){
 	if(array_key_exists(0, $data->object->fwd_messages)){
 		$member_id = $data->object->fwd_messages[0]->from_id;
 		$reason = mb_substr($data->object->text, 5);
-	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
-		$member_id = bot_get_id_from_mention($words[1]);
-		$reason = mb_substr($data->object->text, 6 + mb_strlen($words[1]));
-	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
-		$member_id = intval($words[1]);
-		$reason = mb_substr($data->object->text, 6 + mb_strlen($words[1]));
+	} elseif(array_key_exists(1, $argv) && bot_is_mention($argv[1])){
+		$member_id = bot_get_id_from_mention($argv[1]);
+		$reason = mb_substr($data->object->text, 6 + mb_strlen($argv[1]));
+	} elseif(array_key_exists(1, $argv) && is_numeric($argv[1])) {
+		$member_id = intval($argv[1]);
+		$reason = mb_substr($data->object->text, 6 + mb_strlen($argv[1]));
 	} else $member_id = 0;
 
 	if($member_id == 0){
@@ -748,7 +748,7 @@ function manager_baninfo_user($finput){
 function manager_kick_user($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
@@ -772,9 +772,9 @@ function manager_kick_user($finput){
 			$member_ids[] = $data->object->fwd_messages[$i]->from_id;
 		}
 	}
-	for($i = 1; $i < sizeof($words); $i++){
-		if(bot_is_mention($words[$i])){
-			$member_id = bot_get_id_from_mention($words[$i]);
+	for($i = 1; $i < sizeof($argv); $i++){
+		if(bot_is_mention($argv[$i])){
+			$member_id = bot_get_id_from_mention($argv[$i]);
 			$isContinue = true;
 			for($j = 0; $j < sizeof($member_ids); $j++){
 				if($member_ids[$j] == $member_id){
@@ -785,8 +785,8 @@ function manager_kick_user($finput){
 			if($isContinue){
 				$member_ids[] = $member_id;
 			}
-		} elseif(is_numeric($words[$i])) {
-			$member_id = intval($words[$i]);
+		} elseif(is_numeric($argv[$i])) {
+			$member_id = intval($argv[$i]);
 			$isContinue = true;
 			for($j = 0; $j < sizeof($member_ids); $j++){
 				if($member_ids[$j] == $member_id){
@@ -864,12 +864,12 @@ function manager_kick_user($finput){
 function manager_online_list($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
-	if(!array_key_exists(1, $words)){
+	if(!array_key_exists(1, $argv)){
 		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'online'});
 			var msg = ', 🌐следующие пользователи в сети:\\n';
@@ -896,12 +896,12 @@ function manager_online_list($finput){
 function manager_nick($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
-	if(array_key_exists(1, $words)){
+	if(array_key_exists(1, $argv)){
 		$nick = mb_substr($data->object->text, 5);
 		$nick = str_ireplace("\n", "", $nick);
 		if(!array_key_exists(0, $data->object->fwd_messages)){
@@ -996,13 +996,13 @@ function manager_remove_nick($data, &$db){
 function manager_show_nicknames($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
-	if(array_key_exists(1, $words))
-		$list_number_from_word = intval($words[1]);
+	if(array_key_exists(1, $argv))
+		$list_number_from_word = intval($argv[1]);
 	else
 		$list_number_from_word = 1;
 
@@ -1067,7 +1067,7 @@ function manager_show_nicknames($finput){
 function manager_greeting($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$ranksys = new RankSystem($db);
@@ -1078,8 +1078,8 @@ function manager_greeting($finput){
 		return;
 	}
 
-	if(array_key_exists(1, $words))
-		$command = mb_strtolower($words[1]);
+	if(array_key_exists(1, $argv))
+		$command = mb_strtolower($argv[1]);
 	else
 		$command = "";
 	if($command == 'установить'){
@@ -1163,13 +1163,13 @@ function manager_show_invited_greetings($data, $db){
 function manager_rank($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
-	if(array_key_exists(1, $words)){
-		$command = mb_strtolower($words[1]);
+	if(array_key_exists(1, $argv)){
+		$command = mb_strtolower($argv[1]);
 		if($command == "выдать"){
 			$ranksys = new RankSystem($db);
 			if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверка ранга (Администратор)
@@ -1178,15 +1178,15 @@ function manager_rank($finput){
 				return;
 			}
 
-			if(!array_key_exists(2, $words) && !array_key_exists(0, $data->object->fwd_messages)){
+			if(!array_key_exists(2, $argv) && !array_key_exists(0, $data->object->fwd_messages)){
 				$msg = ", используйте \"!ранг выдать <ранг> <id/упоминание/перес. сообщение>\".";
 				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
 				return;
 			}
 
-			if(array_key_exists(2, $words))
-				$rank = intval($words[2]);
+			if(array_key_exists(2, $argv))
+				$rank = intval($argv[2]);
 			else
 				$rank = 0;
 
@@ -1204,10 +1204,10 @@ function manager_rank($finput){
 
 			if(array_key_exists(0, $data->object->fwd_messages)){
 				$member_id = $data->object->fwd_messages[0]->from_id;
-			} elseif(array_key_exists(3, $words) && bot_is_mention($words[3])){
-				$member_id = bot_get_id_from_mention($words[3]);
-			} elseif(array_key_exists(3, $words) && is_numeric($words[3])) {
-				$member_id = intval($words[3]);
+			} elseif(array_key_exists(3, $argv) && bot_is_mention($argv[3])){
+				$member_id = bot_get_id_from_mention($argv[3]);
+			} elseif(array_key_exists(3, $argv) && is_numeric($argv[3])) {
+				$member_id = intval($argv[3]);
 			} else {
 				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите пользователя.", $data->object->from_id);
 				return;
@@ -1235,7 +1235,7 @@ function manager_rank($finput){
 				return;
 			}
 
-			if(!array_key_exists(2, $words) && !array_key_exists(0, $data->object->fwd_messages)){
+			if(!array_key_exists(2, $argv) && !array_key_exists(0, $data->object->fwd_messages)){
 				$msg = ", используйте \"!ранг забрать <id/упоминание/перес. сообщение>\".";
 				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
@@ -1246,10 +1246,10 @@ function manager_rank($finput){
 
 			if(array_key_exists(0, $data->object->fwd_messages)){
 				$member_id = $data->object->fwd_messages[0]->from_id;
-			} elseif(array_key_exists(2, $words) && bot_is_mention($words[2])){
-				$member_id = bot_get_id_from_mention($words[2]);
-			} elseif(array_key_exists(2, $words) && is_numeric($words[2])) {
-				$member_id = intval($words[2]);
+			} elseif(array_key_exists(2, $argv) && bot_is_mention($argv[2])){
+				$member_id = bot_get_id_from_mention($argv[2]);
+			} elseif(array_key_exists(2, $argv) && is_numeric($argv[2])) {
+				$member_id = intval($argv[2]);
 			} else {
 				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите пользователя.", $data->object->from_id);
 				return;
@@ -1300,13 +1300,13 @@ function manager_rank($finput){
 function manager_show_user_ranks($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
-	if(array_key_exists(1, $words))
-		$list_number_from_word = intval($words[1]);
+	if(array_key_exists(1, $argv))
+		$list_number_from_word = intval($argv[1]);
 	else
 		$list_number_from_word = 1;
 	$ranksys = new RankSystem($db);
@@ -1368,7 +1368,7 @@ function manager_show_user_ranks($finput){
 function manager_rank_list($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
@@ -1386,7 +1386,7 @@ function manager_rank_list($finput){
 function manager_panel_show($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
@@ -1442,12 +1442,12 @@ function manager_panel_show($finput){
 function manager_panel_control($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 
-	$command = mb_strtolower(bot_get_array_argv($words, 1, ""));
+	$command = mb_strtolower(bot_get_array_value($argv, 1, ""));
 
 	if($command == "создать"){
 		$text_command = mb_substr($data->object->text, 16);
@@ -1495,9 +1495,9 @@ function manager_panel_control($finput){
 	}
 	elseif($command == "название"){
 		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
-		$argv = bot_get_array_argv($words, 2, 0);
-		$name = mb_substr($data->object->text, 18+mb_strlen($argv));
-		if($argv == "" || !is_numeric($argv) || $name == ""){
+		$argvt = bot_get_array_value($argv, 2, 0);
+		$name = mb_substr($data->object->text, 18+mb_strlen($argvt));
+		if($argvt == "" || !is_numeric($argvt) || $name == ""){
 			$botModule->sendSilentMessage($data->object->peer_id, ", Используйте [!панель название <номер> <название>], чтобы изменить название элемента.", $data->object->from_id);
 			return;
 		}
@@ -1505,22 +1505,22 @@ function manager_panel_control($finput){
 			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Название не может быть больше 15 символов.", $data->object->from_id);
 			return;
 		}
-		$id = intval($argv) - 1;
+		$id = intval($argvt) - 1;
 		if(!array_key_exists($id, $user_panel["elements"])){
-			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Элемента под номером {$argv} не существует.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Элемента под номером {$argvt} не существует.", $data->object->from_id);
 			return;
 		}
 		$user_panel["elements"][$id]["name"] = $name;
 		$user_panel["last_change_time"] = time();
 		$db->setValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), $user_panel);
 		$db->save();
-		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Название элемента №{$argv} успешно изменено.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Название элемента №{$argvt} успешно изменено.", $data->object->from_id);
 	}
 	elseif($command == "команда"){
 		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
-		$argv = bot_get_array_argv($words, 2, 0);
-		$text_command = mb_substr($data->object->text, 17+mb_strlen($argv));
-		if($argv == "" || !is_numeric($argv) || $text_command == ""){
+		$argvt = bot_get_array_value($argv, 2, 0);
+		$text_command = mb_substr($data->object->text, 17+mb_strlen($argvt));
+		if($argvt == "" || !is_numeric($argvt) || $text_command == ""){
 			$botModule->sendSilentMessage($data->object->peer_id, ", Используйте [!панель команда <номер> <команда>], чтобы изменить команду элемента.", $data->object->from_id);
 			return;
 		}
@@ -1528,39 +1528,39 @@ function manager_panel_control($finput){
 			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Команда не может быть больше 32 символов.", $data->object->from_id);
 			return;
 		}
-		$id = intval($argv) - 1;
+		$id = intval($argvt) - 1;
 		if(!array_key_exists($id, $user_panel["elements"])){
-			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Элемента под номером {$argv} не существует.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Элемента под номером {$argvt} не существует.", $data->object->from_id);
 			return;
 		}
 		$user_panel["elements"][$id]["command"] = $text_command;
 		$user_panel["last_change_time"] = time();
 		$db->setValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), $user_panel);
 		$db->save();
-		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Команда элемента №{$argv} успешно изменено.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Команда элемента №{$argvt} успешно изменено.", $data->object->from_id);
 	}
 	elseif($command == "цвет"){
 		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
-		$argv1 = intval(bot_get_array_argv($words, 2, 0));
-		$argv2 = intval(bot_get_array_argv($words, 3, 0));
-		if($argv1 == 0 || $argv2 == 0){
+		$argvt1 = intval(bot_get_array_value($argv, 2, 0));
+		$argvt2 = intval(bot_get_array_value($argv, 3, 0));
+		if($argvt1 == 0 || $argvt2 == 0){
 			$botModule->sendSilentMessage($data->object->peer_id, ", Используйте [!панель цвет <номер> <цвет>], чтобы изменить название элемента.\nДоступные цвета: 1 — белый, 2 - синий, 3- зелёный, 4 - красный.", $data->object->from_id);
 			return;
 		}
-		if($argv2 < 1 || $argv2 > 4){
-			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Цвета под номером {$argv2} не существует.\nДоступные цвета: 1 — белый, 2 - синий, 3- зелёный, 4 - красный.", $data->object->from_id);
+		if($argvt2 < 1 || $argvt2 > 4){
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Цвета под номером {$argvt2} не существует.\nДоступные цвета: 1 — белый, 2 - синий, 3- зелёный, 4 - красный.", $data->object->from_id);
 			return;
 		}
-		$id = $argv1 - 1;
+		$id = $argvt1 - 1;
 		if(!array_key_exists($id, $user_panel["elements"])){
-			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Элемента под номером {$argv1} не существует.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Элемента под номером {$argvt1} не существует.", $data->object->from_id);
 			return;
 		}
-		$user_panel["elements"][$id]["color"] = $argv2;
+		$user_panel["elements"][$id]["color"] = $argvt2;
 		$user_panel["last_change_time"] = time();
 		$db->setValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), $user_panel);
 		$db->save();
-		switch ($argv2) {
+		switch ($argvt2) {
 			case 1:
 				$color_name = "Белый";
 				break;
@@ -1577,18 +1577,18 @@ function manager_panel_control($finput){
 				$color_name = "Красный";
 				break;
 		}
-		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Название элемента номер {$argv1} успешно изменено. Установлен цвет: {$color_name}.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Название элемента номер {$argvt1} успешно изменено. Установлен цвет: {$color_name}.", $data->object->from_id);
 	}
 	elseif($command == "удалить"){
 		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
-		$argv = intval(bot_get_array_argv($words, 2, 0));
-		if($argv == 0){
+		$argvt = intval(bot_get_array_value($argv, 2, 0));
+		if($argvt == 0){
 			$botModule->sendSilentMessage($data->object->peer_id, ", Используйте [!панель удалить <номер>], чтобы удалить элемент.", $data->object->from_id);
 			return;
 		}
-		$id = $argv - 1;
+		$id = $argvt - 1;
 		if(!array_key_exists($id, $user_panel["elements"])){
-			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Элемента под номером {$argv} не существует.", $data->object->from_id);
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Элемента под номером {$argvt} не существует.", $data->object->from_id);
 			return;
 		}
 		unset($user_panel["elements"][$id]);
@@ -1596,7 +1596,7 @@ function manager_panel_control($finput){
 		$user_panel["last_change_time"] = time();
 		$db->setValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), $user_panel);
 		$db->save();
-		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Элемент под номером {$argv} успешно удален.", $data->object->from_id);
+		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Элемент под номером {$argvt} успешно удален.", $data->object->from_id);
 	}
 	else{
 		$botModule->sendCommandListFromArray($data, ", используйте:", array(
@@ -1619,9 +1619,9 @@ function manager_panel_keyboard_handler($finput){
 	$payload = $finput->payload;
 	$db = $finput->db;
 
-	$user_id = bot_get_array_argv($payload, 1, null);
-	$last_change_time = bot_get_array_argv($payload, 2, null);
-	$element_id = bot_get_array_argv($payload, 3, null);
+	$user_id = bot_get_array_value($payload, 1, null);
+	$last_change_time = bot_get_array_value($payload, 2, null);
+	$element_id = bot_get_array_value($payload, 3, null);
 
 	if(is_null($user_id) || is_null($last_change_time) || is_null($last_change_time))
 		return;

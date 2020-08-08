@@ -71,7 +71,7 @@ function fun_luba_menu($data, $fun, $msg, $botModule){
 function fun_memes_control_panel($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 	$event = $finput->event;
 
@@ -83,8 +83,8 @@ function fun_memes_control_panel($finput){
 		return;
 	}
 
-	if(array_key_exists(1, $words))
-		$command = mb_strtolower($words[1]);
+	if(array_key_exists(1, $argv))
+		$command = mb_strtolower($argv[1]);
 	else
 		$command = "";
 	if($command == "add"){
@@ -357,7 +357,7 @@ function fun_stockings($data, $db){ // Чулки
 function fun_buzova($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
@@ -473,24 +473,24 @@ function fun_like_wallpost($data, $db){
 function fun_choose($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 	$options = array();
 	$new_str = "";
-	for($i = 1; $i <= sizeof($words); $i++){
+	for($i = 1; $i <= sizeof($argv); $i++){
 		$isContinue = true;
-		if($i == sizeof($words) || mb_strtolower($words[$i]) == "или"){
+		if($i == sizeof($argv) || mb_strtolower($argv[$i]) == "или"){
 			$options[] = $new_str;
 			$new_str = "";
 			$isContinue = false;
 		}
 		if($isContinue){
 			if($new_str == ""){
-				$new_str = $words[$i];
+				$new_str = $argv[$i];
 			} else {
-				$new_str = $new_str . " " . $words[$i];
+				$new_str = $new_str . " " . $argv[$i];
 			}
 		}
 	}
@@ -512,14 +512,14 @@ function fun_choose($finput){
 function fun_howmuch($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
 	$rnd = mt_rand(0, 100);
 
-	if(array_key_exists(1, $words))
-		$unitname = $words[1];
+	if(array_key_exists(1, $argv))
+		$unitname = $argv[1];
 	else
 		$unitname = "";
 	$add = mb_substr($data->object->text, 9+mb_strlen($unitname));
@@ -556,12 +556,12 @@ function fun_howmuch($finput){
 function fun_bottle($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
-	if(array_key_exists(1, $words))
-		$command = mb_strtolower($words[1]);
+	if(array_key_exists(1, $argv))
+		$command = mb_strtolower($argv[1]);
 	else
 		$command = "";
 	if($command == "сесть"){
@@ -606,7 +606,7 @@ function fun_bottle($finput){
 function fun_whois_nom($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
@@ -636,7 +636,7 @@ function fun_whois_nom($finput){
 function fun_whois_gen($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
@@ -666,7 +666,7 @@ function fun_whois_gen($finput){
 function fun_whois_dat($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
@@ -696,7 +696,7 @@ function fun_whois_dat($finput){
 function fun_tts($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$message = mb_substr($data->object->text, 4);
@@ -736,7 +736,7 @@ function fun_tts($finput){
 function fun_shrug($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule();
@@ -746,7 +746,7 @@ function fun_shrug($finput){
 function fun_tableflip($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule();
@@ -756,7 +756,7 @@ function fun_tableflip($finput){
 function fun_unflip($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 	
 	$botModule = new BotModule();
@@ -766,7 +766,7 @@ function fun_unflip($finput){
 function fun_info($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
@@ -786,7 +786,7 @@ function fun_info($finput){
 function fun_say($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
@@ -811,7 +811,7 @@ function fun_say($finput){
 function fun_marriage($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
@@ -825,13 +825,13 @@ function fun_marriage($finput){
 
 	if(array_key_exists(0, $data->object->fwd_messages)){
 		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
-		$member_id = bot_get_id_from_mention($words[1]);
-	} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
-		$member_id = intval($words[1]);
+	} elseif(array_key_exists(1, $argv) && bot_is_mention($argv[1])){
+		$member_id = bot_get_id_from_mention($argv[1]);
+	} elseif(array_key_exists(1, $argv) && is_numeric($argv[1])) {
+		$member_id = intval($argv[1]);
 	} else {
-		if(array_key_exists(1, $words))
-			$word1 = mb_strtolower($words[1]);
+		if(array_key_exists(1, $argv))
+			$word1 = mb_strtolower($argv[1]);
 		else
 			$word1 = "";
 
@@ -993,7 +993,7 @@ function fun_marriage($finput){
 function fun_show_marriage_list($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$words = $finput->words;
+	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$marriages_db = $db->getValue(array("fun", "marriages"), array(
@@ -1005,8 +1005,8 @@ function fun_show_marriage_list($finput){
 
 	$date = time(); // Переменная времени
 
-	if(array_key_exists(1, $words) && !is_numeric($words[1]))
-		$word = mb_strtolower($words[1]);
+	if(array_key_exists(1, $argv) && !is_numeric($argv[1]))
+		$word = mb_strtolower($argv[1]);
 	else
 		$word = "";
 
@@ -1019,8 +1019,8 @@ function fun_show_marriage_list($finput){
 			return;
 		}
 
-		if(array_key_exists(2, $words) && is_numeric($words[2]))
-			$list_number_from_word = intval($words[2]);
+		if(array_key_exists(2, $argv) && is_numeric($argv[2]))
+			$list_number_from_word = intval($argv[2]);
 		else
 			$list_number_from_word = 1;
 
@@ -1117,8 +1117,8 @@ function fun_show_marriage_list($finput){
 			return;
 		}
 
-		if(array_key_exists(1, $words) && is_numeric($words[1]))
-			$list_number_from_word = intval($words[1]);
+		if(array_key_exists(1, $argv) && is_numeric($argv[1]))
+			$list_number_from_word = intval($argv[1]);
 		else
 			$list_number_from_word = 1;
 

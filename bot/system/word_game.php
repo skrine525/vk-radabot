@@ -10,12 +10,12 @@ function wordgame_initcmd($event){
 }
 
 function wordgame_cmd($finput){
-	wordgame_main($finput->data, $finput->words, $finput->db);
+	wordgame_main($finput->data, $finput->argv, $finput->db);
 }
 
-function wordgame_main($data, $words, $db){
+function wordgame_main($data, $argv, $db){
 	$session = wordgame_get_session($data->object->peer_id);
-	if(array_key_exists(1, $words) && mb_strtolower($words[1]) == 'старт'){
+	if(array_key_exists(1, $argv) && mb_strtolower($argv[1]) == 'старт'){
 		if(!array_key_exists('word_game', $session)){
 			$date = time(); // Переменная времени
 			wordgame_reset_word($session, $date, $data->object->from_id);
@@ -44,7 +44,7 @@ function wordgame_main($data, $words, $db){
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->sendMessage($data->object->peer_id, "[Слова] Игра уже запущена.");
 		}
-	} elseif (mb_strtolower($words[1]) == 'стоп') {
+	} elseif (mb_strtolower($argv[1]) == 'стоп') {
 		if(array_key_exists('word_game', $session)){
 			if($session["word_game"]["started_by"] != $data->object->from_id){
 				$ranksys = new RankSystem($db);
@@ -66,7 +66,7 @@ function wordgame_main($data, $words, $db){
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->sendMessage($data->object->peer_id, "[Слова] Игра не запущена.");
 		}
-	} elseif (mb_strtolower($words[1]) == 'рейтинг') {
+	} elseif (mb_strtolower($argv[1]) == 'рейтинг') {
 		$array = $db->getValue(array("games", "word_game_rating"), array());
 
 		if(count($array) > 0){
@@ -210,7 +210,7 @@ function wordgame_gameplay_cb($finput){
 			vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}','keyboard':'{$empty_keyboard}'});");
 		}
 		else{
-			$act = bot_get_array_argv($payload, 1, 0);
+			$act = bot_get_array_value($payload, 1, 0);
 
 			switch ($act) {
 				case 1:
@@ -547,12 +547,12 @@ function wordgame_gameplay($data, &$db){
 // Английская часть игры
 
 function wordgame_eng_cmd($finput){
-	wordgame_eng_main($finput->data, $finput->words, $finput->db);
+	wordgame_eng_main($finput->data, $finput->argv, $finput->db);
 }
 
-function wordgame_eng_main($data, $words, &$db){
+function wordgame_eng_main($data, $argv, &$db){
 	$session = wordgame_eng_get_session($data->object->peer_id);
-	if(array_key_exists(1, $words) && mb_strtolower($words[1]) == 'start'){
+	if(array_key_exists(1, $argv) && mb_strtolower($argv[1]) == 'start'){
 		if(!array_key_exists('word_game_eng', $session)){
 			$date = time(); // Переменная времени
 			wordgame_eng_reset_word($session, $date);
@@ -581,7 +581,7 @@ function wordgame_eng_main($data, $words, &$db){
 			$botModule = new BotModule($db);
 			$botModule->sendSilentMessage($data->object->peer_id, "[Words] Игра уже запущена.");
 		}
-	} elseif (mb_strtolower($words[1]) == 'stop') {
+	} elseif (mb_strtolower($argv[1]) == 'stop') {
 		if(array_key_exists('word_game_eng', $session)){
 			$empty_keyboard = vk_keyboard(true, array());
 			wordgame_eng_del_session($data->object->peer_id);
@@ -600,7 +600,7 @@ function wordgame_eng_main($data, $words, &$db){
 			$botModule = new BotModule($db);
 			$botModule->sendSilentMessage($data->object->peer_id, "[Words] Игра не запущена.");
 		}
-	} elseif (mb_strtolower($words[1]) == 'rating') {
+	} elseif (mb_strtolower($argv[1]) == 'rating') {
 		if(array_key_exists("games", $db) && array_key_exists("word_game_eng_rating", $db["games"]))
 				$array = $db["games"]["word_game_eng_rating"];
 			else

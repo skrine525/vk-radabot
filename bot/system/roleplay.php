@@ -12,6 +12,7 @@ namespace Roleplay{
 		// Базовые переменные
 		private $db;
 		private $data;
+		private $argv;
 		private $text_command;
 
 		// Переменные параметров
@@ -26,9 +27,13 @@ namespace Roleplay{
 		private $permittedMemberGender;
 		private $memberGenderErrorMessage;
 
-		function __construct($db, $data, $text_command){
+		// Описание
+		private $allowDescription;
+
+		function __construct($db, $data, $argv, $text_command){
 			$this->db = $db;
 			$this->data = $data;
+			$this->argv = $argv;
 			$this->text_command = $text_command;
 
 			$this->maleMessage = null;
@@ -40,16 +45,19 @@ namespace Roleplay{
 
 			$this->permittedMemberGender = 0;
 			$this->memberGenderErrorMessage = "";
+
+			$this->allowDescription = false;
 		}
 
-		private function getTextUserInfo($argv){
-			$argv_from_text_command_count = count(explode(' ', $this->text_command));
-			$first_name = bot_get_array_argv($argv, $argv_from_text_command_count, "");
-			$last_name = bot_get_array_argv($argv, $argv_from_text_command_count+1, "");
-			if($first_name !== "" && $last_name !== "")
-				return "{$first_name} {$last_name}";
+		private function getArgv(){
+			$text_command_argv_count = count(bot_parse_argv($this->text_command));
+			$argv = array();
+			$argv[] = bot_get_array_value($this->argv, $text_command_argv_count, false);
+			if($this->allowDescription)
+				$argv[] = bot_get_array_value($this->argv, $text_command_argv_count + 1, false);
 			else
-				return $first_name;
+				$argv[] = false;
+			return $argv;
 		}
 
 		public function setPermittedMemberGender($gender, $message){
@@ -60,6 +68,23 @@ namespace Roleplay{
 			}
 			$this->permittedMemberGender = $gender;
 			$this->memberGenderErrorMessage = $message;
+		}
+
+		public function allowDescription($state){
+			$this->allowDescription = $state;
+		}
+
+		private function generateDescriptionMessageVKScriptCode($message){
+			if($this->allowDescription){
+				if(gettype($message) == "string"){
+					$formated_message = addslashes($message);
+					return "var DESCRIPTION_MSG=\" {$formated_message}\";";
+				}
+				else
+					return "var DESCRIPTION_MSG=\"\";";
+			}
+			else
+				return "";
 		}
 
 		public function handle(){
@@ -84,12 +109,9 @@ namespace Roleplay{
 				error_log("Invalid parameter femaleMessageToMyself while handling in {$debug_backtrace[0]["file"]} on line {$debug_backtrace[0]["line"]}");
 				return false;
 			}
-
-			$argv = explode(' ', $this->data->object->text);
-
-			$user_info = $this->getTextUserInfo($argv); // Получаем информацию о пользователе из сообщения
+			$argv = $this->getArgv(); // Получаем аргументы текущего запроса из сообщения
 			$messagesModule = new \Bot\Messages($this->db);
-			if($user_info == "" && !array_key_exists(0, $this->data->object->fwd_messages)){
+			if(gettype($argv[0]) != "string" && !array_key_exists(0, $this->data->object->fwd_messages)){
 				$messagesModule->setAppealID($this->data->object->from_id);
 				$messagesModule->sendSilentMessageWithListFromArray($this->data->object->peer_id, "%appeal%, Используйте:", array(
 					"{$this->text_command} <имя>",
@@ -103,12 +125,21 @@ namespace Roleplay{
 			}
 
 			$member_id = 0;
-			if(array_key_exists(0, $this->data->object->fwd_messages))
+			if(array_key_exists(0, $this->data->object->fwd_messages)){
 				$member_id = $this->data->object->fwd_messages[0]->from_id;
-			elseif(!is_null($user_info) && bot_is_mention($user_info))
-				$member_id = bot_get_id_from_mention($user_info);
-			elseif(!is_null($user_info) && is_numeric($user_info))
-				$member_id = intval($user_info);
+				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($argv[0]);
+			}
+			elseif(bot_is_mention($argv[0])){
+				$member_id = bot_get_id_from_mention($argv[0]);
+				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($argv[1]);
+			}
+			elseif(is_numeric($argv[0])){
+				$member_id = intval($argv[0]);
+				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($argv[1]);
+			}
+			else
+				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($argv[1]);
+
 
 			if($member_id > 0){
 				$messagesJson = json_encode(
@@ -119,29 +150,40 @@ namespace Roleplay{
 						'femaleToMyself' => $this->femaleMessageToMyself,
 						'memberGenderErrorMessage' => $this->memberGenderErrorMessage
 					), JSON_UNESCAPED_UNICODE);
-				$messagesJson = vk_parse_vars($messagesJson, array("FROM_USERNAME", "MEMBER_USERNAME", "MEMBER_USERNAME_GEN", "MEMBER_USERNAME_DAT", "MEMBER_USERNAME_ACC", "MEMBER_USERNAME_INS", "MEMBER_USERNAME_ABL", "appeal"));
+
+				// Парсинг переменных
+				$parsing_vars = array("FROM_USERNAME", "MEMBER_USERNAME", "MEMBER_USERNAME_GEN", "MEMBER_USERNAME_DAT", "MEMBER_USERNAME_ACC", "MEMBER_USERNAME_INS", "MEMBER_USERNAME_ABL", "appeal");
+				if($this->allowDescription)
+					$parsing_vars[] = "DESCRIPTION_MSG";
+				$messagesJson = vk_parse_vars($messagesJson, $parsing_vars);
 
 				if($this->permittedMemberGender != 0)
 					$permittedMemberGender_VKScript = "if(member.sex != {$this->permittedMemberGender}){API.messages.send({'peer_id':{$this->data->object->peer_id},'message':messages.memberGenderErrorMessage});return{'result':false};}";
 				else
 					$permittedMemberGender_VKScript = "";
 
-				$res = (object) json_decode(vk_execute($messagesModule->makeExeAppealByID($this->data->object->from_id)."var users=API.users.get({'user_ids':[{$member_id},{$this->data->object->from_id}],'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});var members=API.messages.getConversationMembers({'peer_id':{$this->data->object->peer_id}});var from_user=users[1];var member=users[0];if({$member_id}=={$this->data->object->from_id}){from_user=users[0];}var isContinue=false;var i=0;while(i<members.profiles.length){if(members.profiles[i].id=={$member_id}){isContinue=true;}i=i+1;}if(!isContinue){API.messages.send({'peer_id':{$this->data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});return{'result':false};}var FROM_USERNAME='@'+from_user.screen_name+' ('+from_user.first_name.substr(0,2)+'. '+from_user.last_name+')';var MEMBER_USERNAME='@'+member.screen_name+' ('+member.first_name.substr(0,2)+'. '+member.last_name+')';var MEMBER_USERNAME_GEN='@'+member.screen_name+' ('+member.first_name_gen.substr(0,2)+'. '+member.last_name_gen+')';var MEMBER_USERNAME_DAT='@'+member.screen_name+' ('+member.first_name_dat.substr(0,2)+'. '+member.last_name_dat+')';var MEMBER_USERNAME_ACC='@'+member.screen_name+' ('+member.first_name_acc.substr(0,2)+'. '+member.last_name_acc+')';var MEMBER_USERNAME_INS='@'+member.screen_name+' ('+member.first_name_ins.substr(0,2)+'. '+member.last_name_ins+')';var MEMBER_USERNAME_ABL='@'+member.screen_name+' ('+member.first_name_abl.substr(0,2)+'. '+member.last_name_abl+')';var messages={$messagesJson};{$permittedMemberGender_VKScript}var msg='';if({$member_id}=={$this->data->object->from_id}){if(member.sex==1){msg=messages.femaleToMyself;}else{msg=messages.maleToMyself;}}else{if(from_user.sex==1){msg=messages.female;}else{msg=messages.male;};};API.messages.send({'peer_id':{$this->data->object->peer_id},'message':msg});return{'result':true,'member_id':member.id};"))->response;
+				$res = (object) json_decode(vk_execute($messagesModule->makeExeAppealByID($this->data->object->from_id)."var users=API.users.get({'user_ids':[{$member_id},{$this->data->object->from_id}],'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});var members=API.messages.getConversationMembers({'peer_id':{$this->data->object->peer_id}});var from_user=users[1];var member=users[0];if({$member_id}=={$this->data->object->from_id}){from_user=users[0];}var isContinue=false;var i=0;while(i<members.profiles.length){if(members.profiles[i].id=={$member_id}){isContinue=true;}i=i+1;}if(!isContinue){API.messages.send({'peer_id':{$this->data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});return{'result':false};}var FROM_USERNAME='@'+from_user.screen_name+' ('+from_user.first_name.substr(0,2)+'. '+from_user.last_name+')';var MEMBER_USERNAME='@'+member.screen_name+' ('+member.first_name.substr(0,2)+'. '+member.last_name+')';var MEMBER_USERNAME_GEN='@'+member.screen_name+' ('+member.first_name_gen.substr(0,2)+'. '+member.last_name_gen+')';var MEMBER_USERNAME_DAT='@'+member.screen_name+' ('+member.first_name_dat.substr(0,2)+'. '+member.last_name_dat+')';var MEMBER_USERNAME_ACC='@'+member.screen_name+' ('+member.first_name_acc.substr(0,2)+'. '+member.last_name_acc+')';var MEMBER_USERNAME_INS='@'+member.screen_name+' ('+member.first_name_ins.substr(0,2)+'. '+member.last_name_ins+')';var MEMBER_USERNAME_ABL='@'+member.screen_name+' ('+member.first_name_abl.substr(0,2)+'. '+member.last_name_abl+')';{$descriptionMessage_VKScript}var messages={$messagesJson};{$permittedMemberGender_VKScript}var msg='';if({$member_id}=={$this->data->object->from_id}){if(member.sex==1){msg=messages.femaleToMyself;}else{msg=messages.maleToMyself;}}else{if(from_user.sex==1){msg=messages.female;}else{msg=messages.male;};};API.messages.send({'peer_id':{$this->data->object->peer_id},'message':msg});return{'result':true,'member_id':member.id};"))->response;
 				if($res->result)
 					return $res->member_id;
 				else
 					return false;
 			}
 			else{
-				if(isset($this->maleMessageToAll, $this->femaleMessageToAll) && array_search(mb_strtolower($user_info), array('всем', 'всех', 'у всех', 'со всеми', 'на всех')) !== false){ 
+				if(isset($this->maleMessageToAll, $this->femaleMessageToAll) && array_search(mb_strtolower($argv[0]), array('всем', 'всех', 'у всех', 'со всеми', 'на всех')) !== false){ 
 					// Выполнение действия над всеми
 					$messagesJson = json_encode(array(
 						'male' => $this->maleMessageToAll,
 						'female' => $this->femaleMessageToAll
 					), JSON_UNESCAPED_UNICODE);
-					$messagesJson = vk_parse_var($messagesJson, "FROM_USERNAME");
-					$res = json_decode(vk_execute($messagesModule->makeExeAppealByID($this->data->object->from_id)."var from_user=API.users.get({'user_ids':[{$this->data->object->from_id}],'fields':'sex,screen_name'})[0];var FROM_USERNAME='@'+from_user.screen_name+' ('+from_user.first_name.substr(0,2)+'. '+from_user.last_name+')';var messages={$messagesJson};var msg='';if(from_user.sex==1){msg=messages.female;}else{msg=messages.male;};API.messages.send({'peer_id':{$this->data->object->peer_id},'message':msg});return {'result':true,'member_id':0};"))->response;
-					return (object) $res;
+					$parsing_vars = array("FROM_USERNAME", "DESCRIPTION_MSG");
+					if($this->allowDescription)
+						$parsing_vars[] = "DESCRIPTION_MSG";
+					$messagesJson = vk_parse_vars($messagesJson, $parsing_vars);
+					$res = json_decode(vk_execute($messagesModule->makeExeAppealByID($this->data->object->from_id)."var from_user=API.users.get({'user_ids':[{$this->data->object->from_id}],'fields':'sex,screen_name'})[0];var FROM_USERNAME='@'+from_user.screen_name+' ('+from_user.first_name.substr(0,2)+'. '+from_user.last_name+')';{$descriptionMessage_VKScript}var messages={$messagesJson};var msg='';if(from_user.sex==1){msg=messages.female;}else{msg=messages.male;};API.messages.send({'peer_id':{$this->data->object->peer_id},'message':msg});return {'result':true,'member_id':0};"))->response;
+					if($res->result)
+						return $res->member_id;
+					else
+						return false;
 				}
 
 				$messagesJson = json_encode(
@@ -152,14 +194,19 @@ namespace Roleplay{
 						'femaleToMyself' => $this->femaleMessageToMyself,
 						'memberGenderErrorMessage' => $this->memberGenderErrorMessage
 					), JSON_UNESCAPED_UNICODE);
-				$messagesJson = vk_parse_vars($messagesJson, array("FROM_USERNAME", "MEMBER_USERNAME", "MEMBER_USERNAME_GEN", "MEMBER_USERNAME_DAT", "MEMBER_USERNAME_ACC", "MEMBER_USERNAME_INS", "MEMBER_USERNAME_ABL", "appeal"));
+
+				// Парсинг переменных
+				$parsing_vars = array("FROM_USERNAME", "MEMBER_USERNAME", "MEMBER_USERNAME_GEN", "MEMBER_USERNAME_DAT", "MEMBER_USERNAME_ACC", "MEMBER_USERNAME_INS", "MEMBER_USERNAME_ABL", "appeal");
+				if($this->allowDescription)
+					$parsing_vars[] = "DESCRIPTION_MSG";
+				$messagesJson = vk_parse_vars($messagesJson, $parsing_vars);
 
 				if($this->permittedMemberGender != 0)
 					$permittedMemberGender_VKScript = "if(member.sex != {$this->permittedMemberGender}){API.messages.send({'peer_id':{$this->data->object->peer_id},'message':messages.memberGenderErrorMessage});return {'result':false};}";
 				else
 					$permittedMemberGender_VKScript = "";
 
-				$user_info_words = explode(" ", $user_info);
+				$user_info_words = explode(" ", $argv[0]);
 				$word = array();
 				for($i = 0; $i < 2; $i++){
 					if(array_key_exists($i, $user_info_words)){
@@ -171,8 +218,11 @@ namespace Roleplay{
 						$word[$i] = "";
 				}
 
-				$res = json_decode(vk_execute($messagesModule->makeExeAppealByID($this->data->object->from_id)."var members=API.messages.getConversationMembers({'peer_id':{$this->data->object->peer_id},'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});var from_user= API.users.get({'user_ids':[{$this->data->object->from_id}],'fields':'sex,screen_name'})[0];var word1='{$word[0]}';var word2='{$word[1]}';var member_index=-1;var i=0;while(i<members.profiles.length){if(members.profiles[i].first_name==word1){if(word2==''){member_index=i;i=members.profiles.length;}else if(members.profiles[i].last_name==word2){member_index=i;i=members.profiles.length;}}else if(members.profiles[i].last_name==word1){member_index=i;i=members.profiles.length;}i=i+1;};if(member_index==-1){API.messages.send({'peer_id':{$this->data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});return{'result':false};}var member = members.profiles[member_index];var FROM_USERNAME='@'+from_user.screen_name+' ('+from_user.first_name.substr(0, 2)+'. '+from_user.last_name+')';var MEMBER_USERNAME='@'+member.screen_name+' ('+member.first_name.substr(0,2)+'. '+member.last_name+')';var MEMBER_USERNAME_GEN='@'+member.screen_name+' ('+member.first_name_gen.substr(0,2)+'. '+member.last_name_gen+')';var MEMBER_USERNAME_DAT='@'+member.screen_name+' ('+member.first_name_dat.substr(0,2)+'. '+member.last_name_dat+')';var MEMBER_USERNAME_ACC='@'+member.screen_name+' ('+member.first_name_acc.substr(0,2)+'. '+member.last_name_acc+')';var MEMBER_USERNAME_INS='@'+member.screen_name+' ('+member.first_name_ins.substr(0,2)+'. '+member.last_name_ins+')';var MEMBER_USERNAME_ABL='@'+member.screen_name+' ('+member.first_name_abl.substr(0,2)+'. '+member.last_name_abl+')';var messages={$messagesJson};{$permittedMemberGender_VKScript}var msg='';if(member.id=={$this->data->object->from_id}){if(member.sex==1){msg=messages.femaleToMyself;}else{msg=messages.maleToMyself;}}else{if(from_user.sex==1){msg=messages.female;}else{msg=messages.male;};};API.messages.send({'peer_id':{$this->data->object->peer_id},'message':msg});return{'result':true,'member_id':member.id};"))->response;
-				return (object) $res;
+				$res = json_decode(vk_execute($messagesModule->makeExeAppealByID($this->data->object->from_id)."var members=API.messages.getConversationMembers({'peer_id':{$this->data->object->peer_id},'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});var from_user= API.users.get({'user_ids':[{$this->data->object->from_id}],'fields':'sex,screen_name'})[0];var word1='{$word[0]}';var word2='{$word[1]}';var member_index=-1;var i=0;while(i<members.profiles.length){if(members.profiles[i].first_name==word1){if(word2==''){member_index=i;i=members.profiles.length;}else if(members.profiles[i].last_name==word2){member_index=i;i=members.profiles.length;}}else if(members.profiles[i].last_name==word1){member_index=i;i=members.profiles.length;}i=i+1;};if(member_index==-1){API.messages.send({'peer_id':{$this->data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});return{'result':false};}var member = members.profiles[member_index];var FROM_USERNAME='@'+from_user.screen_name+' ('+from_user.first_name.substr(0, 2)+'. '+from_user.last_name+')';var MEMBER_USERNAME='@'+member.screen_name+' ('+member.first_name.substr(0,2)+'. '+member.last_name+')';var MEMBER_USERNAME_GEN='@'+member.screen_name+' ('+member.first_name_gen.substr(0,2)+'. '+member.last_name_gen+')';var MEMBER_USERNAME_DAT='@'+member.screen_name+' ('+member.first_name_dat.substr(0,2)+'. '+member.last_name_dat+')';var MEMBER_USERNAME_ACC='@'+member.screen_name+' ('+member.first_name_acc.substr(0,2)+'. '+member.last_name_acc+')';var MEMBER_USERNAME_INS='@'+member.screen_name+' ('+member.first_name_ins.substr(0,2)+'. '+member.last_name_ins+')';var MEMBER_USERNAME_ABL='@'+member.screen_name+' ('+member.first_name_abl.substr(0,2)+'. '+member.last_name_abl+')';{$descriptionMessage_VKScript}var messages={$messagesJson};{$permittedMemberGender_VKScript}var msg='';if(member.id=={$this->data->object->from_id}){if(member.sex==1){msg=messages.femaleToMyself;}else{msg=messages.maleToMyself;}}else{if(from_user.sex==1){msg=messages.female;}else{msg=messages.male;};};API.messages.send({'peer_id':{$this->data->object->peer_id},'message':msg});return{'result':true,'member_id':member.id};"))->response;
+				if($res->result)
+					return $res->member_id;
+				else
+					return false;
 			}
 		}
 	}
@@ -441,6 +491,8 @@ namespace{
 		$event->addTextMessageCommand("лизнуть", "roleplay_lick");
 		$event->addTextMessageCommand("обосрать", "roleplay_shit");
 		$event->addTextMessageCommand("облевать", "roleplay_puckingup");
+		$event->addTextMessageCommand("отшлепать", "roleplay_spank");
+		$event->addTextMessageCommand("отшлёпать", "roleplay_spank");
 	}
 
 	///////////////////////////////////////////////////////////
@@ -449,10 +501,10 @@ namespace{
 	function roleplay_me($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
-		if(is_null($words[1])){
+		if(is_null($argv[1])){
 			$botModule = new botModule($db);
 			$msg = ", используйте \\\"!me <действие>\\\".";
 			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
@@ -474,10 +526,10 @@ namespace{
 	function roleplay_try($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
-		if(is_null($words[1])){
+		if(is_null($argv[1])){
 			$botModule = new botModule($db);
 			$msg = ", используйте \\\"!try <действие>\\\".";
 			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
@@ -505,10 +557,10 @@ namespace{
 	function roleplay_do($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
-		if(is_null($words[1])){
+		if(is_null($argv[1])){
 			$botModule = new botModule($db);
 			$msg = ", используйте \\\"!do <действие>\\\".";
 			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
@@ -531,10 +583,10 @@ namespace{
 	function roleplay_shout($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
-		if(is_null($words[1])){
+		if(is_null($argv[1])){
 			$botModule = new botModule($db);
 			$msg = ", используйте \\\"!s <текст>\\\".";
 			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
@@ -578,34 +630,27 @@ namespace{
 		}
 	}
 
-	function roleplay_sex($finput){ // Test
+	function roleplay_sex($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
-		$params = array(
-			"msgMale" => "%FROM_USERNAME% занялся сексом с %MEMBER_USERNAME_INS%.😍",
-			"msgFemale" => "%FROM_USERNAME% занялась сексом с %MEMBER_USERNAME_INS%.😍",
-			"msgMyselfMale" => "%FROM_USERNAME% подрочил.🤗",
-			"msgMyselfFemale" => "%FROM_USERNAME% помастурбировала.🤗",
-			"msgToAll" => array(
-				"male" => "%FROM_USERNAME% занялся сексом со всеми.😍",
-				"female" => "%FROM_USERNAME% занялась сексом со всеми.😍"
-			)
-		);
+		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Секс");
+		$handler->maleMessage = "%FROM_USERNAME% занялся сексом с %MEMBER_USERNAME_INS%.😍";
+		$handler->femaleMessage = "%FROM_USERNAME% занялась сексом с %MEMBER_USERNAME_INS%.😍";
+		$handler->maleMessageToMyself = "%FROM_USERNAME% помастурбировал.🤗";
+		$handler->femaleMessageToMyself = "%FROM_USERNAME% помастурбировала.🤗";
+		$handler->maleMessageToAll = "%FROM_USERNAME% занялся сексом со всеми.😍";
+		$handler->femaleMessageToAll = "%FROM_USERNAME% занялась сексом со всеми.😍";
 
-		$user_info = bot_get_array_argv($words, 1, "");
-		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
-
-		roleplay_api_act_with($db, $data, "Секс", $user_info, $params);
+		$handler->handle();
 	}
 
-	function roleplay_hug($finput){ // Test
+	function roleplay_hug($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$params = array(
@@ -619,41 +664,41 @@ namespace{
 			)
 		);
 
-		$user_info = bot_get_array_argv($words, 1, "");
-		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
+		$user_info = bot_get_array_value($argv, 1, "");
+		if($user_info != "" && bot_get_array_value($argv, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_value($argv, 2, "");
 
 		roleplay_api_act_with($db, $data, "Обнять", $user_info, $params);
 	}
 
-	function roleplay_bump($finput){ // Test
+	function roleplay_bump($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
-		$params = array(
-			"msgMale" => "%FROM_USERNAME% уебал %MEMBER_USERNAME_DAT%.👊🏻",
-			"msgFemale" => "%FROM_USERNAME% уебала %MEMBER_USERNAME_DAT%.👊🏻",
-			"msgMyselfMale" => "%FROM_USERNAME% уебал сам себе.👊🏻",
-			"msgMyselfFemale" => "%FROM_USERNAME% уебала сама себе.👊🏻",
-			"msgToAll" => array(
-				"male" => "%FROM_USERNAME% уебал всем.👊🏻",
-				"female" => "%FROM_USERNAME% уебал всем.👊🏻"
-			)
-		);
+		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Уебать");
+		$handler->allowDescription(true);
+		$handler->maleMessage = "%FROM_USERNAME% уебал %MEMBER_USERNAME_DAT%%DESCRIPTION_MSG%.👊🏻";
+		$handler->femaleMessage = "%FROM_USERNAME% уебала %MEMBER_USERNAME_DAT%%DESCRIPTION_MSG%.👊🏻";
+		$handler->maleMessageToMyself = "%FROM_USERNAME% уебал сам себе%DESCRIPTION_MSG%.👊🏻";
+		$handler->femaleMessageToMyself = "%FROM_USERNAME% уебала сама себе%DESCRIPTION_MSG%.👊🏻";
+		$handler->maleMessageToAll = "%FROM_USERNAME% уебал всем%DESCRIPTION_MSG%.👊🏻";
+		$handler->femaleMessageToAll = "%FROM_USERNAME% уебал всем%DESCRIPTION_MSG%.👊🏻";
 
-		$user_info = bot_get_array_argv($words, 1, "");
-		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
-
-		roleplay_api_act_with($db, $data, "Уебать", $user_info, $params);
+		$member_id = $handler->handle();
+		if($member_id !== false && $data->object->from_id != $member_id){
+			$member_stats = stats_api_getuser($db, $member_id);
+			$member_stats['bump_count']++;
+			stats_api_setuser($db, $member_id, $member_stats);
+			$db->save();
+		}
 	}
 
-	function roleplay_pissof($finput){ // Test
+	function roleplay_pissof($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$params = array(
@@ -667,17 +712,17 @@ namespace{
 			)
 		);
 
-		$user_info = bot_get_array_argv($words, 1, "");
-		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
+		$user_info = bot_get_array_value($argv, 1, "");
+		if($user_info != "" && bot_get_array_value($argv, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_value($argv, 2, "");
 
 		roleplay_api_act_with($db, $data, "Обоссать", $user_info, $params);
 	}
 
-	function roleplay_kiss($finput){ // Test
+	function roleplay_kiss($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$params = array(
@@ -691,17 +736,17 @@ namespace{
 			)
 		);
 
-		$user_info = bot_get_array_argv($words, 1, "");
-		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
+		$user_info = bot_get_array_value($argv, 1, "");
+		if($user_info != "" && bot_get_array_value($argv, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_value($argv, 2, "");
 
 		roleplay_api_act_with($db, $data, "Поцеловать", $user_info, $params);
 	}
 
-	function roleplay_hark($finput){ // Test
+	function roleplay_hark($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$params = array(
@@ -715,17 +760,17 @@ namespace{
 			)
 		);
 
-		$user_info = bot_get_array_argv($words, 1, "");
-		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
+		$user_info = bot_get_array_value($argv, 1, "");
+		if($user_info != "" && bot_get_array_value($argv, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_value($argv, 2, "");
 
 		roleplay_api_act_with($db, $data, "Харкнуть", $user_info, $params);
 	}
 
-	function roleplay_suck($finput){ // Test
+	function roleplay_suck($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$params = array(
@@ -741,17 +786,17 @@ namespace{
 			"sexErrorMsg" => "%appeal%, нельзя отсосать у девочки.😂"
 		);
 
-		$user_info = bot_get_array_argv($words, 1, "");
-		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
+		$user_info = bot_get_array_value($argv, 1, "");
+		if($user_info != "" && bot_get_array_value($argv, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_value($argv, 2, "");
 
 		roleplay_api_act_with($db, $data, "Отсосать", $user_info, $params);
 	}
 
-	function roleplay_pussylick($finput){ // Test
+	function roleplay_pussylick($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$params = array(
@@ -767,17 +812,17 @@ namespace{
 			"sexErrorMsg" => "%appeal%, нельзя отлизать у мальчика.😂"
 		);
 
-		$user_info = bot_get_array_argv($words, 1, "");
-		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
+		$user_info = bot_get_array_value($argv, 1, "");
+		if($user_info != "" && bot_get_array_value($argv, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_value($argv, 2, "");
 
 		roleplay_api_act_with($db, $data, "Отсосать", $user_info, $params);
 	}
 
-	function roleplay_gofuck($finput){ // Test
+	function roleplay_gofuck($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$params = array(
@@ -791,17 +836,17 @@ namespace{
 			)
 		);
 
-		$user_info = bot_get_array_argv($words, 1, "");
-		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
+		$user_info = bot_get_array_value($argv, 1, "");
+		if($user_info != "" && bot_get_array_value($argv, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_value($argv, 2, "");
 
 		roleplay_api_act_with($db, $data, "Послать", $user_info, $params);
 	}
 
-	function roleplay_castrate($finput){ // Test
+	function roleplay_castrate($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$params = array(
@@ -811,9 +856,9 @@ namespace{
 			"msgMyselfFemale" => "%appeal%, нельзя кастрировать себя.😐",
 		);
 
-		$user_info = bot_get_array_argv($words, 1, "");
-		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
+		$user_info = bot_get_array_value($argv, 1, "");
+		if($user_info != "" && bot_get_array_value($argv, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_value($argv, 2, "");
 
 		roleplay_api_act_with($db, $data, "Кастрировать", $user_info, $params);
 	}
@@ -821,7 +866,7 @@ namespace{
 	function roleplay_sit($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$params = array(
@@ -835,9 +880,9 @@ namespace{
 			)
 		);
 
-		$user_info = bot_get_array_argv($words, 1, "");
-		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
+		$user_info = bot_get_array_value($argv, 1, "");
+		if($user_info != "" && bot_get_array_value($argv, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_value($argv, 2, "");
 
 		roleplay_api_act_with($db, $data, "Посадить", $user_info, $params);
 	}
@@ -845,10 +890,10 @@ namespace{
 	function roleplay_shake($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
-		switch (mb_strtolower($words[1])) {
+		switch (mb_strtolower($argv[1])) {
 			case 'руку':
 				$params = array(
 					"msgMale" => "%FROM_USERNAME% пожал руку %MEMBER_USERNAME_DAT%.",
@@ -861,9 +906,9 @@ namespace{
 					)
 				);
 
-				$user_info = bot_get_array_argv($words, 2, "");
-				if($user_info != "" && bot_get_array_argv($words, 3, "") != "")
-					$user_info = $user_info . " " . bot_get_array_argv($words, 3, "");
+				$user_info = bot_get_array_value($argv, 2, "");
+				if($user_info != "" && bot_get_array_value($argv, 3, "") != "")
+					$user_info = $user_info . " " . bot_get_array_value($argv, 3, "");
 
 				roleplay_api_act_with($db, $data, "Пожать руку", $user_info, $params);
 				break;
@@ -880,7 +925,7 @@ namespace{
 	function roleplay_lick($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$params = array(
@@ -894,9 +939,9 @@ namespace{
 			)
 		);
 
-		$user_info = bot_get_array_argv($words, 1, "");
-		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
+		$user_info = bot_get_array_value($argv, 1, "");
+		if($user_info != "" && bot_get_array_value($argv, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_value($argv, 2, "");
 
 		roleplay_api_act_with($db, $data, "Лизнуть", $user_info, $params);
 	}
@@ -904,7 +949,7 @@ namespace{
 	function roleplay_shit($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$params = array(
@@ -918,9 +963,9 @@ namespace{
 			)
 		);
 
-		$user_info = bot_get_array_argv($words, 1, "");
-		if($user_info != "" && bot_get_array_argv($words, 2, "") != "")
-			$user_info = $user_info . " " . bot_get_array_argv($words, 2, "");
+		$user_info = bot_get_array_value($argv, 1, "");
+		if($user_info != "" && bot_get_array_value($argv, 2, "") != "")
+			$user_info = $user_info . " " . bot_get_array_value($argv, 2, "");
 
 		roleplay_api_act_with($db, $data, "Обосрать", $user_info, $params);
 	}
@@ -928,16 +973,33 @@ namespace{
 	function roleplay_puckingup($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data;
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
-		$handler = new Roleplay\ActWithHandler($db, $data, "Облевать");
+		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Облевать");
 		$handler->maleMessage = "%FROM_USERNAME% облевал %MEMBER_USERNAME_ACC%.🤢";
 		$handler->femaleMessage = "%FROM_USERNAME% облевала %MEMBER_USERNAME_ACC%.🤢";
 		$handler->maleMessageToMyself = "%FROM_USERNAME% облевал себя.🤢";
 		$handler->femaleMessageToMyself = "%FROM_USERNAME% облевала себя.🤢";
 		$handler->maleMessageToAll = "%FROM_USERNAME% облевал всех.🤢";
 		$handler->femaleMessageToAll = "%FROM_USERNAME% облевала всех.🤢";
+
+		$handler->handle();
+	}
+
+	function roleplay_spank($finput){
+		// Инициализация базовых переменных
+		$data = $finput->data;
+		$argv = $finput->argv;
+		$db = $finput->db;
+
+		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Отшлёпать");
+		$handler->maleMessage = "%FROM_USERNAME% отшлепал %MEMBER_USERNAME_ACC%.😻";
+		$handler->femaleMessage = "%FROM_USERNAME% отшлепала %MEMBER_USERNAME_ACC%.😻";
+		$handler->maleMessageToMyself = "%FROM_USERNAME% отшлепал себя.😻";
+		$handler->femaleMessageToMyself = "%FROM_USERNAME% отшлепала себя.😻";
+		$handler->maleMessageToAll = "%FROM_USERNAME% отшлепал всех.😻";
+		$handler->femaleMessageToAll = "%FROM_USERNAME% отшлепала всех.😻";
 
 		$handler->handle();
 	}

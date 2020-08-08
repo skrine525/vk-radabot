@@ -83,8 +83,9 @@ class Event{
 
   	public function runTextMessageCommand($data){
   		if(gettype($data) == "object"){
-  			$words = explode(' ', $data->object->text); // Извлекаем слова из сообщения
-			$command = mb_strtolower($words[0]); // Переводим команду в нижний регистр
+  			//$argv = explode(' ', $data->object->text); // Извлекаем слова из сообщения
+  			$argv = bot_parse_argv($data->object->text); // Извлекаем аргументы из сообщения
+			$command = mb_strtolower($argv[0]); // Переводим команду в нижний регистр
 
 			if(array_key_exists($command, $this->textMessageCommands)){
 				if(!bot_check_reg($this->db)){ // Проверка на регистрацию в системе
@@ -102,7 +103,7 @@ class Event{
 				}
 				$finput = (object) array(
 					'data' => $data,
-					'words' => $words,
+					'argv' => $argv,
 					'db' => $this->db,
 					'event' => $this
 				);
@@ -186,11 +187,11 @@ class Event{
 
 			// Обработка не командный сообщений
 			if(!is_null($this->defaultFunc)){
-				$words = explode(' ', $this->data->object->text); // Извлекаем слова из сообщения
+				$argv = explode(' ', $this->data->object->text); // Извлекаем слова из сообщения
 				if(!bot_check_reg($this->db)){ // Проверка на регистрацию в системе
 					$ignore = false;
 					for($i = 0; $i < count($this->dbIgnoreCommandList); $i++){
-						if($words[0] == $this->dbIgnoreCommandList[$i]){
+						if($argv[0] == $this->dbIgnoreCommandList[$i]){
 							$ignore = true;
 							break;
 						}

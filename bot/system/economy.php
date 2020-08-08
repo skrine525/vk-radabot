@@ -518,7 +518,7 @@ namespace{
 	function economy_show_user_stats($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$botModule = new BotModule($db);
@@ -526,10 +526,10 @@ namespace{
 
 		if(array_key_exists(0, $data->object->fwd_messages)){
 			$member_id = $data->object->fwd_messages[0]->from_id;
-		} elseif(array_key_exists(1, $words) && bot_is_mention($words[1])){
-			$member_id = bot_get_id_from_mention($words[1]);
-		} elseif(array_key_exists(1, $words) && is_numeric($words[1])) {
-			$member_id = intval($words[1]);
+		} elseif(array_key_exists(1, $argv) && bot_is_mention($argv[1])){
+			$member_id = bot_get_id_from_mention($argv[1]);
+		} elseif(array_key_exists(1, $argv) && is_numeric($argv[1])) {
+			$member_id = intval($argv[1]);
 		} else $member_id = $data->object->from_id;
 
 		if($data->object->from_id == $member_id)
@@ -643,7 +643,7 @@ namespace{
 	function economy_work($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$messagesModule = new Bot\Messages($db);
@@ -659,8 +659,8 @@ namespace{
 
 		$user_economy = $economy->getUser($data->object->from_id);
 
-		if(array_key_exists(1, $words)){
-			$job_index = intval(bot_get_array_argv($words, 1, 0));
+		if(array_key_exists(1, $argv)){
+			$job_index = intval(bot_get_array_value($argv, 1, 0));
 			if($job_index <= 0){
 				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите номер профессии.", $data->object->from_id);
 				return;
@@ -798,7 +798,7 @@ namespace{
 		$date = time(); // Переменная времени
 
 		// Переменная тестирования пользователя
-		$testing_user_id = bot_get_array_argv($payload, 1, $data->object->user_id);
+		$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
 		if($testing_user_id !== $data->object->user_id){
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
 			return;
@@ -807,7 +807,7 @@ namespace{
 		$economy = new Economy\Main($db);
 		$user_economy = $economy->getUser($data->object->user_id);
 
-		$command = bot_get_array_argv($payload, 2, 0);
+		$command = bot_get_array_value($payload, 2, 0);
 
 		switch ($command) {
 			case 0:
@@ -915,7 +915,7 @@ namespace{
 	function economy_joblist($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$messagesModule = new Bot\Messages($db);
@@ -947,7 +947,7 @@ namespace{
 
 		$botModule = new BotModule($db);
 
-		$job_index = intval(bot_get_array_argv($words, 1, 0));
+		$job_index = intval(bot_get_array_value($argv, 1, 0));
 
 		if($job_index > 0){
 			$jobs = Economy\Job::getJobArray();
@@ -1039,17 +1039,17 @@ namespace{
 		$message = "";
 
 		// Переменная тестирования пользователя
-		$testing_user_id = bot_get_array_argv($payload, 1, $data->object->user_id);
+		$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
 		if($testing_user_id !== $data->object->user_id){
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
 			return;
 		}
 
-		$command = bot_get_array_argv($payload, 2, 0);
+		$command = bot_get_array_value($payload, 2, 0);
 
 		switch ($command) {
 			case 0:
-			$job_index = bot_get_array_argv($payload, 3, 0);
+			$job_index = bot_get_array_value($payload, 3, 0);
 
 			$jobs = Economy\Job::getJobArray();
 			$job_id = Economy\Job::getIDByIndex($job_index);
@@ -1114,7 +1114,7 @@ namespace{
 			break;
 
 			case 1:
-			$job_index = bot_get_array_argv($payload, 3, -1);
+			$job_index = bot_get_array_value($payload, 3, -1);
 
 			$jobs = Economy\Job::getJobArray();
 			$job_id = Economy\Job::getIDByIndex($job_index);
@@ -1191,17 +1191,17 @@ namespace{
 		$message = "";
 
 		// Переменная тестирования пользователя
-		$testing_user_id = bot_get_array_argv($payload, 1, $data->object->user_id);
+		$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
 		if($testing_user_id !== $data->object->user_id){
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
 			return;
 		}
 
-		$command = bot_get_array_argv($payload, 2, 0);
+		$command = bot_get_array_value($payload, 2, 0);
 
 		switch ($command) {
 			case 0:
-			$section_number = bot_get_array_argv($payload, 3, 0);
+			$section_number = bot_get_array_value($payload, 3, 0);
 
 			$config_sections = Economy\Item::getShopSectionsArray();
 
@@ -1258,9 +1258,9 @@ namespace{
 			break;
 
 			case 1:
-			$section_code = bot_get_array_argv($payload, 3, 0);
-			$operation_code = bot_get_array_argv($payload, 4, 0);
-			$product_code = bot_get_array_argv($payload, 5, 0);
+			$section_code = bot_get_array_value($payload, 3, 0);
+			$operation_code = bot_get_array_value($payload, 4, 0);
+			$product_code = bot_get_array_value($payload, 5, 0);
 
 			$economy = new Economy\Main($db);
 			$user_economy = $economy->getUser($data->object->user_id);
@@ -1404,19 +1404,19 @@ namespace{
 	function economy_buy($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$botModule = new BotModule($db);
 
-		$argv1 = bot_get_array_argv($words, 1);
+		$argvt1 = bot_get_array_value($argv, 1);
 
 		$sections = Economy\Item::getShopSectionsArray();
 
 		$section_id = -1;
 
 		for($i = 0; $i < count($sections); $i++){
-			if(mb_strtolower($sections[$i]["name"]) == mb_strtolower($argv1)){
+			if(mb_strtolower($sections[$i]["name"]) == mb_strtolower($argvt1)){
 				$section_id = $i;
 				break;
 			}
@@ -1454,18 +1454,18 @@ namespace{
 					$economy = new Economy\Main($db);
 					$user_economy = $economy->getUser($data->object->from_id);
 
-					$argv2 = intval(bot_get_array_argv($words, 2));
-					if($argv2 >= 1){
-						$index = $argv2-1;
+					$argvt2 = intval(bot_get_array_value($argv, 2));
+					if($argvt2 >= 1){
+						$index = $argvt2-1;
 						if(count($items_for_buy) <= $index){
-							$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Товара под номером {$argv2} не существует.", $data->object->from_id);
+							$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Товара под номером {$argvt2} не существует.", $data->object->from_id);
 							return;
 						}
 
 						$item_for_buy = $items_for_buy[$index];
 
 						if($user_economy->checkItem($item_for_buy["type"], $item_for_buy["id"]) !== false){
-							$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас уже есть товар под номером {$argv2}.", $data->object->from_id);
+							$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас уже есть товар под номером {$argvt2}.", $data->object->from_id);
 							return;
 						}
 
@@ -1524,7 +1524,7 @@ namespace{
 						$botModule->sendSilentMessage($data->object->peer_id, ", ⛔вы уже имеете максимальное количество бизнесов (3).", $data->object->from_id);
 						return;
 					}
-					$type_index = bot_get_array_argv($words, 2, 0);
+					$type_index = bot_get_array_value($argv, 2, 0);
 					$enterprise_types = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types");
 					$types = array_keys($enterprise_types);
 					if($type_index > 0 && count($types) >= $type_index){
@@ -1570,15 +1570,15 @@ namespace{
 	function economy_sell($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$botModule = new BotModule($db);
 
-		$argv1 = intval(bot_get_array_argv($words, 1, 0));
-		$argv2 = intval(bot_get_array_argv($words, 2, 1));
+		$argvt1 = intval(bot_get_array_value($argv, 1, 0));
+		$argvt2 = intval(bot_get_array_value($argv, 2, 1));
 
-		if($argv1 > 0){
+		if($argvt1 > 0){
 			$economy = new Economy\Main($db);
 			$user_economy = $economy->getUser($data->object->from_id);
 			$user_items = $user_economy->getItems();
@@ -1590,14 +1590,14 @@ namespace{
 					$items[] = $user_items[$i];
 			}
 
-			$index = $argv1 - 1;
+			$index = $argvt1 - 1;
 
-			if(count($items) < $argv1){
-				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Собственности под номером {$argv1} у вас нет.", $data->object->from_id);
+			if(count($items) < $argvt1){
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Собственности под номером {$argvt1} у вас нет.", $data->object->from_id);
 				return;
 			}
 
-			if($argv2 <= 0){
+			if($argvt2 <= 0){
 				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Количество не может быть отрицательным числом или быть равным 0.", $data->object->from_id);
 				return;
 			}
@@ -1609,12 +1609,12 @@ namespace{
 				return;
 			}
 
-			if($user_economy->changeItem($items[$index]->type, $items[$index]->id, -$argv2)){
-				$value = $selling_item_info->price * 0.7 * $argv2;
+			if($user_economy->changeItem($items[$index]->type, $items[$index]->id, -$argvt2)){
+				$value = $selling_item_info->price * 0.7 * $argvt2;
 				$user_economy->changeMoney($value); // Добавляем к счету пользователя 70% от начальной стоимости товара
 				$db->save();
 				$value = Economy\Main::getFormatedMoney($value);
-				$botModule->sendSilentMessage($data->object->peer_id, ", ✅Собственность \"{$selling_item_info->name}\" продана в количестве {$argv2} за \${$value}.", $data->object->from_id);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ✅Собственность \"{$selling_item_info->name}\" продана в количестве {$argvt2} за \${$value}.", $data->object->from_id);
 			}
 			else{
 				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас в наличии только {$items[$index]->count} {$selling_item_info->name}.", $data->object->from_id);
@@ -1631,7 +1631,7 @@ namespace{
 	function economy_mypawards($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$botModule = new BotModule($db);
@@ -1647,7 +1647,7 @@ namespace{
 		}
 
 		if(count($items) > 0){
-			$list_number_from_word = intval(bot_get_array_argv($words, 1, 1));
+			$list_number_from_word = intval(bot_get_array_value($argv, 1, 1));
 
 			/////////////////////////////////////////////////////
 			////////////////////////////////////////////////////
@@ -1696,7 +1696,7 @@ namespace{
 	function economy_myprops($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$botModule = new BotModule($db);
@@ -1713,9 +1713,9 @@ namespace{
 
 		$items_count = count($items);
 		if($items_count > 0){
-			$argv1 = bot_get_array_argv($words, 1, 1);
-			if(is_numeric($argv1)){
-				$list_number_from_word = intval($argv1);
+			$argvt1 = bot_get_array_value($argv, 1, 1);
+			if(is_numeric($argvt1)){
+				$list_number_from_word = intval($argvt1);
 
 				/////////////////////////////////////////////////////
 				////////////////////////////////////////////////////
@@ -1757,17 +1757,17 @@ namespace{
 				$keyboard = vk_keyboard_inline(array(array(vk_text_button("Купить", array("command" => "bot_runtc", "text_command" => "!купить"), "positive")),array(vk_text_button("Продать", array("command" => "bot_runtc", "text_command" => "!продать"), "negative")),array(vk_text_button("Подарить", array("command" => "bot_runtc", "text_command" => "Подарить"), "primary"))));
 				$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
 			}
-			elseif(mb_strtolower($argv1) == "инфа"){
-				$argv2 = intval(bot_get_array_argv($words, 2, 0));
-				if($argv2 <= 0){
+			elseif(mb_strtolower($argvt1) == "инфа"){
+				$argvt2 = intval(bot_get_array_value($argv, 2, 0));
+				if($argvt2 <= 0){
 					$botModule->sendSilentMessage($data->object->peer_id, ", используйте !имущество инфа <номер>.", $data->object->from_id);
 					return;
 				}
-				if($argv2 > $items_count){
-					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас нет имущества под номером {$argv2}.", $data->object->from_id);
+				if($argvt2 > $items_count){
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас нет имущества под номером {$argvt2}.", $data->object->from_id);
 					return;
 				}
-				$index = $argv2-1;
+				$index = $argvt2-1;
 				$item = Economy\Item::getItemInfo($items[$index]->type, $items[$index]->id);
 
 				$buying_price = Economy\Main::getFormatedMoney($item->price);
@@ -1787,7 +1787,7 @@ namespace{
 	function economy_bank($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$botModule = new BotModule($db);
@@ -1796,23 +1796,23 @@ namespace{
 
 		$time = time();
 
-		$argv1 = bot_get_array_argv($words, 1, "");
+		$argvt1 = bot_get_array_value($argv, 1, "");
 
-		if($argv1 == "перевод"){
-			$argv2 = intval(bot_get_array_argv($words, 2, 0));
-			$argv3 = bot_get_array_argv($words, 3, "");
+		if($argvt1 == "перевод"){
+			$argvt2 = intval(bot_get_array_value($argv, 2, 0));
+			$argvt3 = bot_get_array_value($argv, 3, "");
 
-			if($argv2 <= 0){
+			if($argvt2 <= 0){
 				$botModule->sendSilentMessage($data->object->peer_id, ", используйте \"!банк перевод <сумма> <пользователь>\".", $data->object->from_id);
 				return;
 			}
 
 			if(array_key_exists(0, $data->object->fwd_messages)){
 				$member_id = $data->object->fwd_messages[0]->from_id;
-			} elseif(!is_null($argv3) && bot_is_mention($argv3)){
-				$member_id = bot_get_id_from_mention($argv3);
-			} elseif(!is_null($argv3) && is_numeric($argv3)) {
-				$member_id = intval($argv3);
+			} elseif(!is_null($argvt3) && bot_is_mention($argvt3)){
+				$member_id = bot_get_id_from_mention($argvt3);
+			} elseif(!is_null($argvt3) && is_numeric($argvt3)) {
+				$member_id = intval($argvt3);
 			} else {
 				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите пользователя.", $data->object->from_id);
 				return;
@@ -1826,10 +1826,10 @@ namespace{
 			if($economy->checkUser($member_id)){
 				$member_economy = $economy->getUser($member_id);
 
-				if($user_economy->changeMoney(-$argv2)){
-					$member_economy->changeMoney($argv2);
+				if($user_economy->changeMoney(-$argvt2)){
+					$member_economy->changeMoney($argvt2);
 					$db->save();
-					$money = Economy\Main::getFormatedMoney($argv2);
+					$money = Economy\Main::getFormatedMoney($argvt2);
 					$botModule->sendSilentMessage($data->object->peer_id, ", ✅\${$money} успешно переведены на счет @id{$member_id} (пользователя).", $data->object->from_id);
 				}
 				else
@@ -1849,7 +1849,7 @@ namespace{
 	function economy_education($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$botModule = new BotModule($db);
@@ -1860,27 +1860,27 @@ namespace{
 		$edu_ids = array_keys($edu);
 		$edu_data = array_values($edu);
 
-		$argv1 = intval(bot_get_array_argv($words, 1, 0));
+		$argvt1 = intval(bot_get_array_value($argv, 1, 0));
 
-		if($argv1 > 0 && count($edu_ids) >= $argv1){
-			if($argv1 == 1){
-				if($user_economy->checkItem("edu", $edu_ids[$argv1-1]) !== false){
+		if($argvt1 > 0 && count($edu_ids) >= $argvt1){
+			if($argvt1 == 1){
+				if($user_economy->checkItem("edu", $edu_ids[$argvt1-1]) !== false){
 					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас уже есть данное образование.", $data->object->from_id);
 					return;
 				}
-				$edu_index = $argv1 - 1;
+				$edu_index = $argvt1 - 1;
 			}
 			else{
-				$previous_level = $argv1 - 2;
+				$previous_level = $argvt1 - 2;
 				if($user_economy->checkItem("edu", $edu_ids[$previous_level]) === false){
 					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас нет уровня \"".$edu_data[$previous_level]["name"]."\".", $data->object->from_id);
 					return;
 				}
-				if($user_economy->checkItem("edu", $edu_ids[$argv1-1]) !== false){
+				if($user_economy->checkItem("edu", $edu_ids[$argvt1-1]) !== false){
 					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас уже есть данное образование.", $data->object->from_id);
 					return;
 				}
-				$edu_index = $argv1 - 1;
+				$edu_index = $argvt1 - 1;
 			}
 
 			$price = $edu_data[$edu_index]["price"];
@@ -1921,13 +1921,13 @@ namespace{
 		$message = "";
 
 		// Переменная тестирования пользователя
-		$testing_user_id = bot_get_array_argv($payload, 1, $data->object->user_id);
+		$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
 		if($testing_user_id !== $data->object->user_id){
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
 			return;
 		}
 
-		$command = bot_get_array_argv($payload, 2, 0);
+		$command = bot_get_array_value($payload, 2, 0);
 
 		$economy = new Economy\Main($db);
 		$user_economy = $economy->getUser($data->object->user_id);
@@ -2008,23 +2008,23 @@ namespace{
 	function economy_company($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$botModule = new BotModule($db);
 		$economy = new Economy\Main($db);
 		$user_economy = $economy->getUser($data->object->from_id);
 
-		$command = mb_strtolower(bot_get_array_argv($words, 1, ""));
+		$command = mb_strtolower(bot_get_array_value($argv, 1, ""));
 
 		if($command == "выбрать"){
-			$argv = bot_get_array_argv($words, 2, "");
-			if($argv == "0"){
+			$argvt = bot_get_array_value($argv, 2, "");
+			if($argvt == "0"){
 				$user_economy->deleteMeta("selected_enterprise_index");
 				$db->save();
 				$botModule->sendSilentMessage($data->object->peer_id, ", ✅Информация о выбранном бизнесе очищена.", $data->object->from_id);
 			}
-			elseif($argv == ""){
+			elseif($argvt == ""){
 				$enterpriseSystem = $economy->initEnterpriseSystem();
 				$user_enterprises = $user_economy->getEnterprises();
 				$enterprises = array();
@@ -2048,8 +2048,8 @@ namespace{
 				}
 				$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 			}
-			elseif(is_numeric($argv)){
-				$index = intval($argv);
+			elseif(is_numeric($argvt)){
+				$index = intval($argvt);
 				$user_enterprises = $user_economy->getEnterprises();
 				if($index > 0 && count($user_enterprises) >= $index){
 					$enterpriseSystem = $economy->initEnterpriseSystem();
@@ -2093,8 +2093,8 @@ namespace{
 			if($index > 0 && $user_enterprises_count >= $index){
 				$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$index-1]);
 
-				$command = mb_strtolower(bot_get_array_argv($words, 2, ""));
-				$value = round(abs(intval(bot_get_array_argv($words, 3, 0))), 2);
+				$command = mb_strtolower(bot_get_array_value($argv, 2, ""));
+				$value = round(abs(intval(bot_get_array_value($argv, 3, 0))), 2);
 
 				if($command == "пополнить"){
 					if($value == 0){
@@ -2182,10 +2182,10 @@ namespace{
 				$enterprise_types = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types");
 				$contracts = $enterprise_types[$enterprise["type"]]["contracts"];
 
-				$argv = intval(bot_get_array_argv($words, 2, 0));
+				$argvt = intval(bot_get_array_value($argv, 2, 0));
 
-				if($argv > 0 && count($contracts) >= $argv){
-					$index = $argv-1;
+				if($argvt > 0 && count($contracts) >= $argvt){
+					$index = $argvt-1;
 					$contract = $contracts[$index];
 					
 					$time = $contract["duration"];
@@ -2207,7 +2207,7 @@ namespace{
 
 					$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 				}
-				elseif($argv == 0){
+				elseif($argvt == 0){
 					$msg = ", список контрактов для вашего бизнеса:";
 					for($i = 0; $i < count($contracts); $i++){
 						$j = $i + 1;
@@ -2218,7 +2218,7 @@ namespace{
 					$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 				}
 				else{
-					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Контракта под номером {$argv} не существует.", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Контракта под номером {$argvt} не существует.", $data->object->from_id);
 				}
 			}
 			else{
@@ -2236,7 +2236,7 @@ namespace{
 			if($index > 0 && $user_enterprises_count >= $index){
 				$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$index-1]);
 				$contracts = $enterprise["contracts"];
-				$argv = intval(bot_get_array_argv($words, 2, 0));
+				$argvt = intval(bot_get_array_value($argv, 2, 0));
 
 				$time = time();
 				$msg = ", активные контракты:";
@@ -2288,8 +2288,8 @@ namespace{
 				$enterprise_types = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types");
 				$improvment = $enterprise_types[$enterprise["type"]]["improvment"];
 
-				$argv = intval(bot_get_array_argv($words, 2, 0));
-				if($argv <= 0 || $argv > 2){
+				$argvt = intval(bot_get_array_value($argv, 2, 0));
+				if($argvt <= 0 || $argvt > 2){
 					$botModule->sendCommandListFromArray($data, ", используйте:", array(
 						'!бизнес улучшить 1 - Увеличение числа рабочих',
 						'!бизнес улучшить 2 - Увеличение слотов'
@@ -2297,7 +2297,7 @@ namespace{
 					return;
 				}
 
-				if($argv == 1){
+				if($argvt == 1){
 					if(array_key_exists($enterprise["improvment"]["workers"], $improvment["workers"])){
 						$type = "workers_improvment";
 						$contract = $improvment["workers"][$enterprise["improvment"]["workers"]];
@@ -2364,8 +2364,8 @@ namespace{
 				$enterprise_types = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types");
 				$improvment = $enterprise_types[$enterprise["type"]]["improvment"];
 
-				$argv = intval(bot_get_array_argv($words, 2, 0));
-				if($argv <= 0 || $argv > 2){
+				$argvt = intval(bot_get_array_value($argv, 2, 0));
+				if($argvt <= 0 || $argvt > 2){
 					$botModule->sendCommandListFromArray($data, ", используйте:", array(
 						'!бизнес улучшение 1 - Описание улучшения рабочих',
 						'!бизнес улучшение 2 - Описание улучшения слотов'
@@ -2373,7 +2373,7 @@ namespace{
 					return;
 				}
 
-				if($argv == 1){
+				if($argvt == 1){
 					if(array_key_exists($enterprise["improvment"]["workers"], $improvment["workers"])){
 						$contract = $improvment["workers"][$enterprise["improvment"]["workers"]];
 
@@ -2455,12 +2455,12 @@ namespace{
 				$enterprise_types = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types");
 				$contracts = $enterprise_types[$enterprise["type"]]["contracts"];
 
-				$argv = intval(bot_get_array_argv($words, 2, 0));
-				if($argv <= 0 || count($contracts) < $argv){
-					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Контракта под #{$argv} не существует.", $data->object->from_id);
+				$argvt = intval(bot_get_array_value($argv, 2, 0));
+				if($argvt <= 0 || count($contracts) < $argvt){
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Контракта под #{$argvt} не существует.", $data->object->from_id);
 					return;
 				}
-				$contract = $contracts[$argv-1];
+				$contract = $contracts[$argvt-1];
 
 				$capital_after_start = $enterprise["capital"] - $contract["cost"];
 				if($capital_after_start < 0){
@@ -2515,8 +2515,8 @@ namespace{
 		$payload = $finput->payload;
 		$db = $finput->db;
 
-		$testing_user_id = bot_get_array_argv($payload, 1, $data->object->user_id);
-		$code = bot_get_array_argv($payload, 2, 0);
+		$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
+		$code = bot_get_array_value($payload, 2, 0);
 
 		if($testing_user_id !== $data->object->user_id){
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
@@ -2562,11 +2562,11 @@ namespace{
 			break;
 
 			case 2:
-			$argv = bot_get_array_argv($payload, 3, 0);
+			$argvt = bot_get_array_value($payload, 3, 0);
 			$enterpriseSystem = $economy->initEnterpriseSystem();
 			$user_enterprises = $user_economy->getEnterprises();
-			if($argv > 0){
-				$index = intval($argv);
+			if($argvt > 0){
+				$index = intval($argvt);
 				$selected_enterprise_index = $user_economy->getMeta("selected_enterprise_index", 0);
 				if($index == $selected_enterprise_index){
 					$user_economy->deleteMeta("selected_enterprise_index");
@@ -2577,7 +2577,7 @@ namespace{
 					$db->save();
 				}
 				else{
-					$index = intval($argv);
+					$index = intval($argvt);
 					$n = $index + 1;
 					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ У вас нет бизнеса #{$n}!");
 					return;
@@ -2646,10 +2646,10 @@ namespace{
 				$enterprise_types = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types");
 				$contracts = $enterprise_types[$enterprise["type"]]["contracts"];
 
-				$argv1 = bot_get_array_argv($payload, 3, 0);
-				$argv2 = bot_get_array_argv($payload, 4, 0);
+				$argvt1 = bot_get_array_value($payload, 3, 0);
+				$argvt2 = bot_get_array_value($payload, 4, 0);
 
-				if($argv1 == 0){
+				if($argvt1 == 0){
 					$elements = array(array());
 					$current_element_index = 0;
 					$message = "%appeal%, список контрактов для вашего бизнеса:";
@@ -2667,9 +2667,9 @@ namespace{
 					$elements[][] = vk_callback_button("⬅ Назад", array('economy_company', $testing_user_id, 0), 'negative');
 					$keyboard_buttons = $elements;
 				}
-				elseif($argv1 == 1){
-					if(count($contracts) >= $argv2){
-						$contract_index = $argv2;
+				elseif($argvt1 == 1){
+					if(count($contracts) >= $argvt2){
+						$contract_index = $argvt2;
 						$contract = $contracts[$contract_index];
 						
 						$time = $contract["duration"];
@@ -2712,20 +2712,20 @@ namespace{
 						);
 					}
 					else{
-						bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Контракта под номером {$argv} не существует.');
+						bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Контракта под номером {$argvt} не существует.');
 						return;
 					}
 				}
-				elseif($argv1 == 2){
+				elseif($argvt1 == 2){
 					if(count($enterprise["contracts"]) >= $enterprise["max_contracts"]){
 						bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Нет свободных слотов (Лимит слотов: {$enterprise["max_contracts"]}).");
 						return;
 					}
 
-					if(array_key_exists($argv2, $contracts))
-						$contract = $contracts[$argv2];
+					if(array_key_exists($argvt2, $contracts))
+						$contract = $contracts[$argvt2];
 					else{
-						bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Контракта под #{$argv2} не существует.");
+						bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Контракта под #{$argvt2} не существует.");
 						return;
 					}
 
@@ -2820,8 +2820,8 @@ namespace{
 			if($index > 0 && $user_enterprises_count >= $index){
 				$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$index-1]);
 
-				$argv = bot_get_array_argv($payload, 3, 0);
-				if($argv == 0){
+				$argvt = bot_get_array_value($payload, 3, 0);
+				if($argvt == 0){
 					$message = "%appeal%, Выберите режим операции.";
 					$keyboard_buttons = array(
 						array(
@@ -2833,11 +2833,11 @@ namespace{
 						)
 					);
 				}
-				elseif($argv == 1 || $argv == 2){
-					$mode = bot_get_array_argv($payload, 4, 0);
-					$transaction = intval(bot_get_array_argv($payload, 5, 0));
+				elseif($argvt == 1 || $argvt == 2){
+					$mode = bot_get_array_value($payload, 4, 0);
+					$transaction = intval(bot_get_array_value($payload, 5, 0));
 
-					if($argv == 2){
+					if($argvt == 2){
 						switch ($mode) {
 							case 1:
 							if($transaction <= 0){
@@ -2948,10 +2948,10 @@ namespace{
 				$enterprise_types = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types");
 				$improvment = $enterprise_types[$enterprise["type"]]["improvment"];
 
-				$argv1 = bot_get_array_argv($payload, 3, 0);
-				$argv2 = bot_get_array_argv($payload, 4, 0);
-				if($argv1 == 0){
-					if($argv2 == 0){
+				$argvt1 = bot_get_array_value($payload, 3, 0);
+				$argvt2 = bot_get_array_value($payload, 4, 0);
+				if($argvt1 == 0){
+					if($argvt2 == 0){
 						$keyboard_buttons = array(
 							array(
 								vk_callback_button("Улучшение рабочих", array('economy_company', $testing_user_id, 7, 0, 1), "primary")
@@ -2965,7 +2965,7 @@ namespace{
 						);
 						$message = "%appeal%, Улучшение бизнеса.\n📝Бизнес: {$enterprise["name"]}";
 					}
-					elseif($argv2 == 1){
+					elseif($argvt2 == 1){
 						if(array_key_exists($enterprise["improvment"]["workers"], $improvment["workers"])){
 							$contract = $improvment["workers"][$enterprise["improvment"]["workers"]];
 
@@ -3009,7 +3009,7 @@ namespace{
 							return;
 						}
 					}
-					elseif($argv2 == 2){
+					elseif($argvt2 == 2){
 						if(array_key_exists($enterprise["improvment"]["contracts"], $improvment["contracts"])){
 							$contract = $improvment["contracts"][$enterprise["improvment"]["contracts"]];
 
@@ -3050,9 +3050,9 @@ namespace{
 						return;
 					}
 				}
-				elseif($argv1 == 1){
-					if($argv2 == 1 || $argv2 == 2){
-						$improvment_type = $argv2;
+				elseif($argvt1 == 1){
+					if($argvt2 == 1 || $argvt2 == 2){
+						$improvment_type = $argvt2;
 					}
 					else{
 						bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Internal error!');
@@ -3144,7 +3144,7 @@ namespace{
 	function economy_most_rich_users($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$botModule = new BotModule($db);
@@ -3218,20 +3218,20 @@ namespace{
 	function economy_give($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
-		$words = $finput->words;
+		$argv = $finput->argv;
 		$db = $finput->db;
 
 		$botModule = new BotModule($db);
 
-		$argv1 = intval(bot_get_array_argv($words, 1, 0));
-		$argv2 = intval(bot_get_array_argv($words, 2, 0));
-		$argv3 = bot_get_array_argv($words, 3, "");
+		$argvt1 = intval(bot_get_array_value($argv, 1, 0));
+		$argvt2 = intval(bot_get_array_value($argv, 2, 0));
+		$argvt3 = bot_get_array_value($argv, 3, "");
 		if(array_key_exists(0, $data->object->fwd_messages)){
 			$member_id = $data->object->fwd_messages[0]->from_id;
-		} elseif(bot_is_mention($argv3)){
-			$member_id = bot_get_id_from_mention($argv3);
-		} elseif(is_numeric($argv3)) {
-			$member_id = intval($argv3);
+		} elseif(bot_is_mention($argvt3)){
+			$member_id = bot_get_id_from_mention($argvt3);
+		} elseif(is_numeric($argvt3)) {
+			$member_id = intval($argvt3);
 		} else{
 			$keyboard = vk_keyboard_inline(array(
 				array(
@@ -3245,7 +3245,7 @@ namespace{
 			return;
 		}
 
-		if($argv1 > 0 && $argv2 > 0){
+		if($argvt1 > 0 && $argvt2 > 0){
 			$economy = new Economy\Main($db);
 
 			if($economy->checkUser($member_id))
@@ -3265,10 +3265,10 @@ namespace{
 					$items[] = $user_items[$i];
 			}
 
-			$index = $argv1 - 1;
+			$index = $argvt1 - 1;
 
-			if(count($items) < $argv1){
-				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Собственности под номером {$argv1} у вас нет.", $data->object->from_id);
+			if(count($items) < $argvt1){
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Собственности под номером {$argvt1} у вас нет.", $data->object->from_id);
 				return;
 			}
 
@@ -3279,8 +3279,8 @@ namespace{
 				return;
 			}
 
-			if($user_economy->changeItem($items[$index]->type, $items[$index]->id, -$argv2)){
-				$member_economy->changeItem($items[$index]->type, $items[$index]->id, $argv2);
+			if($user_economy->changeItem($items[$index]->type, $items[$index]->id, -$argvt2)){
+				$member_economy->changeItem($items[$index]->type, $items[$index]->id, $argvt2);
 				$db->save();
 				vk_execute("
 					var users = API.users.get({'user_ids':[{$member_id},{$data->object->from_id}],'fields':'first_name_dat,last_name_dat,sex'});
@@ -3289,10 +3289,10 @@ namespace{
 
 					var msg = '';
 					if(from.sex == 1){
-						msg = '@id{$data->object->from_id} ('+from.first_name+' '+from.last_name+') подарила {$giving_item_info->name} x{$argv2} @id{$member_id} ('+member.first_name_dat+' '+member.last_name_dat+')';
+						msg = '@id{$data->object->from_id} ('+from.first_name+' '+from.last_name+') подарила {$giving_item_info->name} x{$argvt2} @id{$member_id} ('+member.first_name_dat+' '+member.last_name_dat+')';
 					}
 					else{
-						msg = '@id{$data->object->from_id} ('+from.first_name+' '+from.last_name+') подарил {$giving_item_info->name} x{$argv2} @id{$member_id} ('+member.first_name_dat+' '+member.last_name_dat+')';
+						msg = '@id{$data->object->from_id} ('+from.first_name+' '+from.last_name+') подарил {$giving_item_info->name} x{$argvt2} @id{$member_id} ('+member.first_name_dat+' '+member.last_name_dat+')';
 					}
 					API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
 					");
@@ -3359,7 +3359,7 @@ namespace{
 		public static function bet($finput){
 			// Инициализация базовых переменных
 			$data = $finput->data; 
-			$words = $finput->words;
+			$argv = $finput->argv;
 			$db = $finput->db;
 
 			$botModule = new BotModule($db);
@@ -3368,25 +3368,25 @@ namespace{
 			$session = GameController::getSession($chat_id);
 			if($session !== false && $session->id == "casino_roulette"){
 				$session_data = $session->object;
-				$argv1 = bot_get_array_argv($words, 1, "");
-				$argv2 = intval(bot_get_array_argv($words, 2, 0));
+				$argvt1 = bot_get_array_value($argv, 1, "");
+				$argvt2 = intval(bot_get_array_value($argv, 2, 0));
 
 				if(array_key_exists("id{$data->object->from_id}", $session_data["bets"])){
 					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы уже сделали ставку.", $data->object->from_id);
 					return;
 				}
 
-				if($argv2 == 0 || $argv1 == ''){
+				if($argvt2 == 0 || $argvt1 == ''){
 					$botModule->sendSilentMessage($data->object->peer_id, ", Используйте: [!ставка <ставка> <сумма>]\nЧтобы посмотреть все возможные ставки, используйте кнопку ниже.", $data->object->from_id);
 					return;
 				}
-				elseif($argv2 < 1000 || $argv2 > 100000){
+				elseif($argvt2 < 1000 || $argvt2 > 100000){
 					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите сумму ставки в правильном формате (от \$1,000 до \$100,000).", $data->object->from_id);
 					return;
 				}
 
-				if(is_numeric($argv1)){
-					$bet_num = intval($argv1);
+				if(is_numeric($argvt1)){
+					$bet_num = intval($argvt1);
 					if($bet_num >= 0 && $bet_num <= 36){
 						$bet = "{$bet_num}";
 					}
@@ -3396,7 +3396,7 @@ namespace{
 					}
 				}
 				else{
-					$bet_str = mb_strtolower($argv1);
+					$bet_str = mb_strtolower($argvt1);
 					if(array_key_exists($bet_str, self::SPECIAL_BETS)){
 						$bet = self::SPECIAL_BETS[$bet_str];
 					}
@@ -3408,13 +3408,13 @@ namespace{
 
 				$economy = new Economy\Main($db); // Объект экономики
 				$user_economy = $economy->getUser($data->object->from_id);
-				if($user_economy->changeMoney(-$argv2)){
+				if($user_economy->changeMoney(-$argvt2)){
 					if(count($session_data["bets"]) == 0)
 						$session_data["last_twist_time"] = time();
 					$session_data["bets"]["id{$data->object->from_id}"] = array(
 						'user_id' => $data->object->from_id,
 						'bet' => $bet,
-						'value' => $argv2
+						'value' => $argvt2
 					);
 					if(GameController::setSession($chat_id, "casino_roulette", $session_data)){
 						$db->save();
@@ -3435,13 +3435,13 @@ namespace{
 		function main($finput){
 			// Инициализация базовых переменных
 			$data = $finput->data; 
-			$words = $finput->words;
+			$argv = $finput->argv;
 			$db = $finput->db;
 
 			$botModule = new BotModule($db);
 			$chat_id = $data->object->peer_id - 2000000000;
 
-			$command = mb_strtolower(bot_get_array_argv($words, 1, ""));
+			$command = mb_strtolower(bot_get_array_value($argv, 1, ""));
 
 			if($command == "старт"){
 				$session = GameController::getSession($chat_id);
