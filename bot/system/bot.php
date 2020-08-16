@@ -319,7 +319,11 @@ namespace{
 	}
 
 	function bot_parse_argv($text){
-		$argv = str_getcsv($text, ' ');
+		$argv = array();
+		foreach (str_getcsv($text, ' ') as $v) {
+			if($v != "")
+				$argv[] = $v;
+		}
 		return $argv;
 	}
 
@@ -513,12 +517,12 @@ namespace{
 		}
 	}
 
-	function bot_test_rights_exe($chat_id, $user_id, $check_owner = false, $msgInvalidRights = "%__DEFAULTMSG__%"){ // Тестирование прав через VKScript
-		$messageRequest = json_encode(array('peer_id' => $chat_id, 'message' => $msgInvalidRights, 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
+	function bot_test_rights_exe($peer_id, $user_id, $check_owner = false, $msgInvalidRights = "%__DEFAULTMSG__%"){ // Тестирование прав через VKScript
+		$messageRequest = json_encode(array('peer_id' => $peer_id, 'message' => $msgInvalidRights, 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 		$messageRequest = vk_parse_vars($messageRequest, array("appeal", "__DEFAULTMSG__"));
 		$code = "
 			var from_id = {$user_id};
-			var peer_id = {$chat_id};
+			var peer_id = {$peer_id};
 			var members = API.messages.getConversationMembers({'peer_id':peer_id});
 			var from_id_index = -1;
 			var i = 0; while (i < members.items.length){

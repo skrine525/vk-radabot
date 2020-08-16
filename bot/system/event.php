@@ -83,9 +83,8 @@ class Event{
 
   	public function runTextMessageCommand($data){
   		if(gettype($data) == "object"){
-  			//$argv = explode(' ', $data->object->text); // Извлекаем слова из сообщения
   			$argv = bot_parse_argv($data->object->text); // Извлекаем аргументы из сообщения
-			$command = mb_strtolower($argv[0]); // Переводим команду в нижний регистр
+			$command = mb_strtolower(bot_get_array_value($argv, 0, "")); // Переводим команду в нижний регистр
 
 			if(array_key_exists($command, $this->textMessageCommands)){
 				if(!bot_check_reg($this->db)){ // Проверка на регистрацию в системе

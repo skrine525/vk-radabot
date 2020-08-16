@@ -54,7 +54,7 @@ function goverment_initcmd($event){
 	$event->addTextMessageCommand("!votestop", 'goverment_referendum_stop');
 	$event->addTextMessageCommand("!candidate", 'goverment_referendum_candidate');
 	$event->addTextMessageCommand("!vote", 'goverment_referendum_vote_cmd');
-	$event->addTextButtonCommand("referendum_vote", "goverment_referendum_vote");
+	$event->addCallbackButtonCommand("referendum_vote", "goverment_referendum_vote_cb");
 }
 
 function goverment_constitution($finput){
@@ -677,7 +677,8 @@ function goverment_referendum_start($finput){
 	$argv = $finput->argv;
 	$db = $finput->db;
 
-	$botModule = new BotModule($db);
+	$messagesModule = new Bot\Messages($db);
+	$messagesModule->setAppealID($data->object->from_id);
 
 	$gov = $db->getValue(array("goverment"));
 	if($data->object->from_id == $gov["parliament_id"]){
@@ -691,19 +692,13 @@ function goverment_referendum_start($finput){
 			$referendum["last_notification_time"] = $date;
 			$db->setValue(array("goverment", "referendum"), $referendum);
 			$db->save();
-			$msg = "Начались выборы в президенты беседы. Чтобы зарегистрироваться, как кандидат, используйте команду \\\"!candidate\\\".";
-			vk_execute("
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}','disable_mentions':true});");
-		} else {
-			$msg = ", выборы уже проходят.";
-			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
+			$messagesModule->sendSilentMessage($data->object->peer_id, "Начались выборы в президенты беседы. Чтобы зарегистрироваться, как кандидат, используйте команду \"!candidate\".");
 		}
-	} else {
-		$msg = ", &#9940;у вас нет прав для использования данной команды.";
-			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
+		else
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, выборы уже проходят.");
 	}
+	else
+		$messagesModule->sendSilentMessage($data->object->peer_id, Bot\Messages::MESSAGE_NO_RIGHTS);
 }
 
 function goverment_referendum_stop($finput){
@@ -712,26 +707,21 @@ function goverment_referendum_stop($finput){
 	$argv = $finput->argv;
 	$db = $finput->db;
 
-	$botModule = new BotModule($db);
+	$messagesModule = new Bot\Messages($db);
+	$messagesModule->setAppealID($data->object->from_id);
 
 	$gov = $db->getValue(array("goverment"));
 	if($data->object->from_id == $gov["parliament_id"]){
-		if(!array_key_exists("referendum", $gov)){
-			$msg = ", сейчас не проходят выборы.";
-			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
-		} else {
+		if(!array_key_exists("referendum", $gov))
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, сейчас не проходят выборы.");
+		else{
 			$db->unsetValue(array("goverment", "referendum"));
 			$db->save();
-			$msg = ", выборы остановлены.";
-			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, выборы остановлены.");
 		}
-	} else {
-		$msg = ", &#9940;у вас нет прав для использования данной команды.";
-			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
 	}
+	else
+		$messagesModule->sendSilentMessage($data->object->peer_id, Bot\Messages::MESSAGE_NO_RIGHTS);
 }
 
 function goverment_referendum_candidate($finput){
@@ -740,14 +730,15 @@ function goverment_referendum_candidate($finput){
 	$argv = $finput->argv;
 	$db = $finput->db;
 
-	$botModule = new BotModule($db);
+	$messagesModule = new Bot\Messages($db);
+	$messagesModule->setAppealID($data->object->from_id);
 	$referendum = $db->getValue(array("goverment", "referendum"), false);
 	$gov = $db->getValue(array("goverment"));
 	if($referendum !== false){
 		$date = time(); // Переменная времени
 
 		if($gov["president_id"] == $data->object->from_id){
-			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы не можете балотироваться на второй срок.", $data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Вы не можете балотироваться на второй срок.");
 			return;
 		}
 
@@ -755,37 +746,28 @@ function goverment_referendum_candidate($finput){
 			if($referendum["candidate1"]["id"] == 0){
 				$db->setValue(array("goverment", "referendum", "candidate1", "id"), $data->object->from_id);
 				$db->save();
-				$msg = ", вы зарегистрировались как кандидат №1.";
-				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-					return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
-			} elseif($referendum["candidate2"]["id"] == 0) {
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, вы зарегистрировались как кандидат №1.");
+			}
+			elseif($referendum["candidate2"]["id"] == 0) {
 				$referendum["candidate2"]["id"] = $data->object->from_id;
 				$referendum["last_notification_time"] = $date;
 				$db->setValue(array("goverment", "referendum"), $referendum);
 				$db->save();
 				$msg1 = ", вы зарегистрировались как кандидат №2.";
 				$msg2 = "Кандидаты набраны, самое время голосовать. Используй [!vote], чтобы учавствовать в голосовании.";
-				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-					API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg1}','disable_mentions':true});
-					return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg2}'});");
-			} else {
-				$msg = ", кандидаты уже набраны.";
-				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-					return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
+				vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg1}','disable_mentions':true});return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg2}'});");
 			}
-		} else {
-			$msg = ", вы уже зарегистрированы как кандидат в президенты.";
-				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-					return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
+			else
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, кандидаты уже набраны.");
 		}
-	} else {
-		$msg = ", сейчас не проходят выборы.";
-		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
+		else
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, вы уже зарегистрированы как кандидат в президенты.");
 	}
+	else
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, сейчас не проходят выборы.");
 }
 
-function goverment_referendum_system($data, &$db){
+function goverment_referendum_system($data, $db){
 	$referendum = $db->getValue(array("goverment", "referendum"), false);
 	if($referendum !== false){
 		$date = time(); // Переменная времени
@@ -793,40 +775,25 @@ function goverment_referendum_system($data, &$db){
 			$db->setValue(array("goverment", "referendum", "last_notification_time"), $date);
 			if($referendum["candidate1"]["id"] == 0 || $referendum["candidate2"]["id"] == 0){
 				$msg = "Начались выборы в президенты беседы. Чтобы зарегистрироваться, как кандидат, используйте команду [!candidate].";
-				vk_execute("
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});");
+				vk_execute("return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});");
 			} else {
 				$keyboard = vk_keyboard_inline(array(
 					array(
-						vk_text_button("📝%CANDIDATE1_NAME%", array(
-						'command' => 'referendum_vote',
-						'params' => array(
-							'candidate' => 1
-						)), "primary"),
-						vk_text_button("📝%CANDIDATE2_NAME%", array(
-						'command' => 'referendum_vote',
-						'params' => array(
-							'candidate' => 2
-						)), "primary")
+						vk_callback_button("📝%CANDIDATE1_NAME%", array('referendum_vote', 1), 'primary'),
+						vk_callback_button("📝%CANDIDATE2_NAME%", array('referendum_vote', 2), 'primary')
 					)
 				));
 				$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "Кандидаты набраны, самое время голосовать. Используй [!vote], чтобы учавствовать в голосовании или выберите своего кандидата ниже.", 'keyboard' => $keyboard, 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 				$request = vk_parse_vars($request, array("CANDIDATE1_NAME", "CANDIDATE2_NAME"));
 				$candidate1_id = $referendum["candidate1"]["id"];
 				$candidate2_id = $referendum["candidate2"]["id"];
-				vk_execute("
-					var users = API.users.get({'user_ids':[{$candidate1_id},{$candidate2_id}]});
-					var CANDIDATE1_NAME = users[0].first_name.substr(0, 2)+'. '+users[0].last_name;
-					var CANDIDATE2_NAME = users[1].first_name.substr(0, 2)+'. '+users[1].last_name;
-					return API.messages.send({$request});
-				");
+				vk_execute("var users=API.users.get({'user_ids':[{$candidate1_id},{$candidate2_id}]});var CANDIDATE1_NAME=users[0].first_name.substr(0, 2)+'. '+users[0].last_name;var CANDIDATE2_NAME=users[1].first_name.substr(0, 2)+'. '+users[1].last_name;return API.messages.send({$request});");
 			}
 		} elseif($date - $referendum["start_time"] >= 18000) {
 			if($referendum["candidate1"]["id"] == 0 || $referendum["candidate2"]["id"] == 0){
 				$db->unsetValue(array("goverment", "referendum"));
 				$msg = "❗Выборы прерваны. Причина: не набрано нужно количество кандидатов.";
-				vk_execute("
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});");
+				vk_execute("return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});");
 			} else {
 				$candidate1_voters_count = $referendum["candidate1"]["voters_count"];
 				$candidate2_voters_count = $referendum["candidate2"]["voters_count"];
@@ -834,15 +801,7 @@ function goverment_referendum_system($data, &$db){
 				if($candidate1_voters_count > $candidate2_voters_count){
 					$candidate_id = $referendum["candidate1"]["id"];
 					$candidate_percent = round($candidate1_voters_count/$all_voters_count*100, 1);
-					$res = json_decode(vk_execute("
-						var users = API.users.get({'user_ids':[{$candidate_id}],'fields':'first_name_gen,last_name_gen,sex'});
-						var sex_word = 'Он';
-						if(users[0].sex == 1){
-							sex_word = 'Она';
-						}
-						var msg = '✅На выборах побеждает @id'+users[0].id+' ('+users[0].first_name+' '+users[0].last_name+'). '+sex_word+' побеждает, набрав {$candidate_percent}% голосов избирателей. Поздравляем!';
-						API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-						return {'first_name_gen':users[0].first_name_gen,'last_name_gen':users[0].last_name_gen};"));
+					$res = json_decode(vk_execute("var users=API.users.get({'user_ids':[{$candidate_id}],'fields':'first_name_gen,last_name_gen,sex'});var sex_word='Он';if(users[0].sex==1){sex_word='Она';}var msg='✅На выборах побеждает @id'+users[0].id+' ('+users[0].first_name+' '+users[0].last_name+'). '+sex_word+' побеждает, набрав {$candidate_percent}% голосов избирателей. Поздравляем!';API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});return {'first_name_gen':users[0].first_name_gen,'last_name_gen':users[0].last_name_gen};"));
 					$gov = $db->getValue(array("goverment"));
 					$ranksys = new RankSystem($db);
 					if($ranksys->getUserRank($gov["president_id"]) == 2)
@@ -861,15 +820,7 @@ function goverment_referendum_system($data, &$db){
 				} elseif($candidate1_voters_count < $candidate2_voters_count) {
 					$candidate_id = $referendum["candidate2"]["id"];
 					$candidate_percent = round($candidate2_voters_count/$all_voters_count*100, 1);
-					$res = json_decode(vk_execute("
-						var users = API.users.get({'user_ids':[{$candidate_id}],'fields':'first_name_gen,last_name_gen,sex'});
-						var sex_word = 'Он';
-						if(users[0].sex == 1){
-							sex_word = 'Она';
-						}
-						var msg = '✅На выборах побеждает @id'+users[0].id+' ('+users[0].first_name+' '+users[0].last_name+'). '+sex_word+' побеждает, набрав {$candidate_percent}% голосов избирателей. Поздравляем!';
-						API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-						return {'first_name_gen':users[0].first_name_gen,'last_name_gen':users[0].last_name_gen};"));
+					$res = json_decode(vk_execute("var users=API.users.get({'user_ids':[{$candidate_id}],'fields':'first_name_gen,last_name_gen,sex'});var sex_word='Он';if(users[0].sex==1){sex_word='Она';}var msg='✅На выборах побеждает @id'+users[0].id+' ('+users[0].first_name+' '+users[0].last_name+'). '+sex_word+' побеждает, набрав {$candidate_percent}% голосов избирателей. Поздравляем!';API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});return {'first_name_gen':users[0].first_name_gen,'last_name_gen':users[0].last_name_gen};"));
 					$gov = $db->getValue(array("goverment"));
 					$ranksys = new RankSystem($db);
 					if($ranksys->getUserRank($gov["president_id"]) == 2)
@@ -887,8 +838,7 @@ function goverment_referendum_system($data, &$db){
 					$db->setValue(array("goverment"), $gov);
 				} else {
 				$msg = "❗Выборы прерваны. Причина: оба кандидата набрали одинаковое количество голосов.";
-				vk_execute("
-					return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});");
+				vk_execute("return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});");
 				$db->unsetValue(array("goverment", "referendum"));
 				}
 			}
@@ -910,13 +860,12 @@ function goverment_referendum_system($data, &$db){
 			$db->setValue(array("goverment", "referendum"), $referendum);
 			$db->save();
 			$msg = "Начались выборы в президенты беседы. Чтобы зарегистрироваться, как кандидат, используйте команду \\\"!candidate\\\".";
-			vk_execute("
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});");
+			vk_execute("return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});");
 		}
 	}
 }
 
-function goverment_referendum_vote($finput){
+function goverment_referendum_vote_cb($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$payload = $finput->payload;
@@ -927,46 +876,42 @@ function goverment_referendum_vote($finput){
 	if($referendum === false)
 		return;
 
-	$botModule = new BotModule($db);
-	if(is_numeric($payload->params->candidate)){
-		$candidate = $payload->params->candidate;
+	$candidate = bot_get_array_value($payload, 1, 0);
+	if(is_numeric($candidate)){
 		if ($candidate == 0){
-			$msg = "❗Меню голосования закрыто.";
-			vk_execute("return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}','keyboard':'{\\\"one_time\\\":true,\\\"buttons\\\":[]}'});");
+			$keyboard = vk_keyboard_inline(array());
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->user_id);
+			$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, "❗Меню голосования закрыто.", array('keyboard' => $keyboard));
 			return;
 		}
 
 		for($i = 0; $i < sizeof($referendum["all_voters"]); $i++){
-			if($referendum["all_voters"][$i] == $data->object->from_id){
-				$msg = ", ⛔вы уже голосовали.";
-				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-					return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
+			if($referendum["all_voters"][$i] == $data->object->user_id){
+				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Вы уже голосовали.");
 				return;
 			}
 		}
 
 		if($candidate == 1){
-			$referendum["all_voters"][] = $data->object->from_id;
+			$referendum["all_voters"][] = $data->object->user_id;
 			$referendum["candidate1"]["voters_count"] = $referendum["candidate1"]["voters_count"] + 1;
 			$db->setValue(array("goverment", "referendum"), $referendum);
 			$db->save();
 			$candidate_id = $referendum["candidate1"]["id"];
-			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-				var user = API.users.get({'user_ids':[{$candidate_id}]});
-				var msg = ', 📝вы проголосовали за @id'+user[0].id+' ('+user[0].first_name+' '+user[0].last_name+').';
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+msg,'disable_mentions':true});");
+			vk_execute("var user=API.users.get({'user_ids':[{$candidate_id}],'fields':'first_name_acc,last_name_acc'});var msg='📝 Вы проголосовали за '+user[0].first_name_acc+' '+user[0].last_name_acc+'.';return API.messages.sendMessageEventAnswer({'event_id':'{$data->object->event_id}','user_id':{$data->object->user_id},'peer_id':{$data->object->peer_id},'event_data':'{\"type\":\"show_snackbar\",\"text\":\"'+msg+'\"}'});");
 
-		} elseif ($candidate == 2){
-			$referendum["all_voters"][] = $data->object->from_id;
+		}
+		elseif($candidate == 2){
+			$referendum["all_voters"][] = $data->object->user_id;
 			$referendum["candidate2"]["voters_count"] = $referendum["candidate2"]["voters_count"] + 1;
 			$db->setValue(array("goverment", "referendum"), $referendum);
 			$db->save();
 			$candidate_id = $referendum["candidate2"]["id"];
-			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-				var user = API.users.get({'user_ids':[{$candidate_id}]});
-				var msg = ', 📝вы проголосовали за @id'+user[0].id+' ('+user[0].first_name+' '+user[0].last_name+').';
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+msg,'disable_mentions':true});");
+			error_log(vk_execute("var user=API.users.get({'user_ids':[{$candidate_id}],'fields':'first_name_acc,last_name_acc'});var msg='📝 Вы проголосовали за '+user[0].first_name_acc+' '+user[0].last_name_acc+'.';return API.messages.sendMessageEventAnswer({'event_id':'{$data->object->event_id}','user_id':{$data->object->user_id},'peer_id':{$data->object->peer_id},'event_data':'{\"type\":\"show_snackbar\",\"text\":\"'+msg+'\"}'});"));
 		}
+		else
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Internal error!');
 	}
 }
 
@@ -976,68 +921,35 @@ function goverment_referendum_vote_cmd($finput){
 	$argv = $finput->argv;
 	$db = $finput->db;
 
-	$botModule = new BotModule($db);
+	$messagesModule = new Bot\Messages($db);
+	$messagesModule->setAppealID($data->object->from_id);
 
 	$referendum = $db->getValue(array("goverment", "referendum"), false);
 	if($referendum !== false){
 		if($referendum["candidate1"]["id"] != 0 && $referendum["candidate2"]["id"] != 0){
-			for($i = 0; $i < sizeof($referendum["all_voters"]); $i++){
-				if($referendum["all_voters"][$i] == $data->object->from_id){
-					$msg = ", ⛔вы уже голосовали.";
-					vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-						return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
-					return;
-				}
-			}
-
 			$candidate1_id = $referendum["candidate1"]["id"];
 			$candidate2_id = $referendum["candidate2"]["id"];
 
-			$keyboard = vk_keyboard(false, array(
+			$keyboard = vk_keyboard_inline(array(
 				array(
-					vk_text_button("📝%CANDIDATE1_NAME%", array(
-					'command' => 'referendum_vote',
-					'params' => array(
-						'candidate' => 1
-					)), "primary"),
-					vk_text_button("📝%CANDIDATE2_NAME%", array(
-					'command' => 'referendum_vote',
-					'params' => array(
-						'candidate' => 2
-					)), "primary")
+					vk_callback_button("📝%CANDIDATE1_NAME%", array('referendum_vote', 1), 'primary'),
+					vk_callback_button("📝%CANDIDATE2_NAME%", array('referendum_vote', 2), 'primary')
 				),
 				array(
-					vk_text_button("Закрыть", array(
-					'command' => 'referendum_vote',
-					'params' => array(
-						'candidate' => 0
-					)), "negative")
+					vk_callback_button("Закрыть", array('referendum_vote'), 'negative')
 				)
 			));
 
 			$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%msg%", 'keyboard' => $keyboard, 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 			$request = vk_parse_vars($request, array("CANDIDATE1_NAME", "CANDIDATE2_NAME", "msg"));
 
-			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-				var users = API.users.get({'user_ids':[{$candidate1_id},{$candidate2_id}]});
-
-				var CANDIDATE1_NAME = users[0].first_name.substr(0, 2)+'. '+users[0].last_name;
-				var CANDIDATE2_NAME = users[1].first_name.substr(0, 2)+'. '+users[1].last_name;
-
-				var msg = appeal+', учавствуй в выборах президента. Просто нажми на кнопку понравившегося тебе кандидата и ты отдашь за него свой голос. Список кандидатов:\\n✅@id'+users[0].id+' ('+users[0].first_name+' '+users[0].last_name+')\\n✅@id'+users[1].id+' ('+users[1].first_name+' '+users[1].last_name+')';
-
-				return API.messages.send({$request});
-				");
-		} else {
-			$msg = ", кандидаты еще не набраны. Вы можете балотироваться в президенты, использовав команду \\\"!candidate\\\".";
-				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
+			vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."var users=API.users.get({'user_ids':[{$candidate1_id},{$candidate2_id}]});var CANDIDATE1_NAME=users[0].first_name.substr(0, 2)+'. '+users[0].last_name;var CANDIDATE2_NAME=users[1].first_name.substr(0, 2)+'. '+users[1].last_name;var msg=appeal+', учавствуй в выборах президента. Просто нажми на кнопку понравившегося тебе кандидата и ты отдашь за него свой голос. Список кандидатов:\\n✅@id'+users[0].id+' ('+users[0].first_name+' '+users[0].last_name+')\\n✅@id'+users[1].id+' ('+users[1].first_name+' '+users[1].last_name+')';return API.messages.send({$request});");
 		}
-	} else {
-		$msg = ", сейчас не проходят выборы.";
-		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
+		else
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, кандидаты еще не набраны. Вы можете балотироваться в президенты, использовав команду \"!candidate\".");
 	}
+	else
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, сейчас не проходят выборы.");
 }
 
 ?>
