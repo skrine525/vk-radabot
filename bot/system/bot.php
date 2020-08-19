@@ -282,39 +282,21 @@ namespace{
 		$argv = $finput->argv;
 		$db = $finput->db;
 
-		$botModule = new BotModule($db);
+		$messagesModule = new Bot\Messages($db);
 		if (bot_check_reg($db) == false){
-			$response = json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id).bot_test_rights_exe($data->object->peer_id, $data->object->from_id, true, "%appeal%, &#9940;У вас нет прав для этой команды.")."
-				var chat = API.messages.getConversationsById({'peer_ids':[{$data->object->peer_id}],'extended':1}).items[0];
-
-				if(chat.peer.type != 'chat'){
-					API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', эта беседа не является групповым чатом.','disable_mentions':true});
-					return {'result':0};
-				}
-				var owner = API.users.get({'user_ids':[{$data->object->from_id}],'fields':'first_name_gen,last_name_gen'})[0];
-				API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', беседа успешно зарегистрирована.','disable_mentions':true});
-				return {'result':1,'batch_name':'Полит. партия '+owner.first_name_gen+' '+owner.last_name_gen};
-				"))->response;
-			if ($response->result == 1){
-				$gov_data = array('soc_order' => 1,
-				'president_id' => 0,
-				'parliament_id' => $data->object->from_id,
-				'batch_name' => "Нет данных",
-				'laws' => array(),
-				'anthem' => "null",
-				'flag' => "null",
-				'capital' => 'г. Мда');
+			$response = json_decode(vk_execute($messagesModule->makeExeAppealByID($data->object->from_id).bot_test_rights_exe($data->object->peer_id, $data->object->from_id, true, "%appeal%, &#9940;У вас нет прав для этой команды.")."var chat=API.messages.getConversationsById({'peer_ids':[{$data->object->peer_id}],'extended':1}).items[0];
+				if(chat.peer.type!='chat'){API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', эта беседа не является групповым чатом.','disable_mentions':true});return{'result':0};}API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', беседа успешно зарегистрирована.','disable_mentions':true});return{'result':1};"))->response;
+			if($response->result == 1){
 				$chat_id = $data->object->peer_id - 2000000000;
 				$db->setValue(array("chat_id"), $chat_id);
-				$db->setValue(array("goverment"), $gov_data);
+				$db->setValue(array("owner_id"), $data->object->from_id);
 				$db->setValue(array("bot_manager"), array('user_ranks' => array("id{$data->object->from_id}" => 0)));
 				$db->save();
 			}	
-		} else {
+		}
+		else{
 			$msg = ", данная беседа уже зарегистрирована.";
-			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-				return API.messages.send({'peer_id':{$data->object->peer_id}, 'message':appeal+'{$msg}','disable_mentions':true});
-				");
+			vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."return API.messages.send({'peer_id':{$data->object->peer_id}, 'message':appeal+'{$msg}','disable_mentions':true});");
 		}
 	}
 
