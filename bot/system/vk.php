@@ -24,7 +24,7 @@ function vk_execute($code){
 }
 
 function vk_longpoll($data, $ts, $wait = 25){
-	return file_get_contents("{$dataaddTextMessageCommandserver}?act=a_check&key={$dataaddTextMessageCommandkey}&ts={$ts}&wait={$wait}");
+	return file_get_contents("{$data->server}?act=a_check&key={$data->key}&ts={$ts}&wait={$wait}");
 }
 
 function vk_userexecute($code){

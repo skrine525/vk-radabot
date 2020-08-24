@@ -248,11 +248,10 @@ namespace{
 	// Инициалихация команд
 	function bot_initcmd($event){
 		// Игнорирование отсутствие базы данных для следующих команд
-		$event->addDBIgnoreTextCommand("!reg");
 
 		// Основное
 		$event->addTextMessageCommand("!cmdlist", 'bot_cmdlist');
-		$event->addTextMessageCommand("!reg", 'bot_register');
+		$event->addTextMessageCommand("!reg", 'bot_register', true);
 		$event->addTextMessageCommand("!помощь", 'bot_help');
 
 		// Система управления беседой
@@ -310,7 +309,7 @@ namespace{
 	}
 
 	function bot_pre_handle_function($event){
-		$db = $event->getDB();
+		$db = $event->getDatabase();
 		$data = $event->getData();
 
 		if($data->type != "message_new" || $data->object->peer_id < 2000000000 || !bot_check_reg($db)){
@@ -345,8 +344,8 @@ namespace{
 	}
 
 	function bot_debug($str){ // Debug function
-		$botModule = new BotModule();
-		$botModule->sendMessage(bot_getconfig('DEBUG_USER_ID'), "DEBUG: {$str}");
+		$messagesModule = new Bot\Module();
+		$messagesModule->sendMessage(bot_getconfig('DEBUG_USER_ID'), "DEBUG: {$str}");
 	}
 
 	// Инициалихация команд
@@ -367,7 +366,8 @@ namespace{
 				$argv = $finput->argv;
 				$db = $finput->db;
 
-				$botModule  = new BotModule($db);
+				$messagesModule  = new BotModule($db);
+				$messagesModule->setAppealID($data->object->from_id);
 
 				$member = bot_get_array_value($argv, 1 , "");
 
@@ -378,23 +378,22 @@ namespace{
 					$member_id = bot_get_id_from_mention($member);
 				}
 				else{
-					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Используйте: !docmd <пользователь> <команда>", $data->object->from_id);
+					$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте: !docmd <пользователь> <команда>");
 					return;
 				}
 
 				$command = mb_substr($data->object->text, 8 + mb_strlen($member));
 
 				if($command == ""){
-					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Используйте: !docmd <пользователь> <команда>", $data->object->from_id);
+					$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте: !docmd <пользователь> <команда>");
 					return;
 				}
-				$from_id = $data->object->from_id; // Необходимо для ошибки ниже
 				$modified_data = $data;
 				$modified_data->object->from_id = $member_id;
 				$modified_data->object->text = $command;
 				$result = $finput->event->runTextMessageCommand($modified_data);
-				if($result == 1)
-					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Ошибка. Данной команды не существует.", $from_id); // Вывод ошибки
+				if($result == Event::COMMAND_RESULT_UNKNOWN)
+					$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Ошибка. Данной команды не существует."); // Вывод ошибки
 			});
 
 			$event->addTextMessageCommand("!test-template", function ($finput){
@@ -436,12 +435,12 @@ namespace{
 				$argv = $finput->argv;
 				$db = $finput->db;
 
-				$botModule  = new BotModule($db);
+				$messagesModule  = new BotModule($db);
 
 				$command = mb_substr($data->object->text, 7);
 
 				if($command == ""){
-					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Используйте: !runcb <команда>", $data->object->from_id);
+					$messagesModule->sendSilentMessage($data->object->peer_id, "%apepal%, ⛔Используйте: !runcb <команда>");
 					return;
 				}
 
@@ -451,7 +450,7 @@ namespace{
 					)
 				));
 
-				$botModule->sendSilentMessage($data->object->peer_id, ", Чтобы запустить команду [{$command}] используйте кнопку ниже.", $data->object->from_id, array('keyboard' => $keyboard)); // Вывод ошибки
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, Чтобы запустить команду [{$command}] используйте кнопку ниже.", array('keyboard' => $keyboard)); // Вывод ошибки
 			});
 
 			$event->addCallbackButtonCommand('bot_runcb', function ($finput){
@@ -471,7 +470,7 @@ namespace{
 				$modified_data->object->payload = array($command);
 
 				$result = $event->runCallbackButtonCommand($modified_data);
-				if($result != 0){
+				if($result != Event::COMMAND_RESULT_OK){
 					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ [bot_runcb]: Команды [$command] не существует.");
 				}
 			});
@@ -482,9 +481,9 @@ namespace{
 				$argv = $finput->argv;
 				$db = $finput->db;
 
-				$botModule  = new BotModule($db);
+				$messagesModule  = new BotModule($db);
 
-				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
+				vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."
 					var peer_id = {$data->object->peer_id};
 					var chat_id = peer_id - 2000000000;
 					var members = API.messages.getConversationMembers({'peer_id':peer_id});
@@ -587,9 +586,9 @@ namespace{
 	}
 
 	function bot_message_not_reg($data){ // Legacy
-		$msg = ", ⛔беседа не зарегистрирована. Используйте \"!reg\".";
-		$botModule = new BotModule();
-		$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
+		$messagesModule = new Bot\Messages($db);
+		$messagesModule->setAppealID($data->object->from_id);
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔беседа не зарегистрирована. Используйте \"!reg\".");
 	}
 
 	function bot_getconfig($name){
@@ -604,8 +603,8 @@ namespace{
 
 	function bot_keyboard_remove($data){
 		$keyboard = vk_keyboard(false, array());
-		$botModule = new BotModule();
-		$botModule->sendSilentMessage($data->object->peer_id, '✅Клавиатура убрана.', null, array('keyboard' => $keyboard));
+		$messagesModule = new Bot\Messages($db);
+		$messagesModule->sendSilentMessage($data->object->peer_id, '✅Клавиатура убрана.', array('keyboard' => $keyboard));
 	}
 
 	function bot_like_handler($finput){
@@ -620,19 +619,14 @@ namespace{
 			$command = "";
 		if($command == "аву")
 			fun_like_avatar($data, $db);
-		/*elseif($command == "пост")
-			fun_like_wallpost($data, $db);*/
 		else{
-			/*$commands = array(
-				'Лайк аву - Лайкает аву',
-				'Лайк пост <пост> - Лайкает пост'
-			);*/
 			$commands = array(
 				'Лайк аву - Лайкает аву'
 			);
 
-			$botModule = new BotModule($db);
-			$botModule->sendCommandListFromArray($data, ', используйте:', $commands);
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, '%appeal%, используйте:', $commands);
 		}
 	}
 
@@ -656,8 +650,9 @@ namespace{
 				'!убрать ник - Убирает ник пользователя'
 			);
 
-			$botModule = new BotModule($db);
-			$botModule->sendCommandListFromArray($data, ', используйте:', $commands);
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, '%appeal%, используйте:', $commands);
 		}
 	}
 
@@ -669,18 +664,19 @@ namespace{
 
 		$member_id = 0;
 
-		$botModule = new BotModule($db);
+		$messagesModule = new Bot\Messages($db);
+		$messagesModule->setAppealID($data->object->from_id);
 
 		if(array_key_exists(0, $data->object->fwd_messages)){
 			$member_id = $data->object->fwd_messages[0]->from_id;
 		} elseif(array_key_exists(1, $argv) && bot_is_mention($argv[1])){
 			$member_id = bot_get_id_from_mention($argv[1]);
 		} else {
-			$botModule->sendSilentMessage($data->object->peer_id, ", Ваш ID: {$data->object->from_id}.", $data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, Ваш ID: {$data->object->from_id}.");
 			return;
 		}
 
-		$botModule->sendSilentMessage($data->object->peer_id, ", ID: {$member_id}.", $data->object->from_id);
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ID: {$member_id}.");
 	}
 
 	function bot_base64($finput){
@@ -690,12 +686,13 @@ namespace{
 		$db = $finput->db;
 
 		$str_data = mb_substr($data->object->text, 8);
-		$botModule = new BotModule($db);
+		$messagesModule = new Bot\Messages($db);
+		$messagesModule->setAppealID($data->object->from_id);
 
 		$CHARS_LIMIT = 300; // Переменная ограничения символов
 
 		if($str_data == ""){
-			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Используйте !base64 <data>.", $data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте !base64 <data>.");
 			return;
 		}
 
@@ -704,17 +701,17 @@ namespace{
 		if(!$decoded_data){
 			$encoded_data = base64_encode($str_data);
 			if(strlen($encoded_data) > $CHARS_LIMIT){
-				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Зашифрованный текст превышает {$CHARS_LIMIT} симоволов.", $data->object->from_id);
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Зашифрованный текст превышает {$CHARS_LIMIT} симоволов.");
 				return;
 			}
-			$botModule->sendSilentMessage($data->object->peer_id, ", Зашифрованный текст:\n{$encoded_data}", $data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, Зашифрованный текст:\n{$encoded_data}");
 		}
 		else{
 			if(strlen($decoded_data) > $CHARS_LIMIT){
-				$botModule->sendSilentMessage($data->object->peer_id, ", Дешифрованный текст превышает {$CHARS_LIMIT} симоволов.", $data->object->from_id);
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, Дешифрованный текст превышает {$CHARS_LIMIT} симоволов.");
 				return;
 			}
-			$botModule->sendSilentMessage($data->object->peer_id, ", Дешифрованный текст:\n{$decoded_data}", $data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, Дешифрованный текст:\n{$decoded_data}");
 		}
 	}
 
@@ -734,7 +731,7 @@ namespace{
 
 		/////////////////////////////////////////////////////
 		////////////////////////////////////////////////////
-		$list_in = $event->getMessageCommandList(); // Входной список
+		$list_in = $event->getTextMessageCommandList(); // Входной список
 		$list_out = array(); // Выходной список
 
 		$list_number = $list_number_from_word; // Номер текущего списка
@@ -810,7 +807,7 @@ namespace{
 
 		/////////////////////////////////////////////////////
 		////////////////////////////////////////////////////
-		$list_in = $event->getMessageCommandList(); // Входной список
+		$list_in = $event->getTextMessageCommandList(); // Входной список
 		$list_out = array(); // Выходной список
 
 		$list_number = intval(bot_get_array_value($payload, 2, 1)); // Номер текущего списка
@@ -873,28 +870,16 @@ namespace{
 		$argv = $finput->argv;
 		$db = $finput->db;
 
-		$botModule = new BotModule($db);
+		$messagesModule = new Bot\Messages($db);
+		$messagesModule->setAppealID($data->object->from_id);
 		$ranksys = new RankSystem($db);
 
 		if(!$ranksys->checkRank($data->object->from_id, 2)){ // Проверка ранга (Президент)
-			$botModule->sendSystemMsg_NoRights($data);
+			$messagesModule->sendSilentMessage($data->object->peer_id, Bot\Messages::MESSAGE_NO_RIGHTS);
 			return;
 		}
 
-		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-			var peer_id = {$data->object->peer_id};
-			var from_id = {$data->object->from_id};
-			var members = API.messages.getConversationMembers({'peer_id':peer_id});
-
-			var msg = appeal+' созывает всех!';
-			var i = 0; while (i < members.profiles.length){
-				if(members.profiles[i].id != from_id){
-					msg = msg + '@id'+members.profiles[i].id+'(&#12288;)';
-				}
-				i = i + 1;
-			};
-			API.messages.send({'peer_id':peer_id,'message':msg});
-			");
+		vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var from_id={$data->object->from_id};var members=API.messages.getConversationMembers({'peer_id':peer_id});var msg=appeal+' созывает всех!';var i=0;while (i<members.profiles.length){if(members.profiles[i].id!=from_id){msg=msg + '@id'+members.profiles[i].id+'(&#12288;)';}i=i+1;};API.messages.send({'peer_id':peer_id,'message':msg});");
 	}
 
 	function bot_keyboard_rtcc_handler($finput){
@@ -902,8 +887,6 @@ namespace{
 		$data = $finput->data; 
 		$payload = $finput->payload;
 		$db = $finput->db;
-
-		error_log("Data: ".$data->object->peer_id);
 
 		if(property_exists($payload, "text_command") && gettype($payload->text_command) == "string"){
 			$modified_data = (object) array(
@@ -952,54 +935,31 @@ namespace{
 					$chat_id = $data->object->peer_id - 2000000000;
 					$ranksys = new RankSystem($db);
 					if(!$ranksys->checkRank($data->object->from_id, 2)){ // Проверка ранга (Президент)
-						vk_execute("
-							var user = API.users.get({'user_ids':[{$data->object->from_id}]})[0];
-							var msg = 'Пока, @id{$data->object->from_id} ('+user.first_name+' '+user.last_name+'). Больше ты сюда не вернешься!';
-							API.messages.send({'peer_id':{$data->object->peer_id}, 'message':msg});
-							API.messages.removeChatUser({'chat_id':{$chat_id},'user_id':{$data->object->action->member_id}});
-							return 'ok';
-							");
+						vk_execute("var user=API.users.get({'user_ids':[{$data->object->from_id}]})[0];var msg='Пока, @id{$data->object->from_id} ('+user.first_name+' '+user.last_name+'). Больше ты сюда не вернешься!';API.messages.send({'peer_id':{$data->object->peer_id}, 'message':msg});API.messages.removeChatUser({'chat_id':{$chat_id},'user_id':{$data->object->action->member_id}});return 'ok';");
 					}
 				}
 				else{
-					vk_execute("
-						var user = API.users.get({'user_ids':[{$data->object->action->member_id}],'fields':'sex'})[0];
-						var msg = '';
-						if(user.sex == 1){
-							msg = 'Правильно, она мне никогда не нравилась.';
-						}
-						else{
-							msg = 'Правильно, он мне никогда не нравился.';
-						}
-						API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-						");
+					vk_execute("var user=API.users.get({'user_ids':[{$data->object->action->member_id}],'fields':'sex'})[0];var msg='';if(user.sex==1){msg='Правильно, она мне никогда не нравилась.';}else{msg='Правильно, он мне никогда не нравился.';}API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});");
 				}
 			}
-			elseif($data->object->action->type == "chat_invite_user") {
-				if($data->object->action->member_id == -bot_getconfig('VK_GROUP_ID')){
-					$botModule = new BotModule($db);
-					$botModule->sendSilentMessage($data->object->peer_id, "О, привет!");
-				}
+			elseif($data->object->action->type == "chat_invite_user"){
+				$messagesModule = new Bot\Messages($db);
+				if($data->object->action->member_id == -bot_getconfig('VK_GROUP_ID'))
+					$messagesModule->sendSilentMessage($data->object->peer_id, "О, привет!");
 				else{
 					$banned_users = BanSystem::getBanList($db);
-					$botModule = new BotModule($db);
 					$isBanned = false;
 					for($i = 0; $i < sizeof($banned_users); $i++){
 						if($banned_users[$i]["user_id"] == $data->object->action->member_id){
 							$chat_id = $data->object->peer_id - 2000000000;
 							$ranksys = new RankSystem($db);
 							if($ranksys->checkRank($data->object->from_id, 2)){ // Проверка ранга (Президент)
-								vk_execute("
-									API.messages.send({'peer_id':{$data->object->peer_id},'message':'@id{$data->object->action->member_id} (Пользователь) был приглашен @id{$data->object->from_id} (администратором) беседы и автоматически разбанен.'});
-									");
+								vk_execute("API.messages.send({'peer_id':{$data->object->peer_id},'message':'@id{$data->object->action->member_id} (Пользователь) был приглашен @id{$data->object->from_id} (администратором) беседы и автоматически разбанен.'});");
 								BanSystem::unbanUser($db, $data->object->action->member_id);
 							}
 							else{
 								$ban_info = BanSystem::getUserBanInfo($db, $data->object->action->member_id);
-								json_decode(vk_execute($botModule->makeExeAppealByID($data->object->action->member_id)."
-									API.messages.send({'peer_id':{$data->object->peer_id}, 'message':appeal+', вы забанены в этой беседе!\\nПричина: {$ban_info["reason"]}.'});
-									API.messages.removeChatUser({'chat_id':{$chat_id},'user_id':{$data->object->action->member_id}});
-									"));
+								json_decode(vk_execute($messagesModule->makeExeAppealByID($data->object->action->member_id)."API.messages.send({'peer_id':{$data->object->peer_id}, 'message':appeal+', вы забанены в этой беседе!\\nПричина: {$ban_info["reason"]}.'});API.messages.removeChatUser({'chat_id':{$chat_id},'user_id':{$data->object->action->member_id}});"));
 								$isBanned = true;
 							}
 						}

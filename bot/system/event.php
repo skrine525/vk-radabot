@@ -1,69 +1,81 @@
 <?php
 
 class Event{
+	// Переменные
 	private $data;
 	private $db;
 	private $textMessageCommands;			// Массив текстовых команд
 	private $textButtonCommands;			// Массив команд Text-кнопок
 	private $callbackButtonCommands;		// Массив команд Callback-кнопок
 	private $defaultFunc;
-	private $dbIgnoreCommandList;
+
+	// Константы
+	const COMMAND_RESULT_OK = 0;			// Константа результата выполнения команды без ошибок
+	const COMMAND_RESULT_NO_DB = 1;			// Константа результата выполнения команды с ошибкой, которая не способна работать без Базы данных
+	const COMMAND_RESULT_UNKNOWN = 2;		// Константа результата выполнения команды с другими ошибками
 
 	function __construct($data) {
 		$this->data = $data;
 		$this->textMessageCommands = array();
 		$this->textButtonCommands = array();
 		$this->callbackButtonCommands = array();
-		$this->dbIgnoreCommandList = array();
 
-		$chat_id = $this->data->object->peer_id - 2000000000;
-		$this->db = new Database(BOT_DBDIR."/chat{$chat_id}.json");
+		if($this->data->object->peer_id > 2000000000){
+			// Если идентификатор назначения группового чата, то подгружаем Базу данных группового чата
+			$chat_id = $this->data->object->peer_id - 2000000000;
+			$this->db = new Database(BOT_DBDIR."/chat{$chat_id}.json");
+		}
 	}
 
 	public function getData(){
 		return $this->data;
 	}
 
-  	public function getDB(){
+  	public function getDatabase(){
   		return $this->db;
   	}
 
-  	public function addTextMessageCommand($command, $method){
+  	public function addTextMessageCommand($command, $callback, $ignore_db = false){
   		if(!array_key_exists($command, $this->textMessageCommands)){
-  			$this->textMessageCommands[$command] = $method;
+  			$this->textMessageCommands[$command] = (object) array(
+  				'callback' => $callback,
+  				'ignore_db' => $ignore_db
+  			);
   			return true;
   		}
   		else
   			return false;
   	}
 
-  	public function addTextButtonCommand($command, $method){
+  	public function addTextButtonCommand($command, $callback, $ignore_db = false){
   		if(!array_key_exists($command, $this->textButtonCommands)){
-  			$this->textButtonCommands[$command] = $method;
+  			$this->textButtonCommands[$command] = (object) array(
+  				'callback' => $callback,
+  				'ignore_db' => $ignore_db
+  			);
   			return true;
   		}
   		else
   			return false;
   	}
 
-  	public function addCallbackButtonCommand($command, $method){
+  	public function addCallbackButtonCommand($command, $callback, $ignore_db = false){
   		if(!array_key_exists($command, $this->callbackButtonCommands)){
-  			$this->callbackButtonCommands[$command] = $method;
+  			$this->callbackButtonCommands[$command] = (object) array(
+  				'callback' => $callback,
+  				'ignore_db' => $ignore_db
+  			);
   			return true;
   		}
   		else
   			return false;
-  	}
-
-  	public function addDBIgnoreTextCommand($command){
-  		$this->dbIgnoreCommandList[] = $command;
   	}
 
   	public function setDefaultFunction($func){
   		$this->defaultFunc = $func;
   	}
 
-  	public function getMessageCommandList(){
+  	public function getTextMessageCommandList(){
   		$list = array();
   		foreach ($this->textMessageCommands as $key => $value) {
   			$list[] = $key;
@@ -72,13 +84,7 @@ class Event{
   	}
 
   	public function exit(){
-  		unset($this->data);
-  		unset($this->db);
-  		unset($this->textMessageCommands);
-  		unset($this->textButtonCommands);
-  		unset($this->callbackButtonCommands);
-  		unset($this->defaultFunc);
-  		unset($this->dbIgnoreCommandList);
+  		unset($this);
   	}
 
   	public function runTextMessageCommand($data){
@@ -87,31 +93,24 @@ class Event{
 			$command = mb_strtolower(bot_get_array_value($argv, 0, "")); // Переводим команду в нижний регистр
 
 			if(array_key_exists($command, $this->textMessageCommands)){
-				if(!bot_check_reg($this->db)){ // Проверка на регистрацию в системе
-					$ignore = false;
-					for($i = 0; $i < count($this->dbIgnoreCommandList); $i++){
-						if($command == $this->dbIgnoreCommandList[$i]){
-							$ignore = true;
-							break;
-						}
-					}
-					if(!$ignore){
-						bot_message_not_reg($data);
-						return 2;
-					}
-				}
+				$command_data = $this->textMessageCommands[$command];
+
+				// Проверка на существование беседы в Базе данных, если команда не способна игнорировать это
+				if(!$command_data->ignore_db && !bot_check_reg($this->db))
+					return Event::COMMAND_RESULT_NO_DB;
+
 				$finput = (object) array(
 					'data' => $data,
 					'argv' => $argv,
 					'db' => $this->db,
 					'event' => $this
 				);
-				$method = $this->textMessageCommands[$command]; // Получение значения Callback'а
-				call_user_func_array($method, array($finput)); // Выполнение Callback'а
-				return 0;
+				$callback = $command_data->callback; // Получение Callback'а
+				call_user_func_array($callback, array($finput)); // Выполнение Callback'а
+				return Event::COMMAND_RESULT_OK;
 			}
   		}
-  		return 1;
+  		return Event::COMMAND_RESULT_UNKNOWN;
   	}
 
   	public function runTextButtonCommand($data){
@@ -119,23 +118,26 @@ class Event{
   			if(property_exists($data->object, "payload")){
 				$payload = (object) json_decode($data->object->payload);
 				if(!is_null($payload) && property_exists($payload, "command") && array_key_exists($payload->command, $this->textButtonCommands)){
-					if(!bot_check_reg($this->db)){ // Проверка на регистрацию в системе
-						bot_message_not_reg($data);
-						return 2;
-					}
+					$command_data = $this->textButtonCommands[$payload->command];
+
+					// Проверка на существование беседы в Базе данных, если команда не способна игнорировать это
+					if(!$command_data->ignore_db && !bot_check_reg($this->db))
+						return Event::COMMAND_RESULT_NO_DB;
+
 					$finput = (object) array(
 						'data' => $data,
 						'payload' => $payload,
 						'db' => $this->db,
 						'event' => $this
 					);
-					$method = $this->textButtonCommands[$payload->command]; // Получение значения Callback'а
-					call_user_func_array($method, array($finput)); // Выполнение Callback'а
-					return 0;
+
+					$callback = $command_data->callback; // Получение Callback'а
+					call_user_func_array($callback, array($finput)); // Выполнение Callback'а
+					return Event::COMMAND_RESULT_OK;
 				}
   			}
   		}
-  		return 1;
+  		return Event::COMMAND_RESULT_UNKNOWN;
   	}
 
   	public function runCallbackButtonCommand($data){
@@ -143,23 +145,26 @@ class Event{
   			if(property_exists($data->object, "payload") && gettype($data->object->payload) == 'array'){
 				$payload = $data->object->payload;
 				if(array_key_exists(0, $payload)&& array_key_exists($payload[0], $this->callbackButtonCommands)){
-					if(!bot_check_reg($this->db)){ // Проверка на регистрацию в системе
-						bot_message_not_reg($data);
-						return 2;
-					}
+					$command_data = $this->callbackButtonCommands[$payload[0]];
+					
+					// Проверка на существование беседы в Базе данных, если команда не способна игнорировать это
+					if(!$command_data->ignore_db && !bot_check_reg($this->db))
+						return Event::COMMAND_RESULT_NO_DB;
+
 					$finput = (object) array(
 						'data' => $data,
 						'payload' => $payload,
 						'db' => $this->db,
 						'event' => $this
 					);
-					$method = $this->callbackButtonCommands[$payload[0]]; // Получение значения Callback'а
-					call_user_func_array($method, array($finput)); // Выполнение Callback'а
-					return 0;
+
+					$callback = $command_data->callback; // Получение Callback'а
+					call_user_func_array($callback, array($finput)); // Выполнение Callback'а
+					return Event::COMMAND_RESULT_OK;
 				}
   			}
   		}
-  		return 1;
+  		return Event::COMMAND_RESULT_UNKNOWN;
   	}
 
   	public function handle(){
@@ -172,17 +177,21 @@ class Event{
 
 			// Обработка тектовых команд
 			$result = $this->runTextMessageCommand($this->data);
-			if($result == 0)
+			if($result == Event::COMMAND_RESULT_OK)
 				return true;
-			elseif($result == 2)
+			elseif($result == Event::COMMAND_RESULT_NO_DB){
+				bot_message_not_reg($this->data);
 				return false;
+			}
 
 			// Обработка клавиатурных команд
 			$result = $this->runTextButtonCommand($this->data);
-			if($result == 0)
+			if($result == Event::COMMAND_RESULT_OK)
 				return true;
-			elseif($result == 2)
+			elseif($result == Event::COMMAND_RESULT_NO_DB){
+				bot_message_not_reg($data);
 				return false;
+			}
 
 			// Обработка не командный сообщений
 			if(!is_null($this->defaultFunc)){
@@ -207,10 +216,12 @@ class Event{
 
 			// Обработка клавиатурных команд
 			$result = $this->runCallbackButtonCommand($this->data);
-			if($result == 0)
+			if($result == Event::COMMAND_RESULT_OK)
 				return true;
-			elseif($result == 2)
+			elseif($result == Event::COMMAND_RESULT_NO_DB){
+				bot_message_not_reg($this->data);
 				return false;
+			}
 			break;
 		}
 		return false;
@@ -223,7 +234,6 @@ function event_handle($data){
 		/// Обработка бота в Личном
 		///////////////////////////
 		vk_call('messages.send', array('peer_id'=>$data->object->peer_id,'message'=>'Бот работает только в беседах. Вы можете добавить бота в беседу соответствующей кнопкой в меню бота на главной странице.'));
-		return false;
 	}
 	else{
 		///////////////////////////
@@ -233,38 +243,18 @@ function event_handle($data){
 		// Инициализирует класс
 		$event = new Event($data);
 
-		// Функция предварительной обработки
-		bot_pre_handle_function($event);
+		bot_pre_handle_function($event);				// Функция предварительной обработки
+		bot_debug_cmdinit($event);						// Инициализация команд отладочного режима
 
-		// Инициализация команд отладочного режима
-		bot_debug_cmdinit($event);
-
-		// Инициализация команд модуля bot
-		bot_initcmd($event);
-
-		// Инициализация команд Гос. устройства
-		government_initcmd($event);
-
-		// Инициализация команд модуля manager
-		manager_initcmd($event);
-
-		// Инициализация команд модуля stats
-		stats_initcmd($event);
-
-		// RP-команды
-		roleplay_cmdinit($event);
-
-		// Fun-команды
-		fun_initcmd($event);
-
-		// Инициализация команд модуля giphy
-		giphy_initcmd($event);
-
-		// Игра Слова
-		wordgame_initcmd($event);
-
-		// Economy
-		economy_initcmd($event);
+		bot_initcmd($event);							// Инициализация команд модуля bot
+		government_initcmd($event);						// Инициализация команд Гос. устройства
+		manager_initcmd($event);						// Инициализация команд модуля manager
+		stats_initcmd($event);							// Инициализация команд модуля stats
+		roleplay_cmdinit($event);						// RP-команды
+		fun_initcmd($event);							// Fun-команды
+		giphy_initcmd($event);							// Инициализация команд модуля giphy
+		wordgame_initcmd($event);						// Игра Слова
+		economy_initcmd($event);						// Economy
 
 		// Функция обработки событий вне командной среды
 		$event->setDefaultFunction(function ($finput){
@@ -279,7 +269,6 @@ function event_handle($data){
 			fun_handler($data, $db);
 			stats_update($data, $db); // Ведение статистики в беседе
 			wordgame_gameplay($data, $db); // Освновной обработчик игры Слова
-			//wordgame_eng_gameplay($data, $db); // Освновной обработчик игры Words
 
 			$db->save();
 		});

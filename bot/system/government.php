@@ -115,12 +115,12 @@ function government_constitution($finput){
 		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 		$request = vk_parse_vars($request, array("__president_name__", "__confa_name__", "__appeal__"));
 
-		vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."var confa_info=API.messages.getConversationsById({'peer_ids':[{$data->object->peer_id}]}).items[0];var president_info=API.users.get({'user_ids':[{$gov["president_id"]}],'fields':'screen_name'})[0];var __president_name__='@'+president_info.screen_name+' ('+president_info.first_name+' '+president_info.last_name+')';var __confa_name__=confa_info.chat_settings.title;var __appeal__=appeal; appeal = null;return API.messages.send({$request});");
+		vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."var confa_info=API.messages.getConversationsById({'peer_ids':[{$data->object->peer_id}]}).items[0];var president_info=API.users.get({'user_ids':[{$gov["president_id"]}],'fields':'screen_name'})[0];var __president_name__='@'+president_info.screen_name+' ('+president_info.first_name+' '+president_info.last_name+')';var __confa_name__=confa_info.chat_settings.title;var __appeal__=appeal;appeal=null;return API.messages.send({$request});");
 	}
 	else{
 		$msg = "%__appeal__%, 📰информация о текущем государстве:\n🏛%__confa_name__% - {$current_soc_order_desc}.\n&#128104;&#8205;&#9878;Глава государства: ⛔Не назначен.\n📖Правящая партия: {$gov["batch_name"]}.\n🏢Столица: {$gov["capital"]}.\n";
 
-		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg), JSON_UNESCAPED_UNICODE);
+		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 		$request = vk_parse_vars($request, array("__president_name__", "__confa_name__", "__appeal__"));
 
 		vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."var confa_info = API.messages.getConversationsById({'peer_ids':[{$data->object->peer_id}]}).items[0];var __confa_name__ = confa_info.chat_settings.title;var __appeal__ = appeal; appeal = null;return API.messages.send({$request});");
@@ -756,14 +756,7 @@ function government_rally($finput){
 		if($rally_for !== false && array_key_exists($member_key, $rally_for["members"])){
 			if($date - $rally_for["members"][$member_key] >= 3600){
 				$members_count = count($rally_against["members"]);
-				$r = json_decode(vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var presidential_power={$gov["presidential_power"]};
-					var members_in_chat=API.messages.getConversationMembers({'peer_id':peer_id});var members_in_rally={$members_count};
-					var percentage_of_one=(1/members_in_chat.profiles.length)*0.1;
-					var rally_result=percentage_of_one+(members_in_rally-1)*(percentage_of_one*0.25);
-					presidential_power=presidential_power+rally_result*100;
-					if(presidential_power>100){presidential_power=100;}
-					API.messages.send({'peer_id':peer_id,'message':appeal+', ✅Вы поучаствовали в митинге За @id{$gov["president_id"]} (президента).','disable_mentions':true});
-					return presidential_power;"));
+				$r = json_decode(vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var presidential_power={$gov["presidential_power"]};var members_in_chat=API.messages.getConversationMembers({'peer_id':peer_id});var members_in_rally={$members_count};var percentage_of_one=(1/members_in_chat.profiles.length)*0.1;var rally_result=percentage_of_one+(members_in_rally-1)*(percentage_of_one*0.25);presidential_power=presidential_power+rally_result*100;if(presidential_power>100){presidential_power=100;}API.messages.send({'peer_id':peer_id,'message':appeal+', ✅Вы поучаствовали в митинге За @id{$gov["president_id"]} (президента).','disable_mentions':true});return presidential_power;"));
 				error_log(json_encode($r));
 				if(gettype($r) == "object" && property_exists($r, 'response')){
 					$presidential_power = $r->response;
@@ -787,14 +780,7 @@ function government_rally($finput){
 		elseif($rally_against !== false && array_key_exists($member_key, $rally_against["members"])){
 			if($date - $rally_against["members"][$member_key] >= 3600){
 				$members_count = count($rally_against["members"]);
-				$r = json_decode(vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var presidential_power={$gov["presidential_power"]};
-					var users=API.users.get({'user_ids':[{$rally_against["organizer_id"]},{$gov["president_id"]}],'fields':'first_name_ins,last_name_ins,first_name_gen,last_name_gen'});
-					var members_in_chat=API.messages.getConversationMembers({'peer_id':peer_id});var members_in_rally={$members_count};
-					var percentage_of_one=(1/members_in_chat.profiles.length)*0.1;
-					var rally_result=percentage_of_one+(members_in_rally-1)*(percentage_of_one*0.25);
-					presidential_power=presidential_power-rally_result*100;
-					if(presidential_power<=0){presidential_power=0;API.messages.send({'peer_id':peer_id,'message':'❗Митинг, организованный @id'+users[0].id+' ('+users[0].first_name_ins.substr(0, 2)+'. '+users[0].last_name_ins+'), позволил добиться справедливости и правительсво @id'+users[1].id+' ('+users[1].first_name_gen.substr(0, 2)+'. '+users[1].last_name_gen+') подало в отставку. Организованы досрочные выборы президента.','disable_mentions':true});}else{API.messages.send({'peer_id':peer_id,'message':appeal+', ✅Вы поучаствовали в митинге Против @id{$gov["president_id"]} (президента).','disable_mentions':true});}
-					return presidential_power;"));
+				$r = json_decode(vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var presidential_power={$gov["presidential_power"]};var users=API.users.get({'user_ids':[{$rally_against["organizer_id"]},{$gov["president_id"]}],'fields':'first_name_ins,last_name_ins,first_name_gen,last_name_gen'});var members_in_chat=API.messages.getConversationMembers({'peer_id':peer_id});var members_in_rally={$members_count};var percentage_of_one=(1/members_in_chat.profiles.length)*0.1;var rally_result=percentage_of_one+(members_in_rally-1)*(percentage_of_one*0.25);presidential_power=presidential_power-rally_result*100;if(presidential_power<=0){presidential_power=0;API.messages.send({'peer_id':peer_id,'message':'❗Митинг, организованный @id'+users[0].id+' ('+users[0].first_name_ins.substr(0, 2)+'. '+users[0].last_name_ins+'), позволил добиться справедливости и правительсво @id'+users[1].id+' ('+users[1].first_name_gen.substr(0, 2)+'. '+users[1].last_name_gen+') подало в отставку. Организованы досрочные выборы президента.','disable_mentions':true});}else{API.messages.send({'peer_id':peer_id,'message':appeal+', ✅Вы поучаствовали в митинге Против @id{$gov["president_id"]} (президента).','disable_mentions':true});}return presidential_power;"));
 				if(gettype($r) == "object" && property_exists($r, 'response')){
 					$presidential_power = $r->response;
 					if($presidential_power == 0){

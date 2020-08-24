@@ -487,7 +487,7 @@ namespace Economy{
 namespace{
 	// Инициалихация команд
 	function economy_initcmd(&$event){ // Инициализация тексовых команд модуля экономики
-		$chatModes = new ChatModes($event->getDB());
+		$chatModes = new ChatModes($event->getDatabase());
 		if(!$chatModes->getModeValue("economy_enabled")) // Отключаем, если в беседе запрещена экономика
 			return;
 

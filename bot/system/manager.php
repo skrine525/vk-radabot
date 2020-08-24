@@ -173,63 +173,57 @@ class BanSystem{
 }
 
 class AntiFlood{
-	private $db;
-	private $peer_id;
+	private $antiflood_database;
+	private $chat_id;
 
 	const TIME_INTERVAL = 10; // Промежуток времени в секундах
 	const MSG_COUNT_MAX = 5; // Максимальное количество сообщений в промежуток времени
 	const MSG_LENGTH_MAX = 2048; // Максимальная длинна сообщения
 
 	function __construct($peer_id){
-		$this->peer_id = $peer_id - 2000000000;
+		$this->chat_id = $peer_id - 2000000000;
 
 		if(!file_exists(BOT_DATADIR."/antiflood"))
 		mkdir(BOT_DATADIR."/antiflood");
 
-		if(file_exists(BOT_DATADIR."/antiflood/chat{$this->peer_id}.json"))
-			$this->db = json_decode(file_get_contents(BOT_DATADIR."/antiflood/chat{$this->peer_id}.json"), true);
+		if(file_exists(BOT_DATADIR."/antiflood/chat{$this->chat_id}.json"))
+			$this->antiflood_database = json_decode(file_get_contents(BOT_DATADIR."/antiflood/chat{$this->chat_id}.json"), true);
 		else
-			$this->db = array();
+			$this->antiflood_database = array();
 	}
 
 	public function save(){
-		file_put_contents(BOT_DATADIR."/antiflood/chat{$this->peer_id}.json", json_encode($this->db, JSON_UNESCAPED_UNICODE));
+		file_put_contents(BOT_DATADIR."/antiflood/chat{$this->chat_id}.json", json_encode($this->antiflood_database, JSON_UNESCAPED_UNICODE));
 	}
 
 	public function checkMember($data){
-		$time = $data->object->date;
+		$date = $data->object->date;
 		$member_id = $data->object->from_id;
 		$text = $data->object->text;
 
 		if(mb_strlen($text) > self::MSG_LENGTH_MAX) // Ограничение на длинну сообщения
 			return true;
 
-		if(array_key_exists("member{$member_id}", $this->db)){ // Ограничение на частоту сообщений
-			$user_data = &$this->db["member{$member_id}"];
-			if($time - $user_data["time"] >= self::TIME_INTERVAL){
-				$user_data = array(
-					'msg_count' => 1,
-					'time' => $time
-				);
+		if(array_key_exists("member{$member_id}", $this->antiflood_database)){ // Ограничение на частоту сообщений
+			$user_data = &$this->antiflood_database["member{$member_id}"];
+			foreach ($user_data as $key => $value){
+				if($date - $value >= AntiFlood::TIME_INTERVAL)
+					unset($user_data[$key]);
+			}
+			$user_data = array_filter($user_data);
+			$user_data[] = $date;
+			if(count($user_data) > AntiFlood::MSG_COUNT_MAX)
+				return true;
+			else
 				return false;
-			}
-			else{
-				$user_data["msg_count"] = $user_data["msg_count"] + 1;
-				if($user_data["msg_count"] > self::MSG_COUNT_MAX){
-					return true;
-				}
-			}
 		}
 		else{
-			$this->db["member{$member_id}"] = array(
-				'msg_count' => 1,
-				'time' => $time
-			);
+			$this->antiflood_database["member{$member_id}"] = array($date);
 			return false;
 		}
 	}
 
-	public static function handler($data, &$db){
+	public static function handler($data, $db){
 		$chatModes = new ChatModes($db);
 		if(!$chatModes->getModeValue('antiflood_enabled')){
 			if(file_exists(BOT_DATADIR."/antiflood/chat{$data->object->peer_id}.json"))
@@ -240,38 +234,16 @@ class AntiFlood{
 		$returnValue = false;
 		$floodSystem = new AntiFlood($data->object->peer_id);
 		if($floodSystem->checkMember($data)){
-			$botModule = new BotModule($db);
+			$messagesModule = new Bot\Messages($db);
 			$ranksys = new RankSystem($db);
 
 			if($ranksys->checkRank($data->object->from_id, 2)) // Проверка ранга (Президент)
 				return false;
 
-			$response = json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-				var peer_id = {$data->object->peer_id};
-				var member_id = {$data->object->from_id};
-				var user = API.users.get({'user_ids':member_id})[0];
-				var members = API.messages.getConversationMembers({'peer_id':peer_id});
+			$r = json_decode(vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var member_id={$data->object->from_id};var user=API.users.get({'user_ids':member_id})[0];var members=API.messages.getConversationMembers({'peer_id':peer_id});var user_index=-1;var i=0;while(i<members.items.length){if(members.items[i].member_id==user.id){user_index=i;i=members.items.length;};i=i+1;};if(!members.items[user_index].is_admin&&user_index!=-1){var msg='Пользователь '+appeal+' был кикнут. Причина: Флуд.';API.messages.send({'peer_id':peer_id,'message':msg});API.messages.removeChatUser({'chat_id':peer_id-2000000000,'member_id':user.id});return true;}return false;"));
 
-				var user_index = -1;
-				var i = 0; while (i < members.items.length){
-					if(members.items[i].member_id == user.id){
-						user_index = i;
-						i = members.items.length;
-					};
-					i = i + 1;
-				};
-
-				if(!members.items[user_index].is_admin && user_index != -1){
-					var msg = 'Пользователь '+appeal+' был кикнут. Причина: Флуд.';
-					API.messages.send({'peer_id':peer_id,'message':msg});
-					API.messages.removeChatUser({'chat_id':peer_id-2000000000,'member_id':user.id});
-					return true;
-				}
-				return false;
-				"))->response;
-
-			if($response == true)
-				$returnValue = true;
+			if(gettype($r) == "object" && property_exists($r, 'response'))
+				$returnValue = $r->response;
 		}
 		$floodSystem->save();
 		return $returnValue;
@@ -899,7 +871,8 @@ function manager_nick($finput){
 	$argv = $finput->argv;
 	$db = $finput->db;
 
-	$botModule = new BotModule($db);
+	$messagesModule = new Bot\Messages($db);
+	$messagesModule->setAppealID($data->object->from_id);
 
 	if(array_key_exists(1, $argv)){
 		$nick = mb_substr($data->object->text, 5);
@@ -908,61 +881,44 @@ function manager_nick($finput){
 			if(mb_strlen($nick) <= 15){
 				$nicknames = $db->getValue(array("bot_manager", "user_nicknames"), array());
 				if(array_search($nick, $nicknames) !== false){
-					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Указанный ник занят!", $data->object->from_id);
+					$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Указанный ник занят!");
 					return;
 				}
 				$db->setValue(array("bot_manager", "user_nicknames", "id{$data->object->from_id}"), $nick);
 				$db->save();
-				$msg = ", ✅ник установлен.";
-				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
-				");
-			} else {
-				$msg = ", ⛔Указанный ник больше 15 символов.";
-				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
-				");
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Ник установлен.");
 			}
+			else
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Указанный ник больше 15 символов.");
 		}
 		else{
 			if($data->object->fwd_messages[0]->from_id <= 0){
-				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Ник можно установить только пользователю!", $data->object->from_id);
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Ник можно установить только пользователю!");
 				return;
 			}
 
 			if(mb_strlen($nick) <= 15){
 				$ranksys = new RankSystem($db);
 				if(!$ranksys->checkRank($data->object->from_id, 2)){ // Проверка ранга (Президент)
-					$botModule->sendSystemMsg_NoRights($data);
+					$messagesModule->sendSilentMessage($data->object->peer_id, Bot\Messages::MESSAGE_NO_RIGHTS);
 					return;
 				}
 				$nicknames = $db->getValue(array("bot_manager", "user_nicknames"), array());
 				if(array_search($nick, $nicknames) !== false){
-					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Указанный ник занят!", $data->object->from_id);
+					$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Указанный ник занят!");
 					return;
 				}
 
-				$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%, ✅ник @id{$data->object->fwd_messages[0]->from_id} (пользователя) изменён!", 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
-				$request = vk_parse_var($request, "appeal");
-				$response = json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-					API.messages.send({$request});
-					return 'ok';
-					"))->response;
 				$db->setValue(array("bot_manager", "user_nicknames", "id{$data->object->fwd_messages[0]->from_id}"), $nick);
 				$db->save();
-			} else {
-				$msg = ", ⛔Указанный ник больше 15 символов.";
-				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
-				");
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Ник @id{$data->object->fwd_messages[0]->from_id} (пользователя) изменён!");
 			}
+			else
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Указанный ник больше 15 символов.");
 		}
-	} else {
-		$msg = ", ⛔используйте\\\"!ник <ник>\\\" для управления ником.";
-		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
-			");
 	}
+	else
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте \"!ник <ник>\" для управления ником.");
 }
 
 function manager_remove_nick($data, &$db){
@@ -1657,9 +1613,9 @@ function manager_panel_keyboard_handler($finput){
 				)
 			);
 		$result = $finput->event->runTextMessageCommand($modified_data);
-		if($result == 0)
+		if($result == Event::COMMAND_RESULT_OK)
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "✅ Команда выполнена!");
-		elseif($result == 1)
+		elseif($result == Event::COMMAND_RESULT_UNKNOWN)
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Ошибка. Данной команды не существует.");
 	}
 	else{

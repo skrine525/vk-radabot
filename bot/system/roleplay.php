@@ -77,7 +77,7 @@ namespace Roleplay{
 		private function generateDescriptionMessageVKScriptCode($message){
 			if($this->allowDescription){
 				if(gettype($message) == "string"){
-					$formated_message = addslashes($message);
+					$formated_message = addcslashes($message, "\n");
 					return "var DESCRIPTION_MSG=\" {$formated_message}\";";
 				}
 				else

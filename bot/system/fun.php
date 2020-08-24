@@ -114,7 +114,7 @@ function fun_memes_control_panel($finput){
 			return;
 		}
 
-		$event_command_list = $event->getMessageCommandList();
+		$event_command_list = $event->getTextMessageCommandList();
 		for($i = 0; $i < count($event_command_list); $i++){ // Запрет на использование названий из Командной системы
 			if($meme_name == $event_command_list[$i]){
 				$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Данное имя нельзя использовать!", $data->object->from_id);
@@ -1178,7 +1178,7 @@ function fun_show_marriage_list($finput){
 }
 
 class SysMemes{
-	const MEMES = array('мемы', 'f', 'topa', 'андрей', 'олег', 'ябловод', 'люба', /*'люба',*/ 'керил', 'юля', 'олды тут?', 'кб', 'некита', 'егор', 'ксюша', 'дрочить', 'саня', 'аля', 'дрочить на чулки', 'дрочить на карину', 'дрочить на амину', 'оффники', 'пашел нахуй', 'лохи беседы', 'дата регистрации', 'memory_get_usage', "memory_get_usage_real");
+	const MEMES = array('мемы', 'f', 'topa', 'андрей', 'олег', 'ябловод', 'люба', 'керил', 'юля', 'олды тут?', 'кб', 'некита', 'егор', 'ксюша', 'дрочить', 'саня', 'аля', 'дрочить на чулки', 'дрочить на карину', 'дрочить на амину', 'оффники', 'пашел нахуй', 'лохи беседы', 'дата регистрации', 'memory_get_usage', "memory_get_usage_real");
 
 	public static function isExists($meme_name){
 		$exists = false;
