@@ -243,7 +243,7 @@ function event_handle($data){
 		bot_initcmd($event);
 
 		// Инициализация команд Гос. устройства
-		goverment_initcmd($event);
+		government_initcmd($event);
 
 		// Инициализация команд модуля manager
 		manager_initcmd($event);
@@ -272,7 +272,7 @@ function event_handle($data){
 			$data = $finput->data; 
 			$db = $finput->db;
 
-			goverment_referendum_system($data, $db); // Обработчик выборов президента в беседе
+			government_referendum_system($data, $db); // Обработчик выборов президента в беседе
 
 			bot_message_action_handler($finput); // Обработчик событий сообщений
 

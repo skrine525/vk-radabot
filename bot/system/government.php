@@ -1,5 +1,28 @@
 <?php
 
+// Инициалихация команд
+function government_initcmd($event){
+	// Правительство
+	$event->addTextMessageCommand("!конституция", 'government_constitution');
+	$event->addTextMessageCommand("!президент", 'government_president');
+	$event->addTextMessageCommand("!строй", 'government_socorder');
+	$event->addTextMessageCommand("!стройлист", 'government_socorderlist');
+	$event->addTextMessageCommand("!законы", 'government_show_laws');
+	$event->addTextMessageCommand("!закон", 'government_laws_cpanel');
+	$event->addTextMessageCommand("!партия", 'government_batch');
+	$event->addTextMessageCommand("!столица", 'government_capital');
+	$event->addTextMessageCommand("!гимн", 'government_anthem');
+	$event->addTextMessageCommand("!флаг", 'government_flag');
+	$event->addTextMessageCommand("!митинг", 'government_rally');
+
+	// Система выборов
+	$event->addTextMessageCommand("!votestart", 'government_referendum_start');
+	//$event->addTextMessageCommand("!votestop", 'government_referendum_stop');
+	$event->addTextMessageCommand("!candidate", 'government_referendum_candidate');
+	$event->addTextMessageCommand("!vote", 'government_referendum_vote_cmd');
+	$event->addCallbackButtonCommand("referendum_vote", "government_referendum_vote_cb");
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Data
 
@@ -36,11 +59,12 @@ class SocOrderClass{ // Класс данных социальных строё�
 // Goverment API
 
 // Получение статистики пользователя
-function goverment_api_getdata($db){
+function government_api_getdata($db){
 	// Стандартные значения гос. параметров
-	define('GOVERMENT_DEFAULT', array(
+	define('DB_GOVERNMENT_DEFAULT', array(
 		'soc_order' => 1,
 		'president_id' => 0,
+		'previous_president_id' => 0,
 		'presidential_power' => 100,
 		'parliament_id' => $db->getValue(array("owner_id")),
 		'batch_name' => "Нет данных",
@@ -48,13 +72,17 @@ function goverment_api_getdata($db){
 		'anthem' => "null",
 		'flag' => "null",
 		'capital' => 'г. Мда',
+		'rally' => array(
+			'for' => false,
+			'against' => false
+		),
 		'referendum' => false,
 		'last_referendum_time' => 0
 	));
 
-	$db_data = $db->getValue(array("goverment"), array());
+	$db_data = $db->getValue(array("government"), array());
 	$data = array();
-	foreach (GOVERMENT_DEFAULT as $key => $value) {
+	foreach (DB_GOVERNMENT_DEFAULT as $key => $value) {
 		if(array_key_exists($key, $db_data))
 			$data[$key] = $db_data[$key];
 		else
@@ -64,43 +92,21 @@ function goverment_api_getdata($db){
 }
 
 // Сохранение статистики пользователя
-function goverment_api_setdata($db, $value){
-	return $db->setValue(array("goverment"), $value);
+function government_api_setdata($db, $value){
+	return $db->setValue(array("government"), $value);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Handlers
 
-// Инициалихация команд
-function goverment_initcmd($event){
-	// Правительство
-	$event->addTextMessageCommand("!конституция", 'goverment_constitution');
-	$event->addTextMessageCommand("!президент", 'goverment_president');
-	$event->addTextMessageCommand("!строй", 'goverment_socorder');
-	$event->addTextMessageCommand("!стройлист", 'goverment_socorderlist');
-	$event->addTextMessageCommand("!законы", 'goverment_show_laws');
-	$event->addTextMessageCommand("!закон", 'goverment_laws_cpanel');
-	$event->addTextMessageCommand("!партия", 'goverment_batch');
-	$event->addTextMessageCommand("!столица", 'goverment_capital');
-	$event->addTextMessageCommand("!гимн", 'goverment_anthem');
-	$event->addTextMessageCommand("!флаг", 'goverment_flag');
-
-	// Система выборов
-	$event->addTextMessageCommand("!votestart", 'goverment_referendum_start');
-	$event->addTextMessageCommand("!votestop", 'goverment_referendum_stop');
-	$event->addTextMessageCommand("!candidate", 'goverment_referendum_candidate');
-	$event->addTextMessageCommand("!vote", 'goverment_referendum_vote_cmd');
-	$event->addCallbackButtonCommand("referendum_vote", "goverment_referendum_vote_cb");
-}
-
-function goverment_constitution($finput){
+function government_constitution($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$argv = $finput->argv;
 	$db = $finput->db;
 
 	$messagesModule = new Bot\Messages($db);
-	$gov = goverment_api_getdata($db);
+	$gov = government_api_getdata($db);
 
 	$current_soc_order_desc = SocOrderClass::getSocOrderDesc($gov["soc_order"]);
 	if($gov["president_id"] != 0){
@@ -121,7 +127,7 @@ function goverment_constitution($finput){
 	}
 }
 
-function goverment_show_laws($finput){
+function government_show_laws($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$argv = $finput->argv;
@@ -130,7 +136,7 @@ function goverment_show_laws($finput){
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
 
-	$laws = goverment_api_getdata($db)["laws"];
+	$laws = government_api_getdata($db)["laws"];
 	if(array_key_exists(1, $argv))
 		$number = intval($argv[1]);
 	else
@@ -188,7 +194,7 @@ function goverment_show_laws($finput){
 	$messagesModule->sendSilentMessage($data->object->peer_id, $msg);
 }
 
-function goverment_laws_cpanel($finput){
+function government_laws_cpanel($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$argv = $finput->argv;
@@ -196,7 +202,7 @@ function goverment_laws_cpanel($finput){
 
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
-	$gov = goverment_api_getdata($db);
+	$gov = government_api_getdata($db);
 
 	if(array_key_exists(1, $argv))
 		$command = mb_strtolower($argv[1]);
@@ -218,7 +224,7 @@ function goverment_laws_cpanel($finput){
 				'publisher_id' => $publisher_id,
 				'content' => $content
 			);
-			goverment_api_setdata($db, $gov);
+			government_api_setdata($db, $gov);
 			$db->save();
 			$messagesModule->sendSilentMessage($data->object->peer_id, "@id{$data->object->from_id} (Правительство) обновило законы.");
 		}
@@ -249,7 +255,7 @@ function goverment_laws_cpanel($finput){
 							$laws[] = $laws_tmp[$i];
 						}
 						$gov["laws"] = $laws;
-						$db->setValue(array("goverment", "laws"), $gov["laws"]);
+						$db->setValue(array("government", "laws"), $gov["laws"]);
 						$db->save();
 						$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Вы отменили закон №{$law_id}.");
 					}
@@ -266,7 +272,7 @@ function goverment_laws_cpanel($finput){
 							$laws[] = $laws_tmp[$i];
 						}
 						$gov["laws"] = $laws;
-						goverment_api_setdata($db, $gov);
+						government_api_setdata($db, $gov);
 						$db->save();
 						$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Вы отменили закон №{$law_id}.");
 					}
@@ -350,7 +356,7 @@ function goverment_laws_cpanel($finput){
 		$tmp = $gov["laws"][$to-1];
 		$gov["laws"][$to-1] = $gov["laws"][$from-1];
 		$gov["laws"][$from-1] = $tmp;
-		goverment_api_setdata($db, $gov);
+		government_api_setdata($db, $gov);
 		$db->save();
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Закон №{$from} перемещен на место закона №{$to}.");
 
@@ -367,7 +373,7 @@ function goverment_laws_cpanel($finput){
 	}
 }
 
-function goverment_president($finput){
+function government_president($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$argv = $finput->argv;
@@ -375,10 +381,11 @@ function goverment_president($finput){
 
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
-	$gov = goverment_api_getdata($db);
+	$gov = government_api_getdata($db);
+	$presidential_power_text = round($gov["presidential_power"], 2);
 	if(!array_key_exists(1, $argv)){
 		if($gov["president_id"] != 0){
-			$msg = "%appeal%,\n&#128104;&#8205;&#9878;Президент: %president_name%.\n💪🏻Власть: {$gov["presidential_power"]}%";
+			$msg = "%appeal%,\n&#128104;&#8205;&#9878;Президент: %president_name%.\n💪🏻Власть: {$presidential_power_text}%";
 			$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 			$request = vk_parse_vars($request, array("appeal", "president_name"));
 			vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."var president = API.users.get({'user_ids':[{$gov["president_id"]}]})[0];var president_name = '@id{$gov["president_id"]} ('+president.first_name+' '+president.last_name+')';return API.messages.send({$request});");
@@ -386,37 +393,9 @@ function goverment_president($finput){
 		else
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%,\n&#128104;&#8205;&#9878;Президент: ⛔Не назначен.");
 	}
-	/*
-	else {
-		if($data->object->from_id == $gov["parliament_id"]){
-			$new_president_id = bot_get_id_from_mention($argv[1]);
-			if(!is_null($new_president_id)){
-				$batch_name = json_decode(vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."var president = API.users.get({'user_ids':[{$new_president_id}],'fields':'first_name_gen,last_name_gen'})[0];var msg = '@id{$gov["parliament_id"]} (Парламентом) назначен новый президент: @id'+president.id+' ('+president.first_name+' '+president.last_name+').';API.messages.send({'peer_id':{$data->object->peer_id},'message':msg,'disable_mentions':true});return 'Полит. партия '+president.first_name_gen+' '+president.last_name_gen;"))->response;
-				$ranksys = new RankSystem($db);
-				if($ranksys->getUserRank($gov["president_id"]) == 2)
-					$ranksys->setUserRank($gov["president_id"], 0);
-				if($ranksys->getUserRank($new_president_id) == $ranksys->getMinRankValue())
-					$ranksys->setUserRank($new_president_id, 2);
-				$economy = new Economy\Main($db); // Модуль Экономики
-				if($gov["president_id"] != 0)
-					$economy->getUser($gov["president_id"])->deleteItem("govdoc", "presidential_certificate");  // Убираем удостоверение президента у предыдущего
-				$economy->getUser($new_president_id)->changeItem("govdoc", "presidential_certificate", 1);  // Выдаем удостоверение президента новому
-				$gov["president_id"] = $new_president_id;
-				$gov["batch_name"] = $batch_name;
-				goverment_api_setdata($db, $gov);
-				$db->save();
-			}
-			else{
-				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔данного пользователя не существует.");
-			}
-		} else {
-			$messagesModule->sendSilentMessage($data->object->peer_id, Bot\Messages::MESSAGE_NO_RIGHTS);
-		}
-	}
-	*/
 }
 
-function goverment_batch($finput){
+function government_batch($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$argv = $finput->argv;
@@ -424,13 +403,13 @@ function goverment_batch($finput){
 
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
-	$gov = goverment_api_getdata($db);
+	$gov = government_api_getdata($db);
 	if(!array_key_exists(1, $argv)){
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, &#128214;Действующая партия: ".$gov["batch_name"].".", $data->object->from_id);
 	} else {
 		if($data->object->from_id == $gov["president_id"]){
 			$gov["batch_name"] = mb_substr($data->object->text, 8, mb_strlen($data->object->text));
-			goverment_api_setdata($db, $gov);
+			government_api_setdata($db, $gov);
 			$db->save();
 			$msg = "@id".$gov["president_id"]." (Президент) переименовал действующую партию.";
 			$messagesModule->sendSilentMessage($data->object->peer_id, $msg);
@@ -440,7 +419,7 @@ function goverment_batch($finput){
 	}
 }
 
-function goverment_capital($finput){
+function government_capital($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$argv = $finput->argv;
@@ -448,19 +427,19 @@ function goverment_capital($finput){
 
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
-	$gov = goverment_api_getdata($db);
+	$gov = government_api_getdata($db);
 	if(!array_key_exists(1, $argv)){
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, &#127970;Текущая столица: ".$gov["capital"].".");
 	} else {
 		if($data->object->from_id == $gov["president_id"]){
 			$gov["capital"] = mb_substr($data->object->text, 9, mb_strlen($data->object->text));
-			goverment_api_setdata($db, $gov);
+			government_api_setdata($db, $gov);
 			$db->save();
 			$msg = "@id".$gov["president_id"]." (Президент) изменил столицу государства.";
 			$messagesModule->sendSilentMessage($data->object->peer_id, $msg);
 		} elseif($data->object->from_id == $gov["parliament_id"]){
 			$gov["capital"] = mb_substr($data->object->text, 9, mb_strlen($data->object->text));
-			goverment_api_setdata($db, $gov);
+			government_api_setdata($db, $gov);
 			$db->save();
 			$msg = "@id".$gov["parliament_id"]." (Парламент) изменил столицу государства.";
 			$messagesModule->sendSilentMessage($data->object->peer_id, $msg);
@@ -470,7 +449,7 @@ function goverment_capital($finput){
 	}
 }
 
-function goverment_socorder($finput){
+function government_socorder($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$argv = $finput->argv;
@@ -478,7 +457,7 @@ function goverment_socorder($finput){
 
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
-	$gov = goverment_api_getdata($db);
+	$gov = government_api_getdata($db);
 	if(!array_key_exists(1, $argv)){
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⚔Текущий политический строй государства: ".SocOrderClass::socOrderDecode($gov["soc_order"]).".");
 	} else {
@@ -486,7 +465,7 @@ function goverment_socorder($finput){
 			$id = SocOrderClass::socOrderEncode($argv[1]);
 			if ($id != 0){
 				$gov["soc_order"] = $id;
-				goverment_api_setdata($db, $gov);
+				government_api_setdata($db, $gov);
 				$db->save();
 				$msg = "@id".$gov["parliament_id"]." (Парламентом) был изменён политический строй.";
 				$messagesModule->sendSilentMessage($data->object->peer_id, $msg);
@@ -497,7 +476,7 @@ function goverment_socorder($finput){
 			$id = SocOrderClass::socOrderEncode($argv[1]);
 			if ($id != 0){
 				$gov["soc_order"] = $id;
-				goverment_api_setdata($db, $gov);
+				government_api_setdata($db, $gov);
 				$db->save();
 				$msg = "@id".$gov["president_id"]." (Президентом) был изменён политический строй.";
 				$messagesModule->sendSilentMessage($data->object->peer_id, $msg);
@@ -510,7 +489,7 @@ function goverment_socorder($finput){
 	}
 }
 
-function goverment_socorderlist($finput){
+function government_socorderlist($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$argv = $finput->argv;
@@ -527,7 +506,7 @@ function goverment_socorderlist($finput){
 	$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, Список политических строев: ".$msg);
 }
 
-function goverment_anthem($finput){
+function government_anthem($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$argv = $finput->argv;
@@ -535,7 +514,7 @@ function goverment_anthem($finput){
 
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
-	$gov = goverment_api_getdata($db);
+	$gov = government_api_getdata($db);
 	if(count($data->object->attachments) == 0){
 		if($gov["anthem"] != "null"){
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, &#129345;Наш гимн: ", array('attachment' => $gov["anthem"]));
@@ -554,7 +533,7 @@ function goverment_anthem($finput){
 			}
 			if ($first_audio_id != -1){
 				$gov["anthem"] = "audio".$data->object->attachments[$first_audio_id]->audio->owner_id."_".$data->object->attachments[$first_audio_id]->audio->id;
-				goverment_api_setdata($db, $gov);
+				government_api_setdata($db, $gov);
 				$db->save();
 				$msg = "@id".$gov["president_id"]." (Президент) изменил гимн государства.";
 				$messagesModule->sendSilentMessage($data->object->peer_id, $msg);
@@ -572,7 +551,7 @@ function goverment_anthem($finput){
 			}
 			if ($first_audio_id != -1){
 				$gov["anthem"] = "audio".$data->object->attachments[$first_audio_id]->audio->owner_id."_".$data->object->attachments[$first_audio_id]->audio->id;
-				goverment_api_setdata($db, $gov);
+				government_api_setdata($db, $gov);
 				$db->save();
 				$msg = "@id".$gov["parliament_id"]." (Парламент) изменил гимн государства.";
 				$messagesModule->sendSilentMessage($data->object->peer_id, $msg);
@@ -585,7 +564,7 @@ function goverment_anthem($finput){
 	}
 }
 
-function goverment_flag($finput){
+function government_flag($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$argv = $finput->argv;
@@ -593,7 +572,7 @@ function goverment_flag($finput){
 
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
-	$gov = goverment_api_getdata($db);
+	$gov = government_api_getdata($db);
 	if(count($data->object->attachments) == 0){
 		if($gov["flag"] != "null"){
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, &#127987;Наш флаг: ", array('attachment' => $gov["flag"]));
@@ -628,7 +607,7 @@ function goverment_flag($finput){
 				$res_json = json_encode(array('photo' => $res->photo, 'server' => $res->server, 'hash' => $res->hash));
 				$photo = json_decode(vk_execute("var doc = API.photos.saveMessagesPhoto({$res_json});API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}','disable_mentions':true});return doc;"))->response[0];
 				$gov["flag"] = "photo{$photo->owner_id}_{$photo->id}";
-				goverment_api_setdata($db, $gov);
+				government_api_setdata($db, $gov);
 				$db->save();
 			} else {
 				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, &#9940;Фотографии не найдены!");
@@ -660,7 +639,7 @@ function goverment_flag($finput){
 				$res_json = json_encode(array('photo' => $res->photo, 'server' => $res->server, 'hash' => $res->hash));
 				$photo = json_decode(vk_execute("var doc = API.photos.saveMessagesPhoto({$res_json});API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}','disable_mentions':true});return doc;"))->response[0];
 				$gov["flag"] = "photo{$photo->owner_id}_{$photo->id}";
-				goverment_api_setdata($db, $gov);
+				government_api_setdata($db, $gov);
 				$db->save();
 			} else {
 				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, &#9940;Фотографии не найдены!", $data->object->from_id);
@@ -671,7 +650,201 @@ function goverment_flag($finput){
 	}
 }
 
-function goverment_referendum_start($finput){
+function government_rally($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$argv = $finput->argv;
+	$db = $finput->db;
+
+	$date = time(); // Переменная времени
+
+	$messagesModule = new Bot\Messages($db);
+	$messagesModule->setAppealID($data->object->from_id);
+
+	$argvt = mb_strtolower(bot_get_array_value($argv, 1, ""));
+
+	$gov = government_api_getdata($db);
+
+	if($gov["president_id"] == 0){
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Президент не выбран.");
+		return;
+	}
+	elseif($gov["referendum"] !== false){
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Сейчас проходят выборы.");
+		return;
+	}
+
+	switch ($argvt) {
+		case 'за':
+		$rally_for = $gov["rally"]["for"];
+		$rally_against = $gov["rally"]["against"];
+		if($rally_for !== false){
+			if($rally_against !== false && array_key_exists("id{$data->object->from_id}", $rally_against["members"])){
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Вы участвуете в митинге Против @id{$gov["president_id"]} (президента).");
+				return;
+			}
+			elseif(array_key_exists("id{$data->object->from_id}", $rally_for["members"])){
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Вы уже участвуете в митинге За @id{$gov["president_id"]} (президента).");
+				return;
+			}
+			$rally_for["members"]["id{$data->object->from_id}"] = 0;
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Вы присоединились к митингу За @id{$gov["president_id"]} (президента).\nИспользуйте [!митинг], чтобы поддержать его.");
+		}
+		else{
+			if($rally_against !== false && array_key_exists("id{$data->object->from_id}", $rally_against["members"])){
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Вы участвуете в митинге Против @id{$gov["president_id"]} (президента).");
+				return;
+			}
+			$rally_for = array(
+				'organizer_id' => $data->object->from_id,
+				'members' => array(
+					"id{$data->object->from_id}" => 0
+				)
+			);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Вы организовали митинг За @id{$gov["president_id"]} (президента).\nИспользуйте [!митинг], чтобы поддержать его.");
+		}
+		$gov["rally"]["for"] = $rally_for;
+		government_api_setdata($db, $gov);
+		$db->save();
+		break;
+
+		case 'против':
+		$rally_for = $gov["rally"]["for"];
+		$rally_against = $gov["rally"]["against"];
+		if($rally_against !== false){
+			if($rally_for !== false && array_key_exists("id{$data->object->from_id}", $rally_for["members"])){
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Вы участвуете в митинге За @id{$gov["president_id"]} (президента).");
+				return;
+			}
+			elseif($data->object->from_id == $gov["president_id"]){
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Вы не можете учавствовать в митинге против себя.");
+				return;
+			}
+			elseif(array_key_exists("id{$data->object->from_id}", $rally_against["members"])){
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Вы уже участвуете в митинге Против @id{$gov["president_id"]} (президента).");
+				return;
+			}
+			$rally_against["members"]["id{$data->object->from_id}"] = 0;
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Вы присоединились к митингу Против @id{$gov["president_id"]} (президента).\nИспользуйте [!митинг], чтобы свергнуть его.");
+		}
+		else{
+			if($rally_for !== false && array_key_exists("id{$data->object->from_id}", $rally_for["members"])){
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Вы участвуете в митинге За @id{$gov["president_id"]} (президента).");
+				return;
+			}
+			elseif($data->object->from_id == $gov["president_id"]){
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Вы не можете устроить митинг против себя.");
+				return;
+			}
+			$rally_against = array(
+				'organizer_id' => $data->object->from_id,
+				'members' => array(
+					"id{$data->object->from_id}" => 0
+				)
+			);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Вы организовали митинг Против @id{$gov["president_id"]} (президента).\nИспользуйте [!митинг], чтобы свергнуть его.");
+		}
+		$gov["rally"]["against"] = $rally_against;
+		government_api_setdata($db, $gov);
+		$db->save();
+		break;
+		
+		default:
+		$rally_for = $gov["rally"]["for"];
+		$rally_against = $gov["rally"]["against"];
+		$member_key = "id{$data->object->from_id}";
+		if($rally_for !== false && array_key_exists($member_key, $rally_for["members"])){
+			if($date - $rally_for["members"][$member_key] >= 3600){
+				$members_count = count($rally_against["members"]);
+				$r = json_decode(vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var presidential_power={$gov["presidential_power"]};
+					var members_in_chat=API.messages.getConversationMembers({'peer_id':peer_id});var members_in_rally={$members_count};
+					var percentage_of_one=(1/members_in_chat.profiles.length)*0.1;
+					var rally_result=percentage_of_one+(members_in_rally-1)*(percentage_of_one*0.25);
+					presidential_power=presidential_power+rally_result*100;
+					if(presidential_power>100){presidential_power=100;}
+					API.messages.send({'peer_id':peer_id,'message':appeal+', ✅Вы поучаствовали в митинге За @id{$gov["president_id"]} (президента).','disable_mentions':true});
+					return presidential_power;"));
+				error_log(json_encode($r));
+				if(gettype($r) == "object" && property_exists($r, 'response')){
+					$presidential_power = $r->response;
+					$gov["rally"]["for"]["members"][$member_key] = $date;
+					$gov["presidential_power"] = $presidential_power;
+					government_api_setdata($db, $gov);
+					$db->save();
+				}
+			}
+			else{
+				$left_time = 3600 - ($date - $rally_for["members"][$member_key]);
+				$minutes = intdiv($left_time, 60);
+				$seconds = $left_time % 60;
+				$left_time_text = "";
+				if($minutes != 0)
+					$left_time_text = "{$minutes} мин. ";
+				$left_time_text = $left_time_text."{$seconds} сек.";
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Вы устали и больше не можете митинговать. Приходите через {$left_time_text}");
+			}
+		}
+		elseif($rally_against !== false && array_key_exists($member_key, $rally_against["members"])){
+			if($date - $rally_against["members"][$member_key] >= 3600){
+				$members_count = count($rally_against["members"]);
+				$r = json_decode(vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var presidential_power={$gov["presidential_power"]};
+					var users=API.users.get({'user_ids':[{$rally_against["organizer_id"]},{$gov["president_id"]}],'fields':'first_name_ins,last_name_ins,first_name_gen,last_name_gen'});
+					var members_in_chat=API.messages.getConversationMembers({'peer_id':peer_id});var members_in_rally={$members_count};
+					var percentage_of_one=(1/members_in_chat.profiles.length)*0.1;
+					var rally_result=percentage_of_one+(members_in_rally-1)*(percentage_of_one*0.25);
+					presidential_power=presidential_power-rally_result*100;
+					if(presidential_power<=0){presidential_power=0;API.messages.send({'peer_id':peer_id,'message':'❗Митинг, организованный @id'+users[0].id+' ('+users[0].first_name_ins.substr(0, 2)+'. '+users[0].last_name_ins+'), позволил добиться справедливости и правительсво @id'+users[1].id+' ('+users[1].first_name_gen.substr(0, 2)+'. '+users[1].last_name_gen+') подало в отставку. Организованы досрочные выборы президента.','disable_mentions':true});}else{API.messages.send({'peer_id':peer_id,'message':appeal+', ✅Вы поучаствовали в митинге Против @id{$gov["president_id"]} (президента).','disable_mentions':true});}
+					return presidential_power;"));
+				if(gettype($r) == "object" && property_exists($r, 'response')){
+					$presidential_power = $r->response;
+					if($presidential_power == 0){
+						$gov["rally"] = DB_GOVERNMENT_DEFAULT["rally"];
+						$gov["previous_president_id"] = $gov["president_id"];
+						$gov["president_id"] = 0;
+						$gov["batch_name"] = DB_GOVERNMENT_DEFAULT["batch_name"];
+						$gov["referendum"] = array(
+							'candidate1' => array('id' => 0, "voters_count" => 0),
+							'candidate2' => array('id' => 0, "voters_count" => 0),
+							'all_voters' => array(),
+							'start_time' => $date,
+							'last_notification_time' => 0
+						);
+						government_api_setdata($db, $gov);
+						$db->save();
+					}
+					else{
+						$gov["rally"]["against"]["members"][$member_key] = $date;
+						$gov["presidential_power"] = $presidential_power;
+						government_api_setdata($db, $gov);
+						$db->save();
+					}
+				}
+			}
+			else{
+				$left_time = 3600 - ($date - $rally_against["members"][$member_key]);
+				$minutes = intdiv($left_time, 60);
+				$seconds = $left_time % 60;
+				$left_time_text = "";
+				if($minutes != 0)
+					$left_time_text = "{$minutes} мин. ";
+				$left_time_text = $left_time_text."{$seconds} сек.";
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Вы устали и больше не можете митинговать. Приходите через {$left_time_text}");
+			}
+		}
+		else{
+			$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, "%appeal%, используйте:", array(
+				'!митинг за - Митинг за Президента',
+				'!митинг против - Митинг против Президента'
+			));
+		}
+		break;
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Система выборов
+
+function government_referendum_start($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$argv = $finput->argv;
@@ -680,18 +853,20 @@ function goverment_referendum_start($finput){
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
 
-	$gov = goverment_api_getdata($db);
+	$gov = government_api_getdata($db);
 	if($data->object->from_id == $gov["parliament_id"]){
 		if($gov["referendum"] === false){
 			$date = time(); // Переменная времени
-			$referendum = array();
-			$referendum["candidate1"] = array('id' => 0, "voters_count" => 0);
-			$referendum["candidate2"] = array('id' => 0, "voters_count" => 0);
-			$referendum["all_voters"] = array();
-			$referendum["start_time"] = $date;
-			$referendum["last_notification_time"] = $date;
-			$gov["referendum"] = $referendum;
-			goverment_api_setdata($db, $gov);
+			$gov["previous_president_id"] = $gov["president_id"];
+			$gov["president_id"] = 0;
+			$gov["referendum"] = array(
+				'candidate1' => array('id' => 0, "voters_count" => 0),
+				'candidate2' => array('id' => 0, "voters_count" => 0),
+				'all_voters' => array(),
+				'start_time' => $date,
+				'last_notification_time' => $date
+			);
+			government_api_setdata($db, $gov);
 			$db->save();
 			$messagesModule->sendSilentMessage($data->object->peer_id, "Начались выборы в президенты беседы. Чтобы зарегистрироваться, как кандидат, используйте команду \"!candidate\".");
 		}
@@ -702,7 +877,7 @@ function goverment_referendum_start($finput){
 		$messagesModule->sendSilentMessage($data->object->peer_id, Bot\Messages::MESSAGE_NO_RIGHTS);
 }
 
-function goverment_referendum_stop($finput){
+function government_referendum_stop($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$argv = $finput->argv;
@@ -711,13 +886,13 @@ function goverment_referendum_stop($finput){
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
 
-	$gov = goverment_api_getdata($db);
+	$gov = government_api_getdata($db);
 	if($data->object->from_id == $gov["parliament_id"]){
 		if($gov["referendum"] === false)
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, сейчас не проходят выборы.");
 		else{
 			$gov["referendum"] = false;
-			goverment_api_setdata($db, $gov);
+			government_api_setdata($db, $gov);
 			$db->save();
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, выборы остановлены.");
 		}
@@ -726,7 +901,7 @@ function goverment_referendum_stop($finput){
 		$messagesModule->sendSilentMessage($data->object->peer_id, Bot\Messages::MESSAGE_NO_RIGHTS);
 }
 
-function goverment_referendum_candidate($finput){
+function government_referendum_candidate($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$argv = $finput->argv;
@@ -734,12 +909,12 @@ function goverment_referendum_candidate($finput){
 
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
-	$gov = goverment_api_getdata($db);
+	$gov = government_api_getdata($db);
 	$referendum = $gov["referendum"];
 	if($referendum !== false){
 		$date = time(); // Переменная времени
 
-		if($gov["president_id"] == $data->object->from_id){
+		if($gov["previous_president_id"] == $data->object->from_id){
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Вы не можете балотироваться на второй срок.");
 			return;
 		}
@@ -748,7 +923,7 @@ function goverment_referendum_candidate($finput){
 			if($referendum["candidate1"]["id"] == 0){
 				$referendum["candidate1"]["id"] = $data->object->from_id;
 				$gov["referendum"] = $referendum;
-				goverment_api_setdata($db, $gov);
+				government_api_setdata($db, $gov);
 				$db->save();
 				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, вы зарегистрировались как кандидат №1.");
 			}
@@ -756,7 +931,7 @@ function goverment_referendum_candidate($finput){
 				$referendum["candidate2"]["id"] = $data->object->from_id;
 				$referendum["last_notification_time"] = $date;
 				$gov["referendum"] = $referendum;
-				goverment_api_setdata($db, $gov);
+				government_api_setdata($db, $gov);
 				$db->save();
 				$msg1 = ", вы зарегистрировались как кандидат №2.";
 				$msg2 = "Кандидаты набраны, самое время голосовать. Используй [!vote], чтобы учавствовать в голосовании.";
@@ -772,15 +947,15 @@ function goverment_referendum_candidate($finput){
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, сейчас не проходят выборы.");
 }
 
-function goverment_referendum_system($data, $db){
-	$gov = goverment_api_getdata($db);
+function government_referendum_system($data, $db){
+	$gov = government_api_getdata($db);
 	$referendum = $gov["referendum"];
 	if($referendum !== false){
 		$date = time(); // Переменная времени
 		if($date - $referendum["start_time"] >= 18000) {
 			if($referendum["candidate1"]["id"] == 0 || $referendum["candidate2"]["id"] == 0){
 				$gov["referendum"] = false;
-				goverment_api_setdata($db, $gov);
+				government_api_setdata($db, $gov);
 				$msg = "❗Выборы прерваны. Причина: не набрано нужно количество кандидатов.";
 				vk_execute("return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});");
 			} else {
@@ -805,7 +980,7 @@ function goverment_referendum_system($data, $db){
 					$gov["batch_name"] = "Полит. партия ".$res->response->first_name_gen." ".$res->response->last_name_gen;
 					$gov["last_referendum_time"] = time();
 					$gov["referendum"] = false;
-					goverment_api_setdata($db, $gov);
+					government_api_setdata($db, $gov);
 				} elseif($candidate1_voters_count < $candidate2_voters_count) {
 					$candidate_id = $referendum["candidate2"]["id"];
 					$candidate_percent = round($candidate2_voters_count/$all_voters_count*100, 1);
@@ -824,16 +999,16 @@ function goverment_referendum_system($data, $db){
 					$gov["batch_name"] = "Полит. партия ".$res->response->first_name_gen." ".$res->response->last_name_gen;
 					$gov["last_referendum_time"] = time();
 					$gov["referendum"] = false;
-					goverment_api_setdata($db, $gov);
+					government_api_setdata($db, $gov);
 				} else {
 				$msg = "❗Выборы прерваны. Причина: оба кандидата набрали одинаковое количество голосов.";
 				vk_execute("return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});");
-				$db->unsetValue(array("goverment", "referendum"));
+				$db->unsetValue(array("government", "referendum"));
 				}
 			}
 		}
 		elseif($date - $referendum["last_notification_time"] >= 600){
-			$db->setValue(array("goverment", "referendum", "last_notification_time"), $date);
+			$db->setValue(array("government", "referendum", "last_notification_time"), $date);
 			if($referendum["candidate1"]["id"] == 0 || $referendum["candidate2"]["id"] == 0){
 				$msg = "Начались выборы в президенты беседы. Чтобы зарегистрироваться, как кандидат, используйте команду [!candidate].";
 				vk_execute("return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});");
@@ -856,24 +1031,26 @@ function goverment_referendum_system($data, $db){
 		$chatModes = new ChatModes($db);
 		if(!$chatModes->getModeValue("auto_referendum"))
 			return;
-		$time = time();
-		$last_referendum_time = $db->getValue(array("goverment", "last_referendum_time"), 0);
-		if($time - $last_referendum_time >= 432000){
-			$referendum = array();
-			$referendum["candidate1"] = array('id' => 0, "voters_count" => 0);
-			$referendum["candidate2"] = array('id' => 0, "voters_count" => 0);
-			$referendum["all_voters"] = array();
-			$referendum["start_time"] = $time;
-			$referendum["last_notification_time"] = $time;
-			$gov["referendum"] = $referendum;
-			goverment_api_setdata($db, $gov);
+		$date = time();
+		$last_referendum_time = $db->getValue(array("government", "last_referendum_time"), 0);
+		if($date - $last_referendum_time >= 432000){
+			$gov["previous_president_id"] = $gov["president_id"];
+			$gov["president_id"] = 0;
+			$gov["referendum"] = array(
+				'candidate1' => array('id' => 0, "voters_count" => 0),
+				'candidate2' => array('id' => 0, "voters_count" => 0),
+				'all_voters' => array(),
+				'start_time' => $date,
+				'last_notification_time' => $date
+			);
+			government_api_setdata($db, $gov);
 			$msg = "Начались выборы в президенты беседы. Чтобы зарегистрироваться, как кандидат, используйте команду \\\"!candidate\\\".";
 			vk_execute("return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});");
 		}
 	}
 }
 
-function goverment_referendum_vote_cb($finput){
+function government_referendum_vote_cb($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$payload = $finput->payload;
@@ -881,7 +1058,7 @@ function goverment_referendum_vote_cb($finput){
 
 	$date = time(); // Переменная времени
 
-	$gov = goverment_api_getdata($db);
+	$gov = government_api_getdata($db);
 	$referendum = $gov["referendum"];
 
 	$candidate = bot_get_array_value($payload, 1, 0);
@@ -915,7 +1092,7 @@ function goverment_referendum_vote_cb($finput){
 			$referendum["all_voters"][] = $data->object->user_id;
 			$referendum["candidate1"]["voters_count"] = $referendum["candidate1"]["voters_count"] + 1;
 			$gov["referendum"] = $referendum;
-			goverment_api_setdata($db, $gov);
+			government_api_setdata($db, $gov);
 			$db->save();
 			$candidate_id = $referendum["candidate1"]["id"];
 			vk_execute("var user=API.users.get({'user_ids':[{$candidate_id}],'fields':'first_name_acc,last_name_acc'});var msg='📝 Вы проголосовали за '+user[0].first_name_acc+' '+user[0].last_name_acc+'.';return API.messages.sendMessageEventAnswer({'event_id':'{$data->object->event_id}','user_id':{$data->object->user_id},'peer_id':{$data->object->peer_id},'event_data':'{\"type\":\"show_snackbar\",\"text\":\"'+msg+'\"}'});");
@@ -925,7 +1102,7 @@ function goverment_referendum_vote_cb($finput){
 			$referendum["all_voters"][] = $data->object->user_id;
 			$referendum["candidate2"]["voters_count"] = $referendum["candidate2"]["voters_count"] + 1;
 			$gov["referendum"] = $referendum;
-			goverment_api_setdata($db, $gov);
+			government_api_setdata($db, $gov);
 			$db->save();
 			$candidate_id = $referendum["candidate2"]["id"];
 			vk_execute("var user=API.users.get({'user_ids':[{$candidate_id}],'fields':'first_name_acc,last_name_acc'});var msg='📝 Вы проголосовали за '+user[0].first_name_acc+' '+user[0].last_name_acc+'.';return API.messages.sendMessageEventAnswer({'event_id':'{$data->object->event_id}','user_id':{$data->object->user_id},'peer_id':{$data->object->peer_id},'event_data':'{\"type\":\"show_snackbar\",\"text\":\"'+msg+'\"}'});");
@@ -935,7 +1112,7 @@ function goverment_referendum_vote_cb($finput){
 	}
 }
 
-function goverment_referendum_vote_cmd($finput){
+function government_referendum_vote_cmd($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$argv = $finput->argv;
@@ -944,7 +1121,7 @@ function goverment_referendum_vote_cmd($finput){
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
 
-	$gov = goverment_api_getdata($db);
+	$gov = government_api_getdata($db);
 	$referendum = $gov["referendum"];
 	if($referendum !== false){
 		if($referendum["candidate1"]["id"] != 0 && $referendum["candidate2"]["id"] != 0){

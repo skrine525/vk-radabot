@@ -3,24 +3,24 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Stats API
 
-// Стандартное значение статистики пользователя
-define('STATS_DEFAULT',array(
-	'msg_count' => 0,
-	'msg_count_in_succession' => 0,
-	'simbol_count' => 0,
-	'audio_msg_count' => 0,
-	'photo_count' => 0,
-	'audio_count' => 0,
-	'video_count' => 0,
-	'sticker_count' => 0,
-	'bump_count' => 0
-));
-
 // Получение статистики пользователя
 function stats_api_getuser($db, $user_id){
+	// Стандартное значение статистики пользователя
+	define('DB_STATS_DEFAULT',array(
+		'msg_count' => 0,
+		'msg_count_in_succession' => 0,
+		'simbol_count' => 0,
+		'audio_msg_count' => 0,
+		'photo_count' => 0,
+		'audio_count' => 0,
+		'video_count' => 0,
+		'sticker_count' => 0,
+		'bump_count' => 0
+	));
+	
 	$db_stats = $db->getValue(array("chat_stats", "users", "id{$user_id}"), array());
 	$stats = array();
-	foreach (STATS_DEFAULT as $key => $value) {
+	foreach (DB_STATS_DEFAULT as $key => $value) {
 		if(array_key_exists($key, $db_stats))
 			$stats[$key] = $db_stats[$key];
 		else
@@ -48,11 +48,6 @@ function stats_update($data, $db){
 
 	$stats = stats_api_getuser($db, $data->object->from_id);
 	$last_message_user_id = $db->getValue(array("chat_stats", "last_message_user_id"), 0);
-
-	foreach (STATS_DEFAULT as $key => $value) {
-		if(!array_key_exists($key, $stats))
-			$stats[$key] = $value;
-	}
 
 	if($last_message_user_id == $data->object->from_id)
 		$stats["msg_count_in_succession"]++;

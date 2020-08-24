@@ -17,7 +17,7 @@ def vk_call(method, parametres):
 	headers = {'Content-type': 'application/x-www-form-urlencoded'}
 	parametres["access_token"] = config_get("VK_GROUP_TOKEN")
 	parametres["v"] = VK_VERSION
-	r = requests.post("https://api.vk.com/method/"+method, data=parametres, headers=headers)
+	r = requests.post("https://api.vk.com/method/{}".format(method), data=parametres, headers=headers)
 	return r.text
 
 def vk_longpoll(data, ts, wait = 25):
@@ -37,11 +37,10 @@ def queue_handler():
 		for update in Queue:
 			if update["type"] == "message_new" or update["type"] == "message_event":
 				peer_id = update["object"]["peer_id"]
-				process_name = "message{peer_id}".format(peer_id=peer_id)
+				process_name = "message{}".format(peer_id)
 				process = Processes.get(process_name)
 				if process == None:
-					base64_update = base64.b64encode(bytes(json.dumps(update).encode('utf-8')))
-					Processes[process_name] = subprocess.Popen(["/usr/bin/php", "php-handler.php", base64_update])
+					Processes[process_name] = subprocess.Popen(["/usr/bin/php", "php-handler.php", json.dumps(update).encode('utf-8')])
 					Queue.remove(update)
 			else:
 				Queue.remove(update)

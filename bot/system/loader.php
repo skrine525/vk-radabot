@@ -14,7 +14,7 @@ mb_internal_encoding("UTF-8");
 require_once(BOT_DIR."/system/vk.php"); // Модуль, отвечающий за все взаимодействия с VK API
 require_once(BOT_DIR."/system/database.php"); // Модуль, отвечающий за взаимодействие основной базы данных бота
 require_once(BOT_DIR."/system/bot.php"); // Модуль, отвечающий за некоторые API методы бота и основные функции
-require_once(BOT_DIR."/system/goverment.php"); // Модуль, отвечающий за работу гос. устройства беседы
+require_once(BOT_DIR."/system/government.php"); // Модуль, отвечающий за работу гос. устройства беседы
 require_once(BOT_DIR."/system/economy.php"); // Модуль, отвечающий за систему Экономики
 require_once(BOT_DIR."/system/fun.php"); // Модуль, отвечающий за развлечения
 require_once(BOT_DIR."/system/roleplay.php"); // Модуль, отвечающий за Roleplay команды
