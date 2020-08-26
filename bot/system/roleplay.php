@@ -601,12 +601,12 @@ namespace{
 		switch (mb_strtolower($argv[1])) {
 			case 'руку':
 				$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Пожать руку");
-				$handler->maleMessage = "%FROM_USERNAME% пожал руку %MEMBER_USERNAME_DAT%.";
-				$handler->femaleMessage = "%FROM_USERNAME% пожала руку %MEMBER_USERNAME_DAT%.";
-				$handler->maleMessageToMyself = "%FROM_USERNAME% настолько ЧСВ, что пожал руку сам с себе.";
-				$handler->femaleMessageToMyself = "%FROM_USERNAME% настолько ЧСВ, что пожала руку сама с себе.";
-				$handler->maleMessageToAll = "%FROM_USERNAME% пожал руку всем.";
-				$handler->femaleMessageToAll = "%FROM_USERNAME% пожала руку всем.";
+				$handler->maleMessage = "%FROM_USERNAME% пожал руку %MEMBER_USERNAME_DAT%.🤝🏻";
+				$handler->femaleMessage = "%FROM_USERNAME% пожала руку %MEMBER_USERNAME_DAT%.🤝🏻";
+				$handler->maleMessageToMyself = "%FROM_USERNAME% настолько ЧСВ, что пожал руку сам с себе.🤝🏻";
+				$handler->femaleMessageToMyself = "%FROM_USERNAME% настолько ЧСВ, что пожала руку сама с себе.🤝🏻";
+				$handler->maleMessageToAll = "%FROM_USERNAME% пожал руку всем.🤝🏻";
+				$handler->femaleMessageToAll = "%FROM_USERNAME% пожала руку всем.🤝🏻";
 
 				$handler->handle();
 				break;

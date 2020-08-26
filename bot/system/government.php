@@ -784,9 +784,9 @@ function government_rally($finput){
 				if(gettype($r) == "object" && property_exists($r, 'response')){
 					$presidential_power = $r->response;
 					if($presidential_power == 0){
-						$gov["rally"] = DB_GOVERNMENT_DEFAULT["rally"];
 						$gov["previous_president_id"] = $gov["president_id"];
 						$gov["president_id"] = 0;
+						$gov["rally"] = DB_GOVERNMENT_DEFAULT["rally"];
 						$gov["batch_name"] = DB_GOVERNMENT_DEFAULT["batch_name"];
 						$gov["referendum"] = array(
 							'candidate1' => array('id' => 0, "voters_count" => 0),
@@ -845,6 +845,7 @@ function government_referendum_start($finput){
 			$date = time(); // Переменная времени
 			$gov["previous_president_id"] = $gov["president_id"];
 			$gov["president_id"] = 0;
+			$gov["rally"] = DB_GOVERNMENT_DEFAULT["rally"];
 			$gov["referendum"] = array(
 				'candidate1' => array('id' => 0, "voters_count" => 0),
 				'candidate2' => array('id' => 0, "voters_count" => 0),
@@ -1022,6 +1023,7 @@ function government_referendum_system($data, $db){
 		if($date - $last_referendum_time >= 432000){
 			$gov["previous_president_id"] = $gov["president_id"];
 			$gov["president_id"] = 0;
+			$gov["rally"] = DB_GOVERNMENT_DEFAULT["rally"];
 			$gov["referendum"] = array(
 				'candidate1' => array('id' => 0, "voters_count" => 0),
 				'candidate2' => array('id' => 0, "voters_count" => 0),

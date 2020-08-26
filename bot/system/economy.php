@@ -836,7 +836,10 @@ namespace{
 			$keyboard = vk_keyboard_inline(array(
 				array(vk_callback_button("Работать", array('economy_work', $testing_user_id, 1), 'positive')),
 				array(vk_callback_button("Профессии", array("economy_jobcontrol", $testing_user_id), "primary")),
-				array(vk_callback_button("⬅ Назад в ЦМ", array('bot_menu', $testing_user_id), "negative"))
+				array(
+					vk_callback_button("Меню", array('bot_menu', $testing_user_id), "secondary"),
+					vk_callback_button("Закрыть", array('bot_menu', $testing_user_id, 0), "negative")
+				)
 			));
 
 			$messagesModule = new Bot\Messages($db);
@@ -1158,7 +1161,8 @@ namespace{
 						vk_callback_button("Работа", array("economy_work"), "positive")
 					),
 					array(
-						vk_callback_button("⬅ Назад в ЦМ", array('bot_menu', $testing_user_id), "negative")
+						vk_callback_button("Меню", array('bot_menu', $testing_user_id), "secondary"),
+						vk_callback_button("Закрыть", array('bot_menu', $testing_user_id, 0), "negative")
 					)
 				);
 				$message = "%appeal%, Вы устроились на работу {$job_name}.";
@@ -1252,7 +1256,8 @@ namespace{
 				),
 				$controlButtons,
 				array(
-					vk_callback_button("⬅ Назад в ЦМ", array('bot_menu', $testing_user_id), "negative")  
+					vk_callback_button("Меню", array('bot_menu', $testing_user_id), "secondary"),
+					vk_callback_button("Закрыть", array('bot_menu', $testing_user_id, 0), "negative")  
 				)
 			);
 			break;
@@ -1948,7 +1953,8 @@ namespace{
 						vk_callback_button("Получить", array("economy_education", $testing_user_id, 1), 'positive')
 					),
 					array(
-						vk_callback_button("⬅ Назад в ЦМ", array('bot_menu', $testing_user_id), "negative")
+						vk_callback_button("Меню", array('bot_menu', $testing_user_id), "secondary"),
+						vk_callback_button("Закрыть", array('bot_menu', $testing_user_id, 0), "negative")
 					)
 				);
 				$formated_price = Economy\Main::getFormatedMoney($edu_data["price"]);
@@ -1978,7 +1984,8 @@ namespace{
 							vk_callback_button("Вернуться", array('economy_education', $testing_user_id), "positive")
 						),
 						array(
-							vk_callback_button("⬅ Назад в ЦМ", array('bot_menu', $testing_user_id), "negative")
+							vk_callback_button("Меню", array('bot_menu', $testing_user_id), "secondary"),
+							vk_callback_button("Закрыть", array('bot_menu', $testing_user_id, 0), "negative")
 						)
 					);
 					$message = "%appeal%, ✅Вы успешно получили образование уровня \"{$edu[$edu_id]["name"]}\".";
@@ -2551,7 +2558,8 @@ namespace{
 					vk_callback_button("Улучшение", array('economy_company', $testing_user_id, 7), "primary")
 				),
 				array(
-					vk_callback_button("⬅ Назад в ЦМ", array('bot_menu', $testing_user_id), "negative")
+					vk_callback_button("Меню", array('bot_menu', $testing_user_id), "secondary"),
+					vk_callback_button("Закрыть", array('bot_menu', $testing_user_id, 0), 'negative')
 				)
 			);
 			break;
@@ -2687,7 +2695,9 @@ namespace{
 						$cost = Economy\Main::getFormatedMoney($contract["cost"]);
 						$income = Economy\Main::getFormatedMoney($contract["income"]);
 						$net_income = Economy\Main::getFormatedMoney($contract["income"] - $contract["cost"]);
-						$message = "%appeal%, информация о контракте:\n📝Название: {$contract["name"]}\n📅Продолжительность: {$duration}\n📉Стоимость: \${$cost}\n📈Доход: \${$income}\n💰Чистый доход: \${$net_income}\n📊Получаемый опыт: {$contract["exp"]}\n👥Необходимо рабочих: {$contract["workers_required"]}";
+						$capital = Economy\Main::getFormatedMoney($enterprise["capital"]);
+						$current_contracts_count = count($enterprise["contracts"]);
+						$message = "%appeal%, информация о контракте:\n📝Название: {$contract["name"]}\n📅Продолжительность: {$duration}\n📉Стоимость: \${$cost}\n📈Доход: \${$income}\n💰Чистый доход: \${$net_income}\n📊Получаемый опыт: {$contract["exp"]}\n👥Необходимо рабочих: {$contract["workers_required"]}\n\n💰Бюджет: \${$capital}\n👥Рабочие: {$enterprise["involved_workers"]}/{$enterprise["workers"]}\n📄Контракты: {$current_contracts_count}/{$enterprise["max_contracts"]}";
 
 						$contracts_count = count($contracts);
 						$controlButtons = array();
@@ -2722,12 +2732,12 @@ namespace{
 						return;
 					}
 
-					if(array_key_exists($argvt2, $contracts))
-						$contract = $contracts[$argvt2];
-					else{
+					if(!array_key_exists($argvt2, $contracts)){
 						bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Контракта под #{$argvt2} не существует.");
 						return;
 					}
+					$contract_index = $argvt2;
+					$contract = $contracts[$contract_index];
 
 					$capital_after_start = $enterprise["capital"] - $contract["cost"];
 					if($capital_after_start < 0){
@@ -2747,10 +2757,49 @@ namespace{
 						"start_time" => time(),
 						"contract_info" => $contract
 					);
+					//bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "✅ Контракт \"{$contract["name"]}\" успешно подписан.");
+					$time = $contract["duration"];
+					$hours = intdiv($time, 3600);
+					$minutes = intdiv($time-3600*$hours, 60);
+					$seconds = $time % 60;
+					$duration = "";
+					if($hours != 0)
+						$duration = "{$hours} ч. ";
+					if($minutes != 0)
+						$duration .= "{$minutes} мин. ";
+					if($seconds != 0)
+						$duration .= "{$seconds} сек.";
+
+					$cost = Economy\Main::getFormatedMoney($contract["cost"]);
+					$income = Economy\Main::getFormatedMoney($contract["income"]);
+					$net_income = Economy\Main::getFormatedMoney($contract["income"] - $contract["cost"]);
+					$capital = Economy\Main::getFormatedMoney($enterprise["capital"]);
+					$current_contracts_count = count($enterprise["contracts"]);
+					$message = "%appeal%, информация о контракте:\n📝Название: {$contract["name"]}\n📅Продолжительность: {$duration}\n📉Стоимость: \${$cost}\n📈Доход: \${$income}\n💰Чистый доход: \${$net_income}\n📊Получаемый опыт: {$contract["exp"]}\n👥Необходимо рабочих: {$contract["workers_required"]}\n\n💰Бюджет: \${$capital}\n👥Рабочие: {$enterprise["involved_workers"]}/{$enterprise["workers"]}\n📄Контракты: {$current_contracts_count}/{$enterprise["max_contracts"]}";
+
+					$contracts_count = count($contracts);
+					$controlButtons = array();
+					if($contracts_count > 0){
+						if($contract_index != 0){
+							$previous_index = $contract_index - 1;
+							$emoji_str = bot_int_to_emoji_str($contract_index);
+							$controlButtons[] = vk_callback_button("{$emoji_str} ⬅", array('economy_company', $testing_user_id, 4, 1, $previous_index), 'secondary');
+						}
+						if($contract_index != ($contracts_count - 1)){
+							$next_index = $contract_index + 1;
+							$emoji_str = bot_int_to_emoji_str($next_index + 1);
+							$controlButtons[] = vk_callback_button("➡ {$emoji_str}", array('economy_company', $testing_user_id, 4, 1, $next_index), 'secondary');
+						}
+					}
+					$keyboard_buttons = array(
+						array(
+							vk_callback_button("⬅ Назад", array('economy_company', $testing_user_id, 4), 'negative'),
+							vk_callback_button("Реализовать", array('economy_company', $testing_user_id, 4, 2, $contract_index), "positive")
+						),
+						$controlButtons
+					);
 					$enterpriseSystem->saveEnterprise($enterprise["id"], $enterprise);
 					$db->save();
-					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "✅ Контракт \"{$contract["name"]}\" успешно подписан.");
-					return;
 				}
 				else{
 					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Internal error!');
@@ -3029,7 +3078,6 @@ namespace{
 
 							$cost = Economy\Main::getFormatedMoney($contract["cost"]);
 							$message = "%appeal%, Информация об улучшении.\n📝Бизнес: {$enterprise["name"]}\n📝Название: {$contract["name"]}\n📅Продолжительность: {$duration}\n💰Стоимость: \${$cost}\n📊Необходимо Опыта: {$contract["exp_required"]}\n👥Необходимо рабочих: {$contract["workers_required"]}\n🔓Результат: {$improvment_text}";
-							$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id, array('keyboard' => $keyboard));
 
 							$keyboard_buttons = array(
 								array(

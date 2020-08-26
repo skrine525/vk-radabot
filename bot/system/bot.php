@@ -776,7 +776,8 @@ namespace{
 		$keyboard = vk_keyboard_inline(array(
 			$buttons,
 			array(
-				vk_callback_button("⬅ Назад в ЦМ", array('bot_menu', $data->object->from_id), 'negative')
+				vk_callback_button("Меню", array('bot_menu', $testing_user_id), "secondary"),
+				vk_callback_button("Закрыть", array('bot_menu', $testing_user_id, 0), "negative")
 			)
 		));
 
@@ -852,7 +853,8 @@ namespace{
 		$keyboard = vk_keyboard_inline(array(
 			$buttons,
 			array(
-				vk_callback_button("⬅ Назад в ЦМ", array('bot_menu', $data->object->user_id), 'negative')
+				vk_callback_button("Меню", array('bot_menu', $testing_user_id), "secondary"),
+				vk_callback_button("Закрыть", array('bot_menu', $testing_user_id, 0), "negative")
 			)
 		));
 
@@ -1224,7 +1226,7 @@ namespace{
 
 		switch ($code) {
 			case 0:
-			$message = "✅ Центральное Меню закрыто.";
+			$message = "✅ Меню закрыто.";
 			break;
 
 			case 1:
