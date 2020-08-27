@@ -1613,9 +1613,9 @@ function manager_panel_keyboard_handler($finput){
 				)
 			);
 		$result = $finput->event->runTextMessageCommand($modified_data);
-		if($result == Bot\Bot\Event::COMMAND_RESULT_OK)
+		if($result == Bot\Event::COMMAND_RESULT_OK)
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "✅ Команда выполнена!");
-		elseif($result == Bot\Bot\Event::COMMAND_RESULT_UNKNOWN)
+		elseif($result == Bot\Event::COMMAND_RESULT_UNKNOWN)
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Ошибка. Данной команды не существует.");
 	}
 	else{

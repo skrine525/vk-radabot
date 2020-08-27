@@ -690,7 +690,7 @@ namespace{
 				$modified_data->object->from_id = $member_id;
 				$modified_data->object->text = $command;
 				$result = $finput->event->runTextMessageCommand($modified_data);
-				if($result == Bot\Bot\Event::COMMAND_RESULT_UNKNOWN)
+				if($result == Bot\Event::COMMAND_RESULT_UNKNOWN)
 					$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Ошибка. Данной команды не существует."); // Вывод ошибки
 			});
 
@@ -768,7 +768,7 @@ namespace{
 				$modified_data->object->payload = array($command);
 
 				$result = $event->runCallbackButtonCommand($modified_data);
-				if($result != Bot\Bot\Event::COMMAND_RESULT_OK){
+				if($result != Bot\Event::COMMAND_RESULT_OK){
 					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ [bot_runcb]: Команды [$command] не существует.");
 				}
 			});

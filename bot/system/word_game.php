@@ -189,7 +189,7 @@ function wordgame_gameplay_cb($finput){
 			wordgame_del_session($data->object->peer_id);
 			$msg = "[Слова] Игра остановлена.";
 			$snackbar_json_request = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "✅ Выполнено!"), JSON_UNESCAPED_UNICODE)));
-			vk_execute("API.messages.sendMessageBot\Bot\EventAnswer({$snackbar_json_request});return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}','keyboard':'{$empty_keyboard}'});");
+			vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}','keyboard':'{$empty_keyboard}'});");
 		}
 		else{
 			$act = bot_get_array_value($payload, 1, 0);
@@ -208,7 +208,7 @@ function wordgame_gameplay_cb($finput){
 				$msg = "[Слова] Игра остановлена.";
 				$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'keyboard' => $empty_keyboard), JSON_UNESCAPED_UNICODE);
 				$snackbar_json_request = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "✅ Выполнено!"), JSON_UNESCAPED_UNICODE)));
-				vk_execute("API.messages.sendMessageBot\Bot\EventAnswer({$snackbar_json_request});return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}','keyboard':'{$empty_keyboard}'});");
+				vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}','keyboard':'{$empty_keyboard}'});");
 				break;
 
 				case 2:
@@ -248,13 +248,13 @@ function wordgame_gameplay_cb($finput){
 								$msg = "[Слова] Больше подсказок нет! Слово ({$wordlen} б.): {$word}.\nОписание: {$explanation}.";
 								$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'keyboard' => $keyboard), JSON_UNESCAPED_UNICODE);
 								$snackbar_json_request = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "✅ Подсказка использована!"), JSON_UNESCAPED_UNICODE)));
-								vk_execute("API.messages.sendMessageBot\Bot\EventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
+								vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
 							}
 							else {
 								$msg = "[Слова] Подсказка использована. Слово ({$wordlen} б.): {$word}.\nОписание: {$explanation}.";
 								$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg), JSON_UNESCAPED_UNICODE);
 								$snackbar_json_request = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "✅ Подсказка использована!"), JSON_UNESCAPED_UNICODE)));
-								vk_execute("API.messages.sendMessageBot\Bot\EventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
+								vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
 							}
 						}
 						else {
@@ -277,7 +277,7 @@ function wordgame_gameplay_cb($finput){
 					$msg = "[Слова] Слово ({$wordlen} б.): {$word}.\nОписание: {$explanation}.";
 					$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg), JSON_UNESCAPED_UNICODE);
 					$snackbar_json_request = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "✅ Слово отображено!"), JSON_UNESCAPED_UNICODE)));
-					vk_execute("API.messages.sendMessageBot\Bot\EventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
+					vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
 				}
 				else
 				 	bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Необходимо Продолжить игру!');
@@ -301,7 +301,7 @@ function wordgame_gameplay_cb($finput){
 							));
 							$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'keyboard' => $keyboard), JSON_UNESCAPED_UNICODE);
 							$snackbar_json_request = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "✅ Выполнено."), JSON_UNESCAPED_UNICODE)));
-							vk_execute("API.messages.sendMessageBot\Bot\EventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
+							vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
 						}
 						else
 							bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Нельзя сдаться раньше 20 секунд после использования всех подсказок');
@@ -334,7 +334,7 @@ function wordgame_gameplay_cb($finput){
 					));
 					$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'keyboard' => $keyboard), JSON_UNESCAPED_UNICODE);
 					$snackbar_json_request = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "✅ Выполнено."), JSON_UNESCAPED_UNICODE)));
-					vk_execute("API.messages.sendMessageBot\Bot\EventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
+					vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
 				}
 				else
 					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Необходимо Завершить партию!');

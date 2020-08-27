@@ -1083,7 +1083,7 @@ function government_referendum_vote_cb($finput){
 			government_api_setdata($db, $gov);
 			$db->save();
 			$candidate_id = $referendum["candidate1"]["id"];
-			vk_execute("var user=API.users.get({'user_ids':[{$candidate_id}],'fields':'first_name_acc,last_name_acc'});var msg='📝 Вы проголосовали за '+user[0].first_name_acc+' '+user[0].last_name_acc+'.';return API.messages.sendMessageBot\Bot\EventAnswer({'event_id':'{$data->object->event_id}','user_id':{$data->object->user_id},'peer_id':{$data->object->peer_id},'event_data':'{\"type\":\"show_snackbar\",\"text\":\"'+msg+'\"}'});");
+			vk_execute("var user=API.users.get({'user_ids':[{$candidate_id}],'fields':'first_name_acc,last_name_acc'});var msg='📝 Вы проголосовали за '+user[0].first_name_acc+' '+user[0].last_name_acc+'.';return API.messages.sendMessageEventAnswer({'event_id':'{$data->object->event_id}','user_id':{$data->object->user_id},'peer_id':{$data->object->peer_id},'event_data':'{\"type\":\"show_snackbar\",\"text\":\"'+msg+'\"}'});");
 
 		}
 		elseif($candidate == 2){
@@ -1093,7 +1093,7 @@ function government_referendum_vote_cb($finput){
 			government_api_setdata($db, $gov);
 			$db->save();
 			$candidate_id = $referendum["candidate2"]["id"];
-			vk_execute("var user=API.users.get({'user_ids':[{$candidate_id}],'fields':'first_name_acc,last_name_acc'});var msg='📝 Вы проголосовали за '+user[0].first_name_acc+' '+user[0].last_name_acc+'.';return API.messages.sendMessageBot\Bot\EventAnswer({'event_id':'{$data->object->event_id}','user_id':{$data->object->user_id},'peer_id':{$data->object->peer_id},'event_data':'{\"type\":\"show_snackbar\",\"text\":\"'+msg+'\"}'});");
+			vk_execute("var user=API.users.get({'user_ids':[{$candidate_id}],'fields':'first_name_acc,last_name_acc'});var msg='📝 Вы проголосовали за '+user[0].first_name_acc+' '+user[0].last_name_acc+'.';return API.messages.sendMessageEventAnswer({'event_id':'{$data->object->event_id}','user_id':{$data->object->user_id},'peer_id':{$data->object->peer_id},'event_data':'{\"type\":\"show_snackbar\",\"text\":\"'+msg+'\"}'});");
 		}
 		else
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Internal error!');
