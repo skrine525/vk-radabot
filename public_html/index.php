@@ -2,7 +2,7 @@
 
 require('../vendor/autoload.php');
 
-require("../bot/system/loader.php"); // Загрузка модулей бота
+require("../bot/system/bot.php"); // Подгружаем PHP код бота
 
 $app = new Silex\Application();
 $app['debug'] = false;
@@ -48,7 +48,7 @@ $app->post('/bot', function() { // Обработчик логики бота
 	session_write_close(); // Added a line suggested in the comment
 	// Do processing here 
 
-	event_handle($data); // Основная функции обработки событий бота
+	bot_handle_event($data); // Основная функции обработки событий бота
 
 	return ''; // Ненужная хрень, которая здесь для того, чтобы было меньше ошибок в логе
 });

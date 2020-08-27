@@ -36,7 +36,7 @@ function stats_api_setuser($db, $user_id, $value){
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Инициалихация команд
+// Инициализация команд
 function stats_initcmd($event){
 	$event->addTextMessageCommand("!стата", 'stats_cmd_handler');
 }

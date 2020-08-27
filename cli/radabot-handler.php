@@ -1,6 +1,6 @@
 <?php
 
-require(__DIR__."/../bot/system/loader.php");
+require("../bot/system/bot.php"); // Подгружаем PHP код бота
 
 function main(){
 	set_time_limit(0);
@@ -19,7 +19,7 @@ function main(){
 			}
 			else{
 				for($i = 0; $i < count($data->updates); $i++){
-					event_handle($data->updates[$i]);
+					bot_handle_event($data->updates[$i]);
 				}
 				$ts = $data->ts;
 			}	

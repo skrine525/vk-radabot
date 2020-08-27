@@ -16,7 +16,7 @@ function vk_call($method, $parametres){
             'content' => http_build_query($parametres)
         )  
 	);
-	return file_get_contents('https://api.vk.com/method/'.$method, false, stream_context_create($options));
+	return file_get_contents("https://api.vk.com/method/{$method}", false, stream_context_create($options));
 }
 
 function vk_execute($code){

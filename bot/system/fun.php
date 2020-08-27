@@ -1,6 +1,6 @@
 <?php
 
-// Инициалихация команд
+// Инициализация команд
 function fun_initcmd($event){
 	$event->addTextMessageCommand("!выбери", 'fun_choose');
 	$event->addTextMessageCommand("!сколько", 'fun_howmuch');
