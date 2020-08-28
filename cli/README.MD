@@ -10,7 +10,7 @@ $ sudo su
 $ adduser --disabled-login radabot
 $ cd ~radabot
 ```
-3. Скопируйте код бота в текущий каталог.
+3. Скопируйте код бота в текущий каталог и настроить bot/data/config.json файл.
 4. Установить пакеты "php", "php-mbstring", "php-curl" и "php-simplexml":
 ```shell
 $ sudo apt install php php-mbstring php-curl php-simplexml
