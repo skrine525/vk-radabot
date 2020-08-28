@@ -757,7 +757,6 @@ function government_rally($finput){
 			if($date - $rally_for["members"][$member_key] >= 3600){
 				$members_count = count($rally_against["members"]);
 				$r = json_decode(vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var presidential_power={$gov["presidential_power"]};var members_in_chat=API.messages.getConversationMembers({'peer_id':peer_id});var members_in_rally={$members_count};var percentage_of_one=(1/members_in_chat.profiles.length)*0.1;var rally_result=percentage_of_one+(members_in_rally-1)*(percentage_of_one*0.25);presidential_power=presidential_power+rally_result*100;if(presidential_power>100){presidential_power=100;}API.messages.send({'peer_id':peer_id,'message':appeal+', ✅Вы поучаствовали в митинге За @id{$gov["president_id"]} (президента).','disable_mentions':true});return presidential_power;"));
-				error_log(json_encode($r));
 				if(gettype($r) == "object" && property_exists($r, 'response')){
 					$presidential_power = $r->response;
 					$gov["rally"]["for"]["members"][$member_key] = $date;

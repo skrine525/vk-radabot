@@ -664,7 +664,7 @@ namespace{
 				$argv = $finput->argv;
 				$db = $finput->db;
 
-				$messagesModule  = new BotModule($db);
+				$messagesModule  = new Bot\Messages($db);
 				$messagesModule->setAppealID($data->object->from_id);
 
 				$member = bot_get_array_value($argv, 1 , "");
@@ -1074,8 +1074,8 @@ namespace{
 		$keyboard = vk_keyboard_inline(array(
 			$buttons,
 			array(
-				vk_callback_button("Меню", array('bot_menu', $testing_user_id), "secondary"),
-				vk_callback_button("Закрыть", array('bot_menu', $testing_user_id, 0), "negative")
+				vk_callback_button("Меню", array('bot_menu', $data->object->from_id), "secondary"),
+				vk_callback_button("Закрыть", array('bot_menu', $data->object->from_id, 0), "negative")
 			)
 		));
 

@@ -1,11 +1,11 @@
 [Unit]
-Description=A PHP handler of vk-radabot
+Description=A Python handler of radabot
 After=multi-user.target
 
 [Service]
 Type=simple
-WorkingDirectory=/root/vk-radabot/cli
-ExecStart=/usr/bin/php radabot-handler.php
+WorkingDirectory=/home/radabot/cli
+ExecStart=/usr/bin/python radabot.py
 Restart=on-failure
 RestartSec=5
 
