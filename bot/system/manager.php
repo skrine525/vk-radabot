@@ -73,7 +73,7 @@ class ChatModes{
 	const MODE_LIST = array(
 		'allow_memes' => array('label' => 'Мемы', 'default_state' => true),
 		'antiflood_enabled' => array('label' => 'Антифлуд', 'default_state' => true),
-		'auto_referendum' => array('label' => 'Авто референдум', 'default_state' => false),
+		'auto_referendum' => array('label' => 'Авто выборы', 'default_state' => false),
 		'economy_enabled' => array('label' => 'Экономика', 'default_state' => false),
 		'roleplay_enabled' => array('label' => 'РП', 'default_state' => true)
 	);
@@ -395,8 +395,8 @@ function manager_mode_cpanel_cb($finput){
 				$keyboard_buttons[] = array(vk_callback_button("&#12288;", array('manager_mode', $testing_user_id, $list_number, 0), 'primary'));
 		}
 
-		$list_buttons = array();
 		if($list->list->max_number > 1){
+			$list_buttons = array();
 			if($list->list->number != 1){
 				$previous_list = $list->list->number - 1;
 				$emoji_str = bot_int_to_emoji_str($previous_list);
@@ -407,8 +407,8 @@ function manager_mode_cpanel_cb($finput){
 				$emoji_str = bot_int_to_emoji_str($next_list);
 				$list_buttons[] = vk_callback_button("➡ {$emoji_str}", array('manager_mode', $testing_user_id, $next_list), 'secondary');
 			}
+			$keyboard_buttons[] = $list_buttons;
 		}
-		$keyboard_buttons[] = $list_buttons;
 		$keyboard_buttons[] = array(
 			vk_callback_button("Меню", array('bot_menu', $testing_user_id), "secondary"),
 			vk_callback_button("Закрыть", array('bot_menu', $testing_user_id, 0), "negative")

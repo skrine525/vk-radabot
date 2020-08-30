@@ -1571,22 +1571,57 @@ namespace{
 			break;
 
 			case 1:
-			$keyboard_buttons = array(
-				array(
-					vk_callback_button("Работа", array('economy_work', $testing_user_id), 'primary'),
-					vk_callback_button("Бизнес", array('economy_company', $testing_user_id), 'primary')
-				),
-				array(
-					vk_callback_button("Образование", array('economy_education', $testing_user_id), 'primary'),
-					vk_callback_button("Магазин", array('economy_shop', $testing_user_id), 'primary')
-				),
-				array(
-					vk_callback_button("Список команд", array('bot_cmdlist', $testing_user_id), 'primary')
-				),
-				array(
-					vk_callback_button("❌ Закрыть Меню", array('bot_menu', $testing_user_id, 0), 'negative')
-				)
-			);
+			$list_number = bot_get_array_value($payload, 3, 1);
+			$elements = array(); // Массив всех кнопок
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			/// Элементы в меню
+
+			$elements[] = vk_callback_button("Список команд", array('bot_cmdlist', $testing_user_id), 'primary');
+
+			$chatModes = new ChatModes($db);
+			if($chatModes->getModeValue("economy_enabled")){ // Проверка режима экономики
+				$elements[] = vk_callback_button("Работа", array('economy_work', $testing_user_id), 'primary');
+				$elements[] = vk_callback_button("Бизнес", array('economy_company', $testing_user_id), 'primary');
+				$elements[] = vk_callback_button("Образование", array('economy_education', $testing_user_id), 'primary');
+				$elements[] = vk_callback_button("Магазин", array('economy_shop', $testing_user_id), 'primary');
+			}
+
+			$ranksys = new RankSystem($db);
+			if($ranksys->checkRank($data->object->user_id, 1)){ // Проверка ранга (Администратор)
+				$elements[] = vk_callback_button("Режимы", array('manager_mode', $testing_user_id), 'primary');
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+			$listBuiler = new Bot\ListBuilder($elements, 6);
+			$build = $listBuiler->build($list_number);
+			if($build->result){
+				for($i = 0; $i < count($build->list->out); $i++){
+					$keyboard_buttons[intdiv($i, 2)][$i % 2] = $build->list->out[$i];
+				}
+				
+				if($build->list->max_number > 1){
+					$list_buttons = array();
+					if($build->list->number != 1){
+						$previous_list = $build->list->number - 1;
+						$emoji_str = bot_int_to_emoji_str($previous_list);
+						$list_buttons[] = vk_callback_button("{$emoji_str} ⬅", array('bot_menu', $testing_user_id, 1, $previous_list), 'secondary');
+					}
+					if($build->list->number != $build->list->max_number){
+						$next_list = $build->list->number + 1;
+						$emoji_str = bot_int_to_emoji_str($next_list);
+						$list_buttons[] = vk_callback_button("➡ {$emoji_str}", array('bot_menu', $testing_user_id, 1, $next_list), 'secondary');
+					}
+					$keyboard_buttons[] = $list_buttons;
+				}
+			}
+			else
+				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Внутренняя ошибка: Неверный номер списка.");
+			
+			$keyboard_buttons[] = array(vk_callback_button("Закрыть", array('bot_menu', $testing_user_id, 0), 'negative'));
 			$message = "%appeal%, Центральное Меню.";
 			break;
 			
@@ -1599,7 +1634,7 @@ namespace{
 		$messagesModule = new Bot\Messages($db);
 		$messagesModule->setAppealID($data->object->user_id);
 		$keyboard = vk_keyboard_inline($keyboard_buttons);
-		$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $message, array('keyboard' => $keyboard));
+		error_log($messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $message, array('keyboard' => $keyboard)));
 	}
 
 	function bot_help($finput){
