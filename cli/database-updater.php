@@ -27,13 +27,17 @@ print("\nОбновлено {$updated} из {$amount} файлов Базы да
 
 // Вызывается для обновления каждого файла Базы данных
 function update_file($db){
-	$gov = $db->getValue(array("government"), false);
-	if($gov !== false){
-		$rally = array(
-			'for' => false,
-			'against' => false
-		);
-		$db->setValue(array("government", "rally"), $rally);
+	$users = $db->getValue(array("economy", "users"), false);
+	if($users !== false){
+		foreach ($users as $key1 => $value1) {
+			$meta = $db->getValue(array("economy", "users", $key1, "meta"), false);
+			if($meta !== false){
+				foreach ($meta as $key2 => $value2) {
+					$db->setValue(array("economy", "users", $key1, $key2), $value2);
+				}
+				$db->unsetValue(array("economy", "users", $key1, "meta"));
+			}
+		}
 	}
 }
 

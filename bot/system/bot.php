@@ -170,7 +170,6 @@ namespace Bot{
 
 	  	public function handle(){
 	  		switch($this->data->type){
-
 				case 'message_new':
 				if($this->data->object->from_id <= 0){ // Игнорирование сообщений других чат-ботов
 					return false;
@@ -309,6 +308,50 @@ namespace Bot{
 				$this->sendSilentMessage($peer_id, $message);
 			else
 				$this->sendSilentMessage($peer_id, $message, array("keyboard" => $keyboard));
+		}
+	}
+
+	class ListBuilder{
+		private $list;
+		private $size;
+
+		function __construct($list, $size){
+			if(gettype($list) == "array" && gettype($size) == "integer"){
+				$this->list = $list;
+				$this->size = $size;
+			}
+			else
+				return false;
+		}
+
+		public function build($list_number){
+			$list_out = array(); // Выходной список
+			
+			if(count($this->list) % $this->size == 0)
+				$list_max_number = intdiv(count($this->list), $this->size);
+			else
+				$list_max_number = intdiv(count($this->list), $this->size)+1;
+			$list_min_index = ($this->size*$list_number)-$this->size;
+			if($this->size*$list_number >= count($this->list))	
+				$list_max_index = count($this->list)-1;
+			else
+				$list_max_index = $this->size*$list_number-1;
+			if($list_number <= $list_max_number && $list_number > 0){
+				for($i = $list_min_index; $i <= $list_max_index; $i++){
+					$list_out[] = $this->list[$i];
+				}
+			}
+			else
+				return (object) array('result' => false);
+
+			return (object) array(
+				'result' => true,
+				'list' => (object) array(
+					'number' => $list_number,
+					'max_number' => $list_max_number,
+					'out' => $list_out
+				)
+			);
 		}
 	}
 }
@@ -1645,8 +1688,7 @@ namespace{
 					'!ранглист - Список доступных рангов',
 					'!приветствие - Управление приветствием',
 					'!стата - Статистика беседы',
-					'!modes - Список всех Режимов беседы',
-					'!mode <name> <value> - Управление Режимом беседы',
+					'!modes - Управление режимами беседы',
 					'!панель - Управление персональной панелью',
 					'Панель - Отобразить персональную панель'
 				);

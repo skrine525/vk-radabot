@@ -10,18 +10,18 @@ $ sudo su
 $ adduser --disabled-login radabot
 $ cd ~radabot
 ```
-3. Скопируйте код бота в текущий каталог и настроить bot/data/config.json файл.
+3. Скопируйте код бота в текущий каталог и настройте bot/data/config.json файл.
 4. Установить пакеты "php", "php-mbstring", "php-curl" и "php-simplexml":
 ```shell
-$ sudo apt install php php-mbstring php-curl php-simplexml
+$ apt install php php-mbstring php-curl php-simplexml
 ```
 5. Установить пакет python и python-pip:
 ```shell
-$ sudo apt install python python-pip
+$ apt install python python-pip
 ```
 6. Установите библиотеку requests для python:
 ```shell
-$ sudo pip install requests
+$ pip install requests
 ```
 7. Скопируйте файл службы в системную директорию:
 ```shell

@@ -26,7 +26,7 @@ def vk_longpoll(server, key, ts, wait = 25):
 	return r.text
 
 Processes = {}
-Queue = []
+EventQueue = []
 
 def queue_handler():
 	while True:
@@ -34,24 +34,24 @@ def queue_handler():
 			if Processes[i].poll() != None:
 				Processes.pop(i)
 
-		for update in Queue:
-			if update["type"] == "message_new" or update["type"] == "message_event":
-				peer_id = update["object"]["peer_id"]
-				process_name = "message{}".format(peer_id)
+		for event in EventQueue:
+			if event["type"] == "message_new" or event["type"] == "message_event":
+				peer_id = event["object"]["peer_id"]
+				process_name = "chat{}".format(peer_id)
 				process = Processes.get(process_name)
 				if process == None:
-					Processes[process_name] = subprocess.Popen(["radabot-system.php", json.dumps(update).encode('utf-8')])
-					Queue.remove(update)
+					Processes[process_name] = subprocess.Popen(["/usr/bin/php", "radabot-system.php", json.dumps(event).encode('utf-8')])
+					EventQueue.remove(event)
 			else:
-				Queue.remove(update)
+				EventQueue.remove(event)
 		time.sleep(0.05)
 
 
-lp_data = json.loads(vk_call('groups.getLongPollServer', {'group_id': config_get('VK_GROUP_ID')}))["response"] 			# Getting Longpoll data
-lp_server = lp_data["server"]																							# Getting server from Longpoll data
-lp_key = lp_data["key"];																								# Getting key from Longpoll data
-lp_ts = lp_data["ts"]																									# Getting ts from Longpoll data
-del lp_data																												# Deleting Longpoll data
+lp_data = json.loads(vk_call('groups.getLongPollServer', {'group_id': config_get('VK_GROUP_ID')}))["response"]
+lp_server = lp_data["server"]
+lp_key = lp_data["key"]
+lp_ts = lp_data["ts"]
+del lp_data
 
 queue_thread = threading.Thread(target=queue_handler)
 queue_thread.start()
@@ -66,7 +66,7 @@ while True:
 	try:
 		data_text = vk_longpoll(lp_server, lp_key, lp_ts)
 		data = json.loads(data_text)
-		log("[{}] Log: {}".format(time.ctime(time.time()), data_text.encode('utf-8'))) # Delete
+		log("[{}] Log: {}".format(time.ctime(time.time()), data_text.encode('utf-8')))
 		failed = data.get('failed', None)
 
 		if(failed == 1):
@@ -81,8 +81,8 @@ while True:
 			lp_ts = lp_data["ts"]
 			del lp_data
 		else:
-			for update in data["updates"]:
-				Queue.append(update)
+			for event in data["updates"]:
+				EventQueue.append(event)
 			lp_ts = data["ts"]
 	except requests.exceptions.ConnectionError:
 		log("[{}] Log: {}\n".format(time.ctime(time.time()), "Connection Error"))

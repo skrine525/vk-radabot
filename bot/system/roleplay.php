@@ -402,6 +402,15 @@ namespace{
 		$argv = $finput->argv;
 		$db = $finput->db;
 
+		// Проверка режима
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
+			return;
+		}
+
 		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Секс");
 		$handler->maleMessage = "%FROM_USERNAME% занялся сексом с %MEMBER_USERNAME_INS%.😍";
 		$handler->femaleMessage = "%FROM_USERNAME% занялась сексом с %MEMBER_USERNAME_INS%.😍";
@@ -419,6 +428,15 @@ namespace{
 		$argv = $finput->argv;
 		$db = $finput->db;
 
+		// Проверка режима
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
+			return;
+		}
+
 		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Обнять");
 		$handler->maleMessage = "%FROM_USERNAME% обнял %MEMBER_USERNAME_ACC%.🤗";
 		$handler->femaleMessage = "%FROM_USERNAME% обняла %MEMBER_USERNAME_ACC%.🤗";
@@ -435,6 +453,15 @@ namespace{
 		$data = $finput->data; 
 		$argv = $finput->argv;
 		$db = $finput->db;
+
+		// Проверка режима
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
+			return;
+		}
 
 		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Уебать");
 		$handler->allowDescription(true);
@@ -460,6 +487,15 @@ namespace{
 		$argv = $finput->argv;
 		$db = $finput->db;
 
+		// Проверка режима
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
+			return;
+		}
+
 		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Обоссать");
 		$handler->maleMessage = "%FROM_USERNAME% обоссал %MEMBER_USERNAME_GEN%.💦";
 		$handler->femaleMessage = "%FROM_USERNAME% обоссала %MEMBER_USERNAME_GEN%.💦";
@@ -476,6 +512,15 @@ namespace{
 		$data = $finput->data; 
 		$argv = $finput->argv;
 		$db = $finput->db;
+
+		// Проверка режима
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
+			return;
+		}
 
 		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Поцеловать");
 		$handler->maleMessage = "%FROM_USERNAME% поцеловал %MEMBER_USERNAME_ACC%.😘";
@@ -494,6 +539,15 @@ namespace{
 		$argv = $finput->argv;
 		$db = $finput->db;
 
+		// Проверка режима
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
+			return;
+		}
+
 		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Харкнуть");
 		$handler->maleMessage = "%FROM_USERNAME% харкнул в %MEMBER_USERNAME_ACC%.";
 		$handler->femaleMessage = "%FROM_USERNAME% харкнула в %MEMBER_USERNAME_ACC%.";
@@ -510,6 +564,15 @@ namespace{
 		$data = $finput->data; 
 		$argv = $finput->argv;
 		$db = $finput->db;
+
+		// Проверка режима
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
+			return;
+		}
 
 		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Отсосать");
 		$handler->maleMessage = "%FROM_USERNAME% отсосал у %MEMBER_USERNAME_GEN%.🍌";
@@ -529,6 +592,15 @@ namespace{
 		$argv = $finput->argv;
 		$db = $finput->db;
 
+		// Проверка режима
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
+			return;
+		}
+
 		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Отлизать");
 		$handler->maleMessage = "%FROM_USERNAME% отлизал у %MEMBER_USERNAME_GEN%.🍑";
 		$handler->femaleMessage = "%FROM_USERNAME% отлизала у %MEMBER_USERNAME_GEN%.🍑";
@@ -547,6 +619,15 @@ namespace{
 		$argv = $finput->argv;
 		$db = $finput->db;
 
+		// Проверка режима
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
+			return;
+		}
+
 		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Послать");
 		$handler->maleMessage = "%FROM_USERNAME% послал %MEMBER_USERNAME_ACC%.";
 		$handler->femaleMessage = "%FROM_USERNAME% послала %MEMBER_USERNAME_ACC%.";
@@ -563,6 +644,15 @@ namespace{
 		$data = $finput->data; 
 		$argv = $finput->argv;
 		$db = $finput->db;
+
+		// Проверка режима
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
+			return;
+		}
 
 		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Кастрировать");
 		$handler->maleMessage = "%FROM_USERNAME% кастрировал %MEMBER_USERNAME_ACC%.";
@@ -581,6 +671,15 @@ namespace{
 		$argv = $finput->argv;
 		$db = $finput->db;
 
+		// Проверка режима
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
+			return;
+		}
+
 		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Посадить");
 		$handler->maleMessage = "%FROM_USERNAME% посадил на бутылку %MEMBER_USERNAME_ACC%.🍾";
 		$handler->femaleMessage = "%FROM_USERNAME% посадила на бутылку %MEMBER_USERNAME_ACC%.🍾%.";
@@ -597,6 +696,15 @@ namespace{
 		$data = $finput->data; 
 		$argv = $finput->argv;
 		$db = $finput->db;
+
+		// Проверка режима
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
+			return;
+		}
 
 		switch (mb_strtolower($argv[1])) {
 			case 'руку':
@@ -626,6 +734,15 @@ namespace{
 		$argv = $finput->argv;
 		$db = $finput->db;
 
+		// Проверка режима
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
+			return;
+		}
+
 		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Лизнуть");
 		$handler->maleMessage = "%FROM_USERNAME% лизнул %MEMBER_USERNAME_DAT%.😋";
 		$handler->femaleMessage = "%FROM_USERNAME% лизнула %MEMBER_USERNAME_DAT%.😋";
@@ -642,6 +759,15 @@ namespace{
 		$data = $finput->data; 
 		$argv = $finput->argv;
 		$db = $finput->db;
+
+		// Проверка режима
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
+			return;
+		}
 
 		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Обосрать");
 		$handler->maleMessage = "%FROM_USERNAME% обосрал %MEMBER_USERNAME_ACC%.💩";
@@ -660,6 +786,15 @@ namespace{
 		$argv = $finput->argv;
 		$db = $finput->db;
 
+		// Проверка режима
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
+			return;
+		}
+
 		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Облевать");
 		$handler->maleMessage = "%FROM_USERNAME% облевал %MEMBER_USERNAME_ACC%.🤢";
 		$handler->femaleMessage = "%FROM_USERNAME% облевала %MEMBER_USERNAME_ACC%.🤢";
@@ -676,6 +811,15 @@ namespace{
 		$data = $finput->data;
 		$argv = $finput->argv;
 		$db = $finput->db;
+
+		// Проверка режима
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
+			return;
+		}
 
 		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Отшлёпать");
 		$handler->maleMessage = "%FROM_USERNAME% отшлепал %MEMBER_USERNAME_ACC%.😻";

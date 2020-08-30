@@ -69,70 +69,71 @@ class RankSystem{ // Класс управления рангами
 }
 
 class ChatModes{
-	const MODES = array( // Константа всех Режимов
-		// Template - array('name' => name, 'default_state' => state)
-		array('name' => 'allow_memes', 'default_state' => true),
-		array('name' => 'antiflood_enabled', 'default_state' => true),
-		array('name' => 'auto_referendum', 'default_state' => false),
-		array('name' => 'economy_enabled', 'default_state' => false)
+	// Список всех режимов
+	const MODE_LIST = array(
+		'allow_memes' => array('label' => 'Мемы', 'default_state' => true),
+		'antiflood_enabled' => array('label' => 'Антифлуд', 'default_state' => true),
+		'auto_referendum' => array('label' => 'Авто референдум', 'default_state' => false),
+		'economy_enabled' => array('label' => 'Экономика', 'default_state' => false),
+		'roleplay_enabled' => array('label' => 'РП', 'default_state' => true)
 	);
 
 	private $db;
+	private $modes;
 
 	function __construct($db){
-		$this->db = $db;
-		if(is_null($this->db))
-			$this->db = array();
+		if(is_null($db))
+			return false;
+		else{
+			$this->db = $db;
+			$this->modes = array();
+			$db_modes = $this->db->getValue(array("bot_manager", "chat_modes"), array());
+			foreach(self::MODE_LIST as $key => $value) {
+				if(array_key_exists($key, $db_modes))
+					$this->modes[$key] = $db_modes[$key];
+				else
+					$this->modes[$key] = $value["default_state"];
+			}
+			unset($db_modes);
+		}
+	}
+
+	public function getModeLabel($name){
+		if(gettype($name) != "string" || !array_key_exists($name, self::MODE_LIST))
+			return null;
+
+		return self::MODE_LIST[$name]["label"];
 	}
 
 	public function getModeValue($name){
-		if(gettype($name) != "string")
+		if(gettype($name) != "string" || !array_key_exists($name, self::MODE_LIST))
 			return null;
 
-		$modeID = -1;
-		for($i = 0; $i < count(self::MODES); $i++){
-			if($name == self::MODES[$i]["name"]){
-				$modeID = $i;
-				break;
-			}
-		}
-
-		if($modeID != -1){
-			return $this->db->getValue(array("bot_manager", "chat_modes", $name), self::MODES[$modeID]["default_state"]);
-		}
-		else
-			return null;
+		return bot_get_array_value($this->modes, $name, self::MODE_LIST[$name]["default_state"]);
 	}
 
 	public function setModeValue($name, $value){
-		if(gettype($name) != "string" || gettype($value) != "boolean")
+		if(gettype($name) != "string" || gettype($value) != "boolean" || !array_key_exists($name, self::MODE_LIST))
 			return false;
 
-		$modeID = -1;
-		for($i = 0; $i < count(self::MODES); $i++){
-			if($name == self::MODES[$i]["name"]){
-				$modeID = $i;
-				break;
-			}
-		}
-
-		if($modeID != -1){
-			$this->db->setValue(array("bot_manager", "chat_modes", $name), $value);
-			return true;
-		}
+		if($value === self::MODE_LIST[$name]["default_state"])
+			unset($this->modes[$name]);
 		else
-			return false;
+			$this->modes[$name] = $value;
+
+		$this->db->setValue(array("bot_manager", "chat_modes"), $this->modes);
+		return true;
 	}
 
 	public function getModeList(){
 		$list = array();
-		for($i = 0; $i < count(self::MODES); $i++){
+		foreach (self::MODE_LIST as $key => $value) {
 			$list[] = array(
-				'name' => self::MODES[$i]["name"],
-				'value' => $this->getModeValue(self::MODES[$i]["name"])
+				'name' => $key,
+				'label' => $value["label"],
+				'value' => $this->getModeValue($key)
 			);
 		}
-
 		return $list;
 	}
 }
@@ -267,7 +268,6 @@ function manager_initcmd($event){
 	$event->addTextMessageCommand("!ранги", 'manager_show_user_ranks');
 	$event->addTextMessageCommand("!приветствие", 'manager_greeting');
 	$event->addTextMessageCommand("!modes", "manager_mode_list");
-	$event->addTextMessageCommand("!mode", "manager_mode_cpanel");
 	$event->addTextMessageCommand("!панель", "manager_panel_control");
 	$event->addTextMessageCommand("панель", "manager_panel_show");
 
@@ -276,6 +276,7 @@ function manager_initcmd($event){
 
 	// Обработка персональной панели
 	$event->addCallbackButtonCommand("manager_panel", 'manager_panel_keyboard_handler');
+	$event->addCallbackButtonCommand("manager_mode", 'manager_mode_cpanel_cb');
 }
 
 function manager_mode_list($finput){
@@ -284,7 +285,8 @@ function manager_mode_list($finput){
 	$argv = $finput->argv;
 	$db = $finput->db;
 
-	$botModule = new BotModule($db);
+	$messagesModule = new Bot\Messages($db);
+	$messagesModule->setAppealID($data->object->from_id);
 	$chatModes = new ChatModes($db);
 
 	if(array_key_exists(1, $argv))
@@ -317,11 +319,11 @@ function manager_mode_list($finput){
 	}
 	else{
 		// Сообщение об ошибке
-		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔указан неверный номер списка!", $data->object->from_id);
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔указан неверный номер списка!");
 		return;
 	}
 
-	$message = ", список режимов беседы:";
+	$message = "%appeal%, список режимов беседы:";
 	for($i = 0; $i < count($list_out); $i++){
 		$name = $list_out[$i]["name"];
 		$value = "true";
@@ -330,63 +332,95 @@ function manager_mode_list($finput){
 		$message = $message . "\n• {$name} — {$value}";
 	}
 
-	$botModule->sendSilentMessage($data->object->peer_id, $message, $data->object->from_id);
+	$keyboard = vk_keyboard_inline(array(
+		array(
+			vk_callback_button("Режимы", array('manager_mode', $data->object->from_id), 'positive')
+		)
+	));
+
+	$messagesModule->sendSilentMessage($data->object->peer_id, $message, array('keyboard' => $keyboard));
 }
 
-function manager_mode_cpanel($finput){
+function manager_mode_cpanel_cb($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
-	$argv = $finput->argv;
+	$payload = $finput->payload;
 	$db = $finput->db;
 
-	$botModule = new BotModule($db);
-	$ranksys = new RankSystem($db);
+	$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
+	if($testing_user_id !== $data->object->user_id){
+		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
+		return;
+	}
+
+	$message = "";
+	$keyboard_buttons = array();
+
 	$chatModes = new ChatModes($db);
 
-	if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверка ранга (Администратор)
-		$botModule->sendSystemMsg_NoRights($data);
-		return;
-	}
+	$list_number = bot_get_array_value($payload, 2, 1);
+	$mode_name = bot_get_array_value($payload, 3, false);
 
-	if(array_key_exists(1, $argv))
-		$modeName = mb_strtolower($argv[1]);
-	else
-		$modeName = "";
-
-	if(array_key_exists(2, $argv))
-		$modeValue = mb_strtolower($argv[2]);
-	else
-		$modeValue = "";
-
-	if($modeName == ""){
-		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔используйте \"!mode <name> <value>\".", $data->object->from_id);
-		return;
-	}
-	elseif($modeValue == ""){
-		$value = $chatModes->getModeValue($modeName);
-		if($value)
-			$value = "true";
-		else
-			$value = "false";
-		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Режим {$modeName} — {$value}.", $data->object->from_id);
-		return;
-	}
-	elseif($modeValue != "true" && $modeValue != "false"){
-		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Ошибка! Параметр <value> должен состоять из одного значения: true или false.", $data->object->from_id);
-		return;
-	}
-
-	$modeValueBoolean = true;
-	if($modeValue == "false")
-		$modeValueBoolean = false;
-
-	if($chatModes->setModeValue($modeName, $modeValueBoolean)){
+	if($mode_name !== false){
+		$ranksys = new RankSystem($db);
+		if(!$ranksys->checkRank($data->object->user_id, 1)){ // Проверка ранга (Администратор)
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ У вас нет прав для использования этой функции.");
+			return;
+		}
+		if($mode_name === 0){
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Этот пустой элемент.");
+			return;
+		}
+		$chatModes->setModeValue($mode_name, !$chatModes->getModeValue($mode_name));
 		$db->save();
-		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Режим {$modeName} изменен на {$modeValue}.", $data->object->from_id);
+	}
+
+	$mode_list = $chatModes->getModeList();
+
+	$list_size = 3;
+	$listBuilder = new Bot\ListBuilder($mode_list, $list_size);
+	$list = $listBuilder->build($list_number);
+
+	if($list->result){
+		$message = "%appeal%, Режимы беседы.";
+		for($i = 0; $i < $list_size; $i++){
+			if(array_key_exists($i, $list->list->out)){
+				if($list->list->out[$i]["value"])
+					$color = 'positive';
+				else
+					$color = 'negative';
+				$keyboard_buttons[] = array(vk_callback_button($list->list->out[$i]["label"], array('manager_mode', $testing_user_id, $list_number, $list->list->out[$i]["name"]), $color));
+			}
+			else
+				$keyboard_buttons[] = array(vk_callback_button("&#12288;", array('manager_mode', $testing_user_id, $list_number, 0), 'primary'));
+		}
+
+		$list_buttons = array();
+		if($list->list->max_number > 1){
+			if($list->list->number != 1){
+				$previous_list = $list->list->number - 1;
+				$emoji_str = bot_int_to_emoji_str($previous_list);
+				$list_buttons[] = vk_callback_button("{$emoji_str} ⬅", array('manager_mode', $testing_user_id, $previous_list), 'secondary');
+			}
+			if($list->list->number != $list->list->max_number){
+				$next_list = $list->list->number + 1;
+				$emoji_str = bot_int_to_emoji_str($next_list);
+				$list_buttons[] = vk_callback_button("➡ {$emoji_str}", array('manager_mode', $testing_user_id, $next_list), 'secondary');
+			}
+		}
+		$keyboard_buttons[] = $list_buttons;
+		$keyboard_buttons[] = array(
+			vk_callback_button("Меню", array('bot_menu', $testing_user_id), "secondary"),
+			vk_callback_button("Закрыть", array('bot_menu', $testing_user_id, 0), "negative")
+		);
 	}
 	else
-		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Ошибка! Возможно Режима {$modeName} не существует!", $data->object->from_id);
+		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Внутренняя ошибка: Неверный номер списка.");
 
+	$messagesModule = new Bot\Messages($db);
+	$messagesModule->setAppealID($data->object->user_id);
+	$keyboard = vk_keyboard_inline($keyboard_buttons);
+	$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $message, array('keyboard' => $keyboard));
 }
 
 function manager_ban_user($finput){

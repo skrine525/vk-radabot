@@ -47,12 +47,12 @@ namespace Economy{
 		function __construct(&$db, $user_id){
 			if($user_id <= 0)
 				return false;
-			$this->db = &$db;
+			$this->db = $db;
 			$this->user_id = $user_id;
 		}
 
 		public function getMoney(){
-			return $this->getMeta("money", 0);
+			return $this->getData("money", 0);
 		}
 
 		public function changeMoney($value){
@@ -60,7 +60,7 @@ namespace Economy{
 			if($money + $value >= 0){
 				$value = round($value, 0);
 				$money = $money + $value;
-				$this->setMeta("money", $money);
+				$this->setData("money", $money);
 				return true;
 			}
 			return false;
@@ -75,7 +75,7 @@ namespace Economy{
 		}
 
 		public function getItems(){
-			$user_items = $this->db->getValue(array("economy", "users", "id{$this->user_id}", "items"), array());
+			$user_items = $this->getData("items", array());
 			$items = array();
 			for($i = 0; $i < count($user_items); $i++){
 				$a = explode(":", $user_items[$i]);
@@ -89,7 +89,7 @@ namespace Economy{
 		}
 
 		public function getItemByIndex($index){
-			$user_items = $this->db->getValue(array("economy", "users", "id{$this->user_id}", "items"), array());
+			$user_items = $this->getData("items", array());
 			if(array_key_exists($index, $user_items)){
 				$a = explode(":", $user_items[$index]);
 				return (object) array(
@@ -103,7 +103,7 @@ namespace Economy{
 		}
 
 		public function getItemsByType($type){
-			$user_items = $this->db->getValue(array("economy", "users", "id{$this->user_id}", "items"), array());
+			$user_items = $this->getData("items", array());
 			$items = array();
 			for($i = 0; $i < count($user_items); $i++){
 				$a = $this->getItemByIndex($i);
@@ -114,7 +114,7 @@ namespace Economy{
 		}
 
 		public function checkItem($type, $id){
-			$user_items = $this->db->getValue(array("economy", "users", "id{$this->user_id}", "items"), array());
+			$user_items = $this->getData("items", array());
 			if(gettype($type) == "string" && gettype($id) == "string"){
 				for($i = 0; $i < count($user_items); $i++){
 					$r = $this->getItemByIndex($i);
@@ -127,7 +127,7 @@ namespace Economy{
 		}
 
 		public function changeItem($type, $id, $count){
-			$user_items = $this->db->getValue(array("economy", "users", "id{$this->user_id}", "items"), array());
+			$user_items = $this->getData("items", array());
 			if(gettype($type) == "string" && gettype($id) == "string" && gettype($count) == "integer"){
 				$item_info = Item::getItemInfo($type, $id);
 				for($i = 0; $i < count($user_items); $i++){
@@ -140,7 +140,7 @@ namespace Economy{
 							$this->deleteItem($type, $id);
 						}
 						else{
-							$this->db->setValue(array("economy", "users", "id{$this->user_id}", "items", $i), "{$r->type}:{$r->id}:{$new_count}");
+							$this->setData(array("items", $i), "{$r->type}:{$r->id}:{$new_count}");
 						}
 						return true;
 					}
@@ -148,7 +148,7 @@ namespace Economy{
 				if($count > 0 && $count <= $item_info->max_count){
 					$user_items = $this->db->getValue(array("economy", "users", "id{$this->user_id}", "items"), array());
 					$user_items[] = "{$type}:{$id}:{$count}";
-					$this->db->setValue(array("economy", "users", "id{$this->user_id}", "items"), $user_items);
+					$this->setData("items", $user_items);
 					return true;
 				}
 				else
@@ -159,14 +159,14 @@ namespace Economy{
 		}
 
 		public function deleteItem($type, $id){
-			$user_items = $this->db->getValue(array("economy", "users", "id{$this->user_id}", "items"), array());
+			$user_items = $this->getData("items", array());
 			if(gettype($type) == "string" && gettype($id) == "string"){
 				for($i = 0; $i < count($user_items); $i++){
 					$r = $this->getItemByIndex($i);
 					if($r->type == $type && $r->id == $id){
 						unset($user_items[$i]);
 						$user_items = array_values($user_items);
-						$this->db->setValue(array("economy", "users", "id{$this->user_id}", "items"), $user_items);
+						$this->setData("items", $user_items);
 						return true;
 					}
 				}
@@ -174,37 +174,61 @@ namespace Economy{
 			return false;
 		}
 
-		public function setMeta($name, $value){
-			$this->db->setValue(array("economy", "users", "id{$this->user_id}", "meta", $name), $value);
+		public function setData($name, $value){
+			$keys = array("economy", "users", "id{$this->user_id}");
+			if(gettype($name) == "array"){
+				foreach ($name as $key => $value)
+					$keys[] = $value;
+			}
+			else
+				$keys[] = $name;
+			
+			return $this->db->setValue($keys, $value);
 		}
 
-		public function getMeta($name, $default = false){
-			return $this->db->getValue(array("economy", "users", "id{$this->user_id}", "meta", $name), $default);
+		public function getData($name, $default = false){
+			$keys = array("economy", "users", "id{$this->user_id}");
+			if(gettype($name) == "array"){
+				foreach ($name as $key => $value)
+					$keys[] = $value;
+			}
+			else
+				$keys[] = $name;
+			
+			return $this->db->getValue($keys, $default);
 		}
 
-		public function deleteMeta($name){
-			return $this->db->unsetValue(array("economy", "users", "id{$this->user_id}", "meta", $name));
+		public function deleteData($name){
+			$keys = array("economy", "users", "id{$this->user_id}");
+			if(gettype($name) == "array"){
+				foreach ($name as $key => $value)
+					$keys[] = $value;
+			}
+			else
+				$keys[] = $name;
+			
+			return $this->db->unsetValue($keys);
 		}
 
 		// Работа
 		public function setJob($id){
-			$this->setMeta("job", $id);
+			$this->setData("job", $id);
 		}
 		public function getJob(){
-			return $this->getMeta("job");
+			return $this->getData("job");
 		}
 		public function deleteJob(){
-			return $this->deleteMeta("job");
+			return $this->deleteData("job");
 		}
 
 		// Компании
 		public function getEnterprises(){
-			return $this->getMeta("enterprises", array());
+			return $this->getData("enterprises", array());
 		}
 		public function addEnterprise($id){
 			$enterprises = $this->getEnterprises();
 			$enterprises[] = $id;
-			$this->setMeta("enterprises", $enterprises);
+			$this->setData("enterprises", $enterprises);
 			return true;
 		}
 		public function delEnterprise($id){
@@ -214,7 +238,7 @@ namespace Economy{
 				return false;
 			unset($enterprises[$index]);
 			$enterprises = array_values($enterprises);
-			$this->setMeta("enterprises", $enterprises);
+			$this->setData("enterprises", $enterprises);
 		}
 	}
 
@@ -468,10 +492,7 @@ namespace Economy{
 
 		function checkUser($user_id){
 			$user_info = $this->db->getValue(array("economy", "users", "id{$user_id}"), false);
-			if($user_info !== false)
-				return true;
-			else
-				return false;
+			return boolval($user_info);
 		}
 
 		/////////////////////////////////////////////////////////////////////////
@@ -539,10 +560,7 @@ namespace{
 
 		if(!$economy->checkUser($member_id)){
 			if(!$other_user){
-				$db->setValue(array("economy", "users", "id{$member_id}"), array(
-					'meta' => array(),
-					'items' => array()
-				));
+				$db->setValue(array("economy", "users", "id{$member_id}"), array());
 				$db->save();
 			}
 			else{
@@ -671,7 +689,7 @@ namespace{
 				$user_job = $user_economy->getJob();
 				if($user_job !== false && Economy\Job::jobExists($user_job)){
 					$current_job = Economy\Job::getJobArray()[$user_economy->getJob()];
-					$last_working_time = $user_economy->getMeta("last_working_time", 0);
+					$last_working_time = $user_economy->getData("last_working_time", 0);
 					if($date - $last_working_time < $current_job["rest_time"]){
 						$time = $current_job["rest_time"] - ($date - $last_working_time);
 						$minutes = intdiv($time, 60);
@@ -729,12 +747,12 @@ namespace{
 					}
 				}
 				$job = Economy\Job::getJobArray()[$job_id];
-				$last_working_time = $user_economy->getMeta("last_working_time");
+				$last_working_time = $user_economy->getData("last_working_time");
 				if($last_working_time === false)
 					$last_working_time = 0;
 
 				if($date - $last_working_time >= $job["rest_time"]){
-					$user_economy->setMeta("last_working_time", $date);
+					$user_economy->setData("last_working_time", $date);
 					$salary = $job["salary"];
 					$user_economy->changeMoney($salary);
 					$db->save();
@@ -866,12 +884,12 @@ namespace{
 					}
 				}
 				$job = Economy\Job::getJobArray()[$job_id];
-				$last_working_time = $user_economy->getMeta("last_working_time");
+				$last_working_time = $user_economy->getData("last_working_time");
 				if($last_working_time === false)
 					$last_working_time = 0;
 
 				if($date - $last_working_time >= $job["rest_time"]){
-					$user_economy->setMeta("last_working_time", $date);
+					$user_economy->setData("last_working_time", $date);
 					$default_salary = $job["salary"];
 					$random_number = mt_rand(0, 65535);
 					if($random_number % 4 == 0){
@@ -1129,7 +1147,7 @@ namespace{
 				$user_job = $user_economy->getJob();
 				if($user_job !== false && Economy\Job::jobExists($user_job)){
 					$current_job = Economy\Job::getJobArray()[$user_economy->getJob()];
-					$last_working_time = $user_economy->getMeta("last_working_time", 0);
+					$last_working_time = $user_economy->getData("last_working_time", 0);
 					if($date - $last_working_time < $current_job["rest_time"]){
 						$time = $current_job["rest_time"] - ($date - $last_working_time);
 						$minutes = intdiv($time, 60);
@@ -1154,7 +1172,7 @@ namespace{
 				}
 
 				$user_economy->setJob($job_id);
-				$user_economy->setMeta("last_working_time", 0);
+				$user_economy->setData("last_working_time", 0);
 				$job_name = Economy\Job::getNameByID($job_id);
 				$keyboard_buttons = array(
 					array(
@@ -2027,7 +2045,7 @@ namespace{
 		if($command == "выбрать"){
 			$argvt = bot_get_array_value($argv, 2, "");
 			if($argvt == "0"){
-				$user_economy->deleteMeta("selected_enterprise_index");
+				$user_economy->deleteData("selected_enterprise_index");
 				$db->save();
 				$botModule->sendSilentMessage($data->object->peer_id, ", ✅Информация о выбранном бизнесе очищена.", $data->object->from_id);
 			}
@@ -2043,7 +2061,7 @@ namespace{
 					return;
 				}
 				$msg = ", Используйте:\n• !бизнес выбрать <номер> - Выбрать бизнес\n• !бизнес выбрать 0 - Убрать выбранный бизнес\n\nСписок ваших бизнесов:";
-				$selected_enterprise_index = $user_economy->getMeta("selected_enterprise_index", 0) - 1;
+				$selected_enterprise_index = $user_economy->getData("selected_enterprise_index", 0) - 1;
 				for($i = 0; $i < count($enterprises); $i++){
 					$j = $i + 1;
 					if($i == $selected_enterprise_index){
@@ -2061,7 +2079,7 @@ namespace{
 				if($index > 0 && count($user_enterprises) >= $index){
 					$enterpriseSystem = $economy->initEnterpriseSystem();
 					$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$index-1]);
-					$user_economy->setMeta("selected_enterprise_index", $index);
+					$user_economy->setData("selected_enterprise_index", $index);
 					$db->save();
 					$botModule->sendSilentMessage($data->object->peer_id, ", ✅Выбран бизнес под названием \"{$enterprise["name"]}\".", $data->object->from_id);
 				}
@@ -2071,7 +2089,7 @@ namespace{
 			}
 		}
 		elseif($command == "инфа"){
-			$index = $user_economy->getMeta("selected_enterprise_index", 0);
+			$index = $user_economy->getData("selected_enterprise_index", 0);
 			$user_enterprises = $user_economy->getEnterprises();
 			$enterpriseSystem = $economy->initEnterpriseSystem();
 			$user_enterprises_count = count($user_enterprises);
@@ -2093,7 +2111,7 @@ namespace{
 			}
 		}
 		elseif($command == "бюджет"){
-			$index = $user_economy->getMeta("selected_enterprise_index", 0);
+			$index = $user_economy->getData("selected_enterprise_index", 0);
 			$user_enterprises = $user_economy->getEnterprises();
 			$enterpriseSystem = $economy->initEnterpriseSystem();
 			$user_enterprises_count = count($user_enterprises);
@@ -2152,7 +2170,7 @@ namespace{
 			}
 		}
 		elseif($command == "название"){
-			$index = $user_economy->getMeta("selected_enterprise_index", 0);
+			$index = $user_economy->getData("selected_enterprise_index", 0);
 			$user_enterprises = $user_economy->getEnterprises();
 			$enterpriseSystem = $economy->initEnterpriseSystem();
 			$user_enterprises_count = count($user_enterprises);
@@ -2179,7 +2197,7 @@ namespace{
 			}
 		}
 		elseif($command == "контракты"){
-			$index = $user_economy->getMeta("selected_enterprise_index", 0);
+			$index = $user_economy->getData("selected_enterprise_index", 0);
 			$user_enterprises = $user_economy->getEnterprises();
 			$enterpriseSystem = $economy->initEnterpriseSystem();
 			$user_enterprises_count = count($user_enterprises);
@@ -2236,7 +2254,7 @@ namespace{
 			}
 		}
 		elseif($command == "очередь"){
-			$index = $user_economy->getMeta("selected_enterprise_index", 0);
+			$index = $user_economy->getData("selected_enterprise_index", 0);
 			$user_enterprises = $user_economy->getEnterprises();
 			$enterpriseSystem = $economy->initEnterpriseSystem();
 			$user_enterprises_count = count($user_enterprises);
@@ -2280,7 +2298,7 @@ namespace{
 			}
 		}
 		elseif ($command == "улучшить") {
-			$index = $user_economy->getMeta("selected_enterprise_index", 0);
+			$index = $user_economy->getData("selected_enterprise_index", 0);
 			$user_enterprises = $user_economy->getEnterprises();
 			$enterpriseSystem = $economy->initEnterpriseSystem();
 			$user_enterprises_count = count($user_enterprises);
@@ -2361,7 +2379,7 @@ namespace{
 			}
 		}
 		elseif($command == "улучшение"){
-			$index = $user_economy->getMeta("selected_enterprise_index", 0);
+			$index = $user_economy->getData("selected_enterprise_index", 0);
 			$user_enterprises = $user_economy->getEnterprises();
 			$enterpriseSystem = $economy->initEnterpriseSystem();
 			$user_enterprises_count = count($user_enterprises);
@@ -2447,7 +2465,7 @@ namespace{
 			}
 		}
 		elseif($command == "выполнить"){
-			$index = $user_economy->getMeta("selected_enterprise_index", 0);
+			$index = $user_economy->getData("selected_enterprise_index", 0);
 			$user_enterprises = $user_economy->getEnterprises();
 			$enterpriseSystem = $economy->initEnterpriseSystem();
 			$user_enterprises_count = count($user_enterprises);
@@ -2575,13 +2593,13 @@ namespace{
 			$user_enterprises = $user_economy->getEnterprises();
 			if($argvt > 0){
 				$index = intval($argvt);
-				$selected_enterprise_index = $user_economy->getMeta("selected_enterprise_index", 0);
+				$selected_enterprise_index = $user_economy->getData("selected_enterprise_index", 0);
 				if($index == $selected_enterprise_index){
-					$user_economy->deleteMeta("selected_enterprise_index");
+					$user_economy->deleteData("selected_enterprise_index");
 					$db->save();
 				}
 				else if(count($user_enterprises) >= $index){
-					$user_economy->setMeta("selected_enterprise_index", $index);
+					$user_economy->setData("selected_enterprise_index", $index);
 					$db->save();
 				}
 				else{
@@ -2601,7 +2619,7 @@ namespace{
 				return;
 			}
 			$message = "%appeal%, Список ваших бизнесов:";
-			$selected_enterprise_index = $user_economy->getMeta("selected_enterprise_index", -1);
+			$selected_enterprise_index = $user_economy->getData("selected_enterprise_index", -1);
 			$enterprise_buttons = array();
 			for($i = 0; $i < count($enterprises); $i++){
 				$j = $i+1;
@@ -2623,7 +2641,7 @@ namespace{
 			break;
 
 			case 3:
-			$index = $user_economy->getMeta("selected_enterprise_index", 0);
+			$index = $user_economy->getData("selected_enterprise_index", 0);
 			$user_enterprises = $user_economy->getEnterprises();
 			$enterpriseSystem = $economy->initEnterpriseSystem();
 			$user_enterprises_count = count($user_enterprises);
@@ -2644,7 +2662,7 @@ namespace{
 			break;
 
 			case 4:
-			$index = $user_economy->getMeta("selected_enterprise_index", 0);
+			$index = $user_economy->getData("selected_enterprise_index", 0);
 			$user_enterprises = $user_economy->getEnterprises();
 			$enterpriseSystem = $economy->initEnterpriseSystem();
 			$user_enterprises_count = count($user_enterprises);
@@ -2813,7 +2831,7 @@ namespace{
 			break;
 
 			case 5:
-			$index = $user_economy->getMeta("selected_enterprise_index", 0);
+			$index = $user_economy->getData("selected_enterprise_index", 0);
 			$user_enterprises = $user_economy->getEnterprises();
 			$enterpriseSystem = $economy->initEnterpriseSystem();
 			$user_enterprises_count = count($user_enterprises);
@@ -2862,7 +2880,7 @@ namespace{
 			break;
 
 			case 6:
-			$index = $user_economy->getMeta("selected_enterprise_index", 0);
+			$index = $user_economy->getData("selected_enterprise_index", 0);
 			$user_enterprises = $user_economy->getEnterprises();
 			$enterpriseSystem = $economy->initEnterpriseSystem();
 			$user_enterprises_count = count($user_enterprises);
@@ -2987,7 +3005,7 @@ namespace{
 			break;
 
 			case 7:
-			$index = $user_economy->getMeta("selected_enterprise_index", 0);
+			$index = $user_economy->getData("selected_enterprise_index", 0);
 			$user_enterprises = $user_economy->getEnterprises();
 			$enterpriseSystem = $economy->initEnterpriseSystem();
 			$user_enterprises_count = count($user_enterprises);
@@ -3186,7 +3204,7 @@ namespace{
 
 		$messagesModule->setAppealID($data->object->user_id);
 		$keyboard = vk_keyboard_inline($keyboard_buttons);
-		$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $message, array('keyboard' => $keyboard));
+		error_log($messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $message, array('keyboard' => $keyboard)));
 	}
 
 	function economy_most_rich_users($finput){
