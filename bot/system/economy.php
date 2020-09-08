@@ -3204,7 +3204,7 @@ namespace{
 
 		$messagesModule->setAppealID($data->object->user_id);
 		$keyboard = vk_keyboard_inline($keyboard_buttons);
-		error_log($messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $message, array('keyboard' => $keyboard)));
+		$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $message, array('keyboard' => $keyboard));
 	}
 
 	function economy_most_rich_users($finput){

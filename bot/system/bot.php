@@ -250,7 +250,7 @@ namespace Bot{
 
 		public function makeExeAppealByID($user_id, $varname = "appeal"){ // Создание переменной appeal с обращением к пользователю, посредством VKScript и vk_execute()
 			if(!is_null($this->db))
-				$user_nick = $this->db->getValue(array("bot_manager", "user_nicknames", "id{$user_id}"), false);
+				$user_nick = $this->db->getValue(array("chat_settings", "user_nicknames", "id{$user_id}"), false);
 			else
 				$user_nick = false;
 
@@ -438,7 +438,7 @@ namespace{
 
 		public function makeExeAppealByID($user_id, $varname = "appeal"){ // Создание переменной appeal с обращением к пользователю, посредством VKScript и vk_execute()
 			if(!is_null($this->db))
-				$user_nick = $this->db->getValue(array("bot_manager", "user_nicknames", "id{$user_id}"), false);
+				$user_nick = $this->db->getValue(array("chat_settings", "user_nicknames", "id{$user_id}"), false);
 			else
 				$user_nick = false;
 
@@ -630,7 +630,6 @@ namespace{
 				$chat_id = $data->object->peer_id - 2000000000;
 				$db->setValue(array("chat_id"), $chat_id);
 				$db->setValue(array("owner_id"), $data->object->from_id);
-				$db->setValue(array("bot_manager"), array('user_ranks' => array("id{$data->object->from_id}" => 0)));
 				$db->save();
 			}	
 		}
@@ -1320,14 +1319,21 @@ namespace{
 		$argv = $finput->argv;
 		$db = $finput->db;
 
-		$bot = new BotModule();
+		$messagesModule = new Bot\Messages();
+
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue("games_enabled")){ // Отключаем, если в беседе запрещены игры
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔В чате отключены игры!");
+			return;
+		}
 
 		$keyboard = vk_keyboard_inline(array(
 			array(vk_callback_button("Играть", array('bot_tictactoe', 10, 0, 0), 'primary')),
 			array(vk_callback_button("Закрыть", array('bot_tictactoe', 0), 'negative'))
 		));
 
-		$bot->sendSilentMessage($data->object->peer_id, "Крестик-нолики. Чтобы присоединиться, нажмите кнопку \"Играть.\"\n\nИгрок 1: Отсутствует\nИгрок 2: Отсутствует", null, array('keyboard' => $keyboard));
+		$messagesModule->sendSilentMessage($data->object->peer_id, "Крестик-нолики. Чтобы присоединиться, нажмите кнопку \"Играть.\"\n\nИгрок 1: Отсутствует\nИгрок 2: Отсутствует", array('keyboard' => $keyboard));
 	}
 
 	function bot_tictactoe_cb($finput){
@@ -1344,6 +1350,12 @@ namespace{
 			));
 		}
 		elseif($payload[1] == 10){
+			$chatModes = new ChatModes($db);
+			if(!$chatModes->getModeValue("games_enabled")){ // Отключаем, если в беседе запрещены игры
+				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ В чате отключены игры!');
+				return;
+			}
+
 			$player1 = bot_get_array_value($payload, 2, 0);
 			$player2 = bot_get_array_value($payload, 3, 0);
 			$messageUpdateRequired = false;
@@ -1393,6 +1405,12 @@ namespace{
 			}
 		}
 		elseif($payload[1] >= 1 && $payload[1] <= 9){
+			$chatModes = new ChatModes($db);
+			if(!$chatModes->getModeValue("games_enabled")){ // Отключаем, если в беседе запрещены игры
+				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ В чате отключены игры!');
+				return;
+			}
+
 			if($payload[2 + $payload[4]] == $data->object->user_id){
 				if($payload[4 + $payload[1]] == 0){
 					$payload[4 + $payload[1]] = $payload[4] + 1;

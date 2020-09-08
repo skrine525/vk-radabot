@@ -27,17 +27,12 @@ print("\nОбновлено {$updated} из {$amount} файлов Базы да
 
 // Вызывается для обновления каждого файла Базы данных
 function update_file($db){
-	$users = $db->getValue(array("economy", "users"), false);
-	if($users !== false){
-		foreach ($users as $key1 => $value1) {
-			$meta = $db->getValue(array("economy", "users", $key1, "meta"), false);
-			if($meta !== false){
-				foreach ($meta as $key2 => $value2) {
-					$db->setValue(array("economy", "users", $key1, $key2), $value2);
-				}
-				$db->unsetValue(array("economy", "users", $key1, "meta"));
-			}
-		}
+	$owner_id = $db->getValue(array('owner_id'));
+	$db->unsetValue(array('bot_manager', 'user_ranks', "id{$owner_id}"));
+	$data = $db->getValue(array("bot_manager"), false);
+	if($data !== false){
+		$db->unsetValue(array('bot_manager'));
+		$db->setValue(array('chat_settings'), $data);
 	}
 }
 

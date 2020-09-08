@@ -1,21 +1,27 @@
 <?php
 
-// Русская часть игры
-
 // Инициализация команд
 function wordgame_initcmd($event){
 	$event->addTextMessageCommand("!слова", 'wordgame_cmd');
-	//$event->addTextMessageCommand("words", 'wordgame_eng_cmd');
 	$event->addCallbackButtonCommand('word_game', 'wordgame_gameplay_cb');
 }
 
 function wordgame_cmd($finput){
-	wordgame_main($finput->data, $finput->argv, $finput->db);
-}
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$argv = $finput->argv;
+	$db = $finput->db;
 
-function wordgame_main($data, $argv, $db){
 	$session = wordgame_get_session($data->object->peer_id);
 	if(array_key_exists(1, $argv) && mb_strtolower($argv[1]) == 'старт'){
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue("games_enabled")){ // Отключаем, если в беседе запрещены игры
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔В чате отключены игры!");
+			return;
+		}
+
 		if(!array_key_exists('word_game', $session)){
 			$date = time(); // Переменная времени
 			wordgame_reset_word($session, $date, $data->object->from_id);
@@ -109,8 +115,9 @@ function wordgame_main($data, $argv, $db){
 		}
 	} else {
 		$messagesModule = new Bot\Messages($db);
-		$msg = ", используйте \"Слова старт/стоп/рейтинг\".";
-		$messagesModule->sendMessage($data->object->peer_id, $msg);
+		$messagesModule->setAppealID($data->object->from_id);
+		$msg = "%appeal%, используйте \"Слова старт/стоп/рейтинг\".";
+		$messagesModule->sendSilentMessage($data->object->peer_id, $msg);
 	}
 }
 
@@ -212,6 +219,12 @@ function wordgame_gameplay_cb($finput){
 				break;
 
 				case 2:
+				$chatModes = new ChatModes($db);
+				if(!$chatModes->getModeValue("games_enabled")){ // Отключаем, если в беседе запрещены игры
+					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ В чате отключены игры!');
+					return;
+				}
+
 				if(!$session["word_game"]["current_word"]["can_reset"]){
 					$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
 					if($wordlen - $session["word_game"]["current_word"]["used_hints"] > 3){
@@ -270,6 +283,12 @@ function wordgame_gameplay_cb($finput){
 				break;
 
 				case 3:
+				$chatModes = new ChatModes($db);
+				if(!$chatModes->getModeValue("games_enabled")){ // Отключаем, если в беседе запрещены игры
+					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ В чате отключены игры!');
+					return;
+				}
+
 				if(!$session["word_game"]["current_word"]["can_reset"]){
 					$word = wordgame_get_encoded_word($session);
 					$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
@@ -284,6 +303,12 @@ function wordgame_gameplay_cb($finput){
 				break;
 
 				case 4:
+				$chatModes = new ChatModes($db);
+				if(!$chatModes->getModeValue("games_enabled")){ // Отключаем, если в беседе запрещены игры
+					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ В чате отключены игры!');
+					return;
+				}
+
 				if(!$session["word_game"]["current_word"]["can_reset"]){
 					$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
 					if($wordlen - $session["word_game"]["current_word"]["used_hints"] <= 3){
@@ -314,6 +339,12 @@ function wordgame_gameplay_cb($finput){
 				break;
 
 				case 5:
+				$chatModes = new ChatModes($db);
+				if(!$chatModes->getModeValue("games_enabled")){ // Отключаем, если в беседе запрещены игры
+					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ В чате отключены игры!');
+					return;
+				}
+				
 				if($session["word_game"]["current_word"]["can_reset"]){
 					wordgame_reset_word($session, $date, $session["word_game"]["started_by"]);
 					wordgame_set_session($data->object->peer_id, $session);
@@ -351,7 +382,11 @@ function wordgame_gameplay_cb($finput){
 
 }
 
-function wordgame_gameplay($data, &$db){
+function wordgame_gameplay($data, $db){
+	$chatModes = new ChatModes($db);
+	if(!$chatModes->getModeValue("games_enabled")) // Отключаем, если в беседе запрещены игры
+		return;
+
 	$session = wordgame_get_session($data->object->peer_id);
 
 	$date = time(); // Переменная времени

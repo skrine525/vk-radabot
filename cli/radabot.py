@@ -4,8 +4,16 @@ import base64
 import subprocess
 import threading
 import time
+from datetime import datetime
 
 VK_VERSION = 5.84
+
+def log(text):
+	f = open("radabot.log", "a")
+	ny_time = time.time() - 14400
+	ny_date = datetime.utcfromtimestamp(ny_time).strftime("%d-%b-%Y %X America/New_York")
+	f.write("[{}] {}\n".format(ny_date, text))
+	f.close()
 
 def config_get(name):
 	f = open("../bot/data/config.json")
@@ -56,33 +64,31 @@ del lp_data
 queue_thread = threading.Thread(target=queue_handler)
 queue_thread.start()
 
-# Delete
-def log(text):
-	f = open("python-log.log", "a")
-	f.write(text)
-	f.close()
+log("Radabot is started")
 
 while True:
 	try:
 		data_text = vk_longpoll(lp_server, lp_key, lp_ts)
 		data = json.loads(data_text)
-		log("[{}] Log: {}".format(time.ctime(time.time()), data_text.encode('utf-8')))
 		failed = data.get('failed', None)
 
 		if(failed == 1):
 			lp_ts = data["ts"]
+			log("VK Failed 1")
 		elif(failed == 2):
 			lp_data = json.loads(vk_call('groups.getLongPollServer', {'group_id': config_get('VK_GROUP_ID')}))["response"]
 			lp_key = lp_data["key"]
 			del lp_data
+			log("VK Failed 2")
 		elif(failed == 3):
 			lp_data = json.loads(vk_call('groups.getLongPollServer', {'group_id': config_get('VK_GROUP_ID')}))["response"]
 			lp_key = lp_data["key"]
 			lp_ts = lp_data["ts"]
 			del lp_data
+			log("VK Failed 3")
 		else:
 			for event in data["updates"]:
 				EventQueue.append(event)
 			lp_ts = data["ts"]
 	except requests.exceptions.ConnectionError:
-		log("[{}] Log: {}\n".format(time.ctime(time.time()), "Connection Error"))
+		log("Connection Error")

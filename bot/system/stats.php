@@ -42,10 +42,6 @@ function stats_initcmd($event){
 }
 
 function stats_update($data, $db){
-	$db->unsetValue(array("stats")); // Удаление старой статы 1
-	$db->unsetValue(array("user_stats")); // Удаление старой статы 2
-	$db->unsetValue(array("bot_manager", "chat_modes", "stats_enabled"));
-
 	$stats = stats_api_getuser($db, $data->object->from_id);
 	$last_message_user_id = $db->getValue(array("chat_stats", "last_message_user_id"), 0);
 

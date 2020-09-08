@@ -15,11 +15,21 @@ class RankSystem{ // Класс управления рангами
 		$this->db = &$database;
 	}
 
-	public static function getRankNameByID($rank){
+	public static function getRankNameByID($rank, $with_code = false){
 		if(array_key_exists($rank, self::RANKS_ARRAY))
-			return self::RANKS_ARRAY[$rank];
+			if($with_code){
+				$name = self::RANKS_ARRAY[$rank];
+				return "{$name} [rank_{$rank}]";
+			}
+			else
+				return self::RANKS_ARRAY[$rank];
 		elseif($rank == self::getMinRankValue())
-			return self::MINRANK_NAME;
+			if($with_code){
+				$name = self::MINRANK_NAME;
+				return "{$name} [rank_{$rank}]";
+			}
+			else
+				return self::MINRANK_NAME;
 		else
 			return "rank_{$rank}";
 	}
@@ -29,7 +39,11 @@ class RankSystem{ // Класс управления рангами
 	}
 
 	public function getUserRank($user_id){
-		return $this->db->getValue(array("bot_manager", "user_ranks", "id{$user_id}"), self::getMinRankValue());
+		$owner_id = $this->db->getValue(array("owner_id"), 0);
+		if($user_id == $owner_id)
+			return 0;
+		else
+			return $this->db->getValue(array("chat_settings", "user_ranks", "id{$user_id}"), self::getMinRankValue());
 	}
 
 	public function setUserRank($user_id, $rank){
@@ -37,11 +51,11 @@ class RankSystem{ // Класс управления рангами
 			return false;
 
 		if($rank == 0){
-			$this->db->unsetValue(array("bot_manager", "user_ranks", "id{$user_id}"));
+			$this->db->unsetValue(array("chat_settings", "user_ranks", "id{$user_id}"));
 			return true;
 		}
 		elseif($rank+1 <= self::getMinRankValue()){
-			$this->db->setValue(array("bot_manager", "user_ranks", "id{$user_id}"), $rank);
+			$this->db->setValue(array("chat_settings", "user_ranks", "id{$user_id}"), $rank);
 			return true;
 		}
 		else{
@@ -66,6 +80,24 @@ class RankSystem{ // Класс управления рангами
 		else
 			return false;
 	}
+
+	public function getUsersRank(){
+		$owner_id = $this->db->getValue(array('owner_id'));
+		$db_ranks = $this->db->getValue(array("chat_settings", "user_ranks"), array());
+		$db_ranks["id{$owner_id}"] = 0; // Добавление в массив Владельца
+		asort($db_ranks);
+		$ranks = array();
+		foreach ($db_ranks as $key => $val) {
+			$user_id = intval(substr($key, 2));
+			$rank = $val;
+			$ranks[] = (object) array(
+				'user_id' => $user_id,
+				'rank' => $rank,
+				'name' => self::getRankNameByID($rank, true)
+			);
+		}
+		return $ranks;
+	}
 }
 
 class ChatModes{
@@ -75,7 +107,8 @@ class ChatModes{
 		'antiflood_enabled' => array('label' => 'Антифлуд', 'default_state' => true),
 		'auto_referendum' => array('label' => 'Авто выборы', 'default_state' => false),
 		'economy_enabled' => array('label' => 'Экономика', 'default_state' => false),
-		'roleplay_enabled' => array('label' => 'РП', 'default_state' => true)
+		'roleplay_enabled' => array('label' => 'РП', 'default_state' => true),
+		'games_enabled' => array('label' => "Игры", 'default_state' => true)
 	);
 
 	private $db;
@@ -87,7 +120,7 @@ class ChatModes{
 		else{
 			$this->db = $db;
 			$this->modes = array();
-			$db_modes = $this->db->getValue(array("bot_manager", "chat_modes"), array());
+			$db_modes = $this->db->getValue(array("chat_settings", "chat_modes"), array());
 			foreach(self::MODE_LIST as $key => $value) {
 				if(array_key_exists($key, $db_modes))
 					$this->modes[$key] = $db_modes[$key];
@@ -121,7 +154,7 @@ class ChatModes{
 		else
 			$this->modes[$name] = $value;
 
-		$this->db->setValue(array("bot_manager", "chat_modes"), $this->modes);
+		$this->db->setValue(array("chat_settings", "chat_modes"), $this->modes);
 		return true;
 	}
 
@@ -140,11 +173,11 @@ class ChatModes{
 
 class BanSystem{
 	public static function getBanList($db){
-		return array_values($db->getValue(array("bot_manager", "banned_users"), array()));
+		return array_values($db->getValue(array("chat_settings", "banned_users"), array()));
 	}
 
 	public static function getUserBanInfo($db, $user_id){
-		return $db->getValue(array("bot_manager", "banned_users", "id{$user_id}"), false);
+		return $db->getValue(array("chat_settings", "banned_users", "id{$user_id}"), false);
 	}
 
 	public static function banUser(&$db, $user_id, $reason, $banned_by, $time){
@@ -157,7 +190,7 @@ class BanSystem{
 				'banned_by' => $banned_by,
 				'time' => $time
 			);
-			$db->setValue(array("bot_manager", "banned_users", "id{$user_id}"), $data);
+			$db->setValue(array("chat_settings", "banned_users", "id{$user_id}"), $data);
 
 			return true;
 		}
@@ -165,7 +198,7 @@ class BanSystem{
 
 	public static function unbanUser(&$db, $user_id){
 		if(BanSystem::getUserBanInfo($db, $user_id) !== false){
-			$db->unsetValue(array("bot_manager", "banned_users", "id{$user_id}"));
+			$db->unsetValue(array("chat_settings", "banned_users", "id{$user_id}"));
 			return true;
 		}
 		else
@@ -913,12 +946,12 @@ function manager_nick($finput){
 		$nick = str_ireplace("\n", "", $nick);
 		if(!array_key_exists(0, $data->object->fwd_messages)){
 			if(mb_strlen($nick) <= 15){
-				$nicknames = $db->getValue(array("bot_manager", "user_nicknames"), array());
+				$nicknames = $db->getValue(array("chat_settings", "user_nicknames"), array());
 				if(array_search($nick, $nicknames) !== false){
 					$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Указанный ник занят!");
 					return;
 				}
-				$db->setValue(array("bot_manager", "user_nicknames", "id{$data->object->from_id}"), $nick);
+				$db->setValue(array("chat_settings", "user_nicknames", "id{$data->object->from_id}"), $nick);
 				$db->save();
 				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Ник установлен.");
 			}
@@ -937,13 +970,13 @@ function manager_nick($finput){
 					$messagesModule->sendSilentMessage($data->object->peer_id, Bot\Messages::MESSAGE_NO_RIGHTS);
 					return;
 				}
-				$nicknames = $db->getValue(array("bot_manager", "user_nicknames"), array());
+				$nicknames = $db->getValue(array("chat_settings", "user_nicknames"), array());
 				if(array_search($nick, $nicknames) !== false){
 					$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Указанный ник занят!");
 					return;
 				}
 
-				$db->setValue(array("bot_manager", "user_nicknames", "id{$data->object->fwd_messages[0]->from_id}"), $nick);
+				$db->setValue(array("chat_settings", "user_nicknames", "id{$data->object->fwd_messages[0]->from_id}"), $nick);
 				$db->save();
 				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Ник @id{$data->object->fwd_messages[0]->from_id} (пользователя) изменён!");
 			}
@@ -959,7 +992,7 @@ function manager_remove_nick($data, &$db){
 	$botModule = new BotModule($db);
 
 	if(!array_key_exists(0, $data->object->fwd_messages)){
-		$db->unsetValue(array("bot_manager", "user_nicknames", "id{$data->object->from_id}"));
+		$db->unsetValue(array("chat_settings", "user_nicknames", "id{$data->object->from_id}"));
 		$db->save();
 		$msg = ", ✅ник убран.";
 		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
@@ -975,7 +1008,7 @@ function manager_remove_nick($data, &$db){
 
 		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%, ✅ник @id{$data->object->fwd_messages[0]->from_id} (пользователя) убран!", 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 		$request = vk_parse_var($request, "appeal");
-		$db->unsetValue(array("bot_manager", "user_nicknames", "id{$data->object->fwd_messages[0]->from_id}"));
+		$db->unsetValue(array("chat_settings", "user_nicknames", "id{$data->object->fwd_messages[0]->from_id}"));
 		$db->save();
 		json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 			API.messages.send({$request});
@@ -996,7 +1029,7 @@ function manager_show_nicknames($finput){
 	else
 		$list_number_from_word = 1;
 
-	$user_nicknames = $db->getValue(array("bot_manager", "user_nicknames"));
+	$user_nicknames = $db->getValue(array("chat_settings", "user_nicknames"));
 	$nicknames = array();
 	foreach ($user_nicknames as $key => $val) {
 		$nicknames[] = array(
@@ -1074,14 +1107,14 @@ function manager_greeting($finput){
 		$command = "";
 	if($command == 'установить'){
 		$invited_greeting = mb_substr($data->object->text, 24, mb_strlen($data->object->text));
-		$db->setValue(array("bot_manager", "invited_greeting"), $invited_greeting);
+		$db->setValue(array("chat_settings", "invited_greeting"), $invited_greeting);
 		$db->save();
 		$msg = ", ✅приветствие установлено.";
 		json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 			API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 			"));
 	} elseif($command == 'показать'){
-		$invited_greeting = $db->getValue(array("bot_manager", "invited_greeting"), false);
+		$invited_greeting = $db->getValue(array("chat_settings", "invited_greeting"), false);
 		if($invited_greeting !== false){
 			$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%, приветствие в беседе:\n{$invited_greeting}", 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 			$json_request = vk_parse_var($json_request, "appeal");
@@ -1097,9 +1130,9 @@ function manager_greeting($finput){
 				");
 		}
 	} elseif($command == 'убрать'){
-		$invited_greeting = $db->getValue(array("bot_manager", "invited_greeting"), false);
+		$invited_greeting = $db->getValue(array("chat_settings", "invited_greeting"), false);
 		if($invited_greeting !== false){
-			$db->unsetValue(array("bot_manager", "invited_greeting"));
+			$db->unsetValue(array("chat_settings", "invited_greeting"));
 			$db->save();
 			$msg = ", ✅приветствие убрано.";
 			json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
@@ -1123,7 +1156,7 @@ function manager_greeting($finput){
 }
 
 function manager_show_invited_greetings($data, $db){
-	$greetings_text = $db->getValue(array("bot_manager", "invited_greeting"), false);
+	$greetings_text = $db->getValue(array("chat_settings", "invited_greeting"), false);
 	if($greetings_text !== false && $data->object->action->member_id > 0){
 		$parsing_vars = array('USERID', 'USERNAME', 'USERNAME_GEN', 'USERNAME_DAT', 'USERNAME_ACC', 'USERNAME_INS', 'USERNAME_ABL');
 
@@ -1163,8 +1196,8 @@ function manager_rank($finput){
 		if($command == "выдать"){
 			$ranksys = new RankSystem($db);
 			if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверка ранга (Администратор)
-				$rank_name = RankSystem::getRankNameByID(1);
-				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Для использования данной функции, ваш ранг должен быть как минимум {$rank_name} (1).", $data->object->from_id);
+				$rank_name = RankSystem::getRankNameByID(1, true);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Для использования данной функции, ваш ранг должен быть как минимум {$rank_name}.", $data->object->from_id);
 				return;
 			}
 
@@ -1211,8 +1244,8 @@ function manager_rank($finput){
 
 			if($ranksys->setUserRank($member_id, $rank)){
 				$db->save();
-				$rank_name = RankSystem::getRankNameByID($rank);
-				$botModule->sendMessage($data->object->peer_id, ", @id{$member_id} (Пользователю) установлен ранг: {$rank_name} [rank_{$rank}].", $data->object->from_id);
+				$rank_name = RankSystem::getRankNameByID($rank, true);
+				$botModule->sendMessage($data->object->peer_id, ", @id{$member_id} (Пользователю) установлен ранг: {$rank_name}.", $data->object->from_id);
 			} else{
 				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Такого ранга не существует.", $data->object->from_id);
 			}
@@ -1220,8 +1253,8 @@ function manager_rank($finput){
 		elseif($command == "забрать"){
 			$ranksys = new RankSystem($db);
 			if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверка ранга (Администратор)
-				$rank_name = RankSystem::getRankNameByID(1);
-				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Для использования данной функции, ваш ранг должен быть как минимум {$rank_name} (1).", $data->object->from_id);
+				$rank_name = RankSystem::getRankNameByID(1, true);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Для использования данной функции, ваш ранг должен быть как минимум {$rank_name}.", $data->object->from_id);
 				return;
 			}
 
@@ -1264,8 +1297,8 @@ function manager_rank($finput){
 				return;
 			}
 
-			$rank_name = RankSystem::getRankNameByID(1);
-			$response = json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id).bot_test_rights_exe($data->object->peer_id, $data->object->from_id, false, "%appeal%, ⛔Чтобы получить ранг {$rank_name} [rank_1] нужно иметь статус администратора в беседе.")."
+			$rank_name = RankSystem::getRankNameByID(1, true);
+			$response = json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id).bot_test_rights_exe($data->object->peer_id, $data->object->from_id, false, "%appeal%, ⛔Чтобы получить ранг {$rank_name} нужно иметь статус администратора в беседе.")."
 					API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Ранг {$rank_name} [rank_1] успешно получен.','disable_mentions':true});
 					return 'ok';
 				"))->response;
@@ -1282,8 +1315,8 @@ function manager_rank($finput){
 	else{
 		$ranksys = new RankSystem($db);
 		$user_rank = $ranksys->getUserRank($data->object->from_id);
-		$rank_name = RankSystem::getRankNameByID($user_rank);
-		$botModule->sendSilentMessage($data->object->peer_id, ", Ваш ранг: {$rank_name} ({$user_rank}).", $data->object->from_id);
+		$rank_name = RankSystem::getRankNameByID($user_rank, true);
+		$botModule->sendSilentMessage($data->object->peer_id, ", Ваш ранг: {$rank_name}.", $data->object->from_id);
 	}
 }
 
@@ -1300,15 +1333,12 @@ function manager_show_user_ranks($finput){
 	else
 		$list_number_from_word = 1;
 	$ranksys = new RankSystem($db);
+	$users_rank = $ranksys->getUsersRank();
 	$ranks = array();
-	$sorted_user_ranks = $db->getValue(array("bot_manager", "user_ranks"), array());
-	asort($sorted_user_ranks);
-	foreach ($sorted_user_ranks as $key => $val) {
-		$user_id = substr($key, 2);
-		$rank = $ranksys->getUserRank($user_id);
+	foreach ($users_rank as $key => $val) {
 		$ranks[] = array(
-			'user_id' => $user_id,
-			'rank_name' => RankSystem::getRankNameByID($rank)." [rank_{$rank}]"
+			'user_id' => $val->user_id,
+			'rank_name' => $val->name
 		);
 	}
 
@@ -1381,7 +1411,7 @@ function manager_panel_show($finput){
 
 	$botModule = new BotModule($db);
 
-	$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
+	$user_panel = $db->getValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
 
 	if(array_key_exists('elements', $user_panel))
 		$element_count = count($user_panel["elements"]);
@@ -1449,7 +1479,7 @@ function manager_panel_control($finput){
 			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Команда не может быть больше 64 символов.", $data->object->from_id);
 			return;
 		}
-		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
+		$user_panel = $db->getValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
 		if(array_key_exists('elements', $user_panel))
 			$element_count = count($user_panel["elements"]);
 		else
@@ -1467,12 +1497,12 @@ function manager_panel_control($finput){
 			'command' => $text_command,
 			'color' => 1
 		);
-		$db->setValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), $user_panel);
+		$db->setValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), $user_panel);
 		$db->save();
 		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Панель с командой [{$text_command}] успешно создана. Её номер: {$panel_id}.", $data->object->from_id);
 	}
 	elseif($command == "список"){
-		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
+		$user_panel = $db->getValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
 		if(count($user_panel["elements"]) > 0){
 			$msg = ', список ваших элементов:';
 			$id = 1; foreach ($user_panel["elements"] as $element) {
@@ -1484,7 +1514,7 @@ function manager_panel_control($finput){
 			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Ваша панель пуста.", $data->object->from_id);
 	}
 	elseif($command == "название"){
-		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
+		$user_panel = $db->getValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
 		$argvt = bot_get_array_value($argv, 2, 0);
 		$name = mb_substr($data->object->text, 18+mb_strlen($argvt));
 		if($argvt == "" || !is_numeric($argvt) || $name == ""){
@@ -1502,12 +1532,12 @@ function manager_panel_control($finput){
 		}
 		$user_panel["elements"][$id]["name"] = $name;
 		$user_panel["last_change_time"] = time();
-		$db->setValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), $user_panel);
+		$db->setValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), $user_panel);
 		$db->save();
 		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Название элемента №{$argvt} успешно изменено.", $data->object->from_id);
 	}
 	elseif($command == "команда"){
-		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
+		$user_panel = $db->getValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
 		$argvt = bot_get_array_value($argv, 2, 0);
 		$text_command = mb_substr($data->object->text, 17+mb_strlen($argvt));
 		if($argvt == "" || !is_numeric($argvt) || $text_command == ""){
@@ -1525,12 +1555,12 @@ function manager_panel_control($finput){
 		}
 		$user_panel["elements"][$id]["command"] = $text_command;
 		$user_panel["last_change_time"] = time();
-		$db->setValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), $user_panel);
+		$db->setValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), $user_panel);
 		$db->save();
 		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Команда элемента №{$argvt} успешно изменено.", $data->object->from_id);
 	}
 	elseif($command == "цвет"){
-		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
+		$user_panel = $db->getValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
 		$argvt1 = intval(bot_get_array_value($argv, 2, 0));
 		$argvt2 = intval(bot_get_array_value($argv, 3, 0));
 		if($argvt1 == 0 || $argvt2 == 0){
@@ -1548,7 +1578,7 @@ function manager_panel_control($finput){
 		}
 		$user_panel["elements"][$id]["color"] = $argvt2;
 		$user_panel["last_change_time"] = time();
-		$db->setValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), $user_panel);
+		$db->setValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), $user_panel);
 		$db->save();
 		switch ($argvt2) {
 			case 1:
@@ -1570,7 +1600,7 @@ function manager_panel_control($finput){
 		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Название элемента номер {$argvt1} успешно изменено. Установлен цвет: {$color_name}.", $data->object->from_id);
 	}
 	elseif($command == "удалить"){
-		$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), array());
+		$user_panel = $db->getValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
 		$argvt = intval(bot_get_array_value($argv, 2, 0));
 		if($argvt == 0){
 			$botModule->sendSilentMessage($data->object->peer_id, ", Используйте [!панель удалить <номер>], чтобы удалить элемент.", $data->object->from_id);
@@ -1584,7 +1614,7 @@ function manager_panel_control($finput){
 		unset($user_panel["elements"][$id]);
 		$user_panel["elements"] = array_values($user_panel["elements"]);
 		$user_panel["last_change_time"] = time();
-		$db->setValue(array("bot_manager", "user_panels", "id{$data->object->from_id}"), $user_panel);
+		$db->setValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), $user_panel);
 		$db->save();
 		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Элемент под номером {$argvt} успешно удален.", $data->object->from_id);
 	}
@@ -1616,7 +1646,7 @@ function manager_panel_keyboard_handler($finput){
 	if(is_null($user_id) || is_null($last_change_time) || is_null($last_change_time))
 		return;
 
-	$user_panel = $db->getValue(array("bot_manager", "user_panels", "id{$user_id}"), false);
+	$user_panel = $db->getValue(array("chat_settings", "user_panels", "id{$user_id}"), false);
 	if($user_panel === false)
 		return;
 
