@@ -1,10 +1,9 @@
+from datetime import datetime
+import time
 import requests
 import json
-import base64
 import subprocess
 import threading
-import time
-from datetime import datetime
 
 VK_VERSION = 5.84
 

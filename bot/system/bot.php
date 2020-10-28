@@ -855,7 +855,7 @@ namespace{
 			};
 		";
 		if($check_owner){
-			$code = $code . "
+			$code .= "
 				if(!members.items[from_id_index].is_owner){
 				var user_name = '';
 				var i = 0; while(i < members.profiles.length){
@@ -869,7 +869,7 @@ namespace{
 				return 'Error: user have not rights';
 			}";
 		} else {
-			$code = $code . "
+			$code .= "
 				if(!members.items[from_id_index].is_admin){
 				var user_name = '';
 				var i = 0; while(i < members.profiles.length){
@@ -1652,7 +1652,7 @@ namespace{
 		$messagesModule = new Bot\Messages($db);
 		$messagesModule->setAppealID($data->object->user_id);
 		$keyboard = vk_keyboard_inline($keyboard_buttons);
-		error_log($messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $message, array('keyboard' => $keyboard)));
+		$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $message, array('keyboard' => $keyboard));
 	}
 
 	function bot_help($finput){

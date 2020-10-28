@@ -92,7 +92,12 @@ function stats_cmd_handler($finput){
 	$command = mb_strtolower(bot_get_array_value($argv, 1, ""));
 	if($command == ""){
 		if(array_key_exists(0, $data->object->fwd_messages)){
-			$member_id = $data->object->fwd_messages[0]->from_id;
+			if($data->object->fwd_messages[0]->from_id > 0)
+				$member_id = $data->object->fwd_messages[0]->from_id;
+			else{
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Статистика сообществ не отслеживается!");
+				return;
+			}
 		} else $member_id = $data->object->from_id;
 
 		$stats = stats_api_getuser($db, $member_id);

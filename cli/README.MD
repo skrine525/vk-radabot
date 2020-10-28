@@ -5,17 +5,17 @@
 ```shell
 $ sudo su
 ```
-2. Создать нового пользователя radabot и переходим в его домашний каталог:
+2. Создайте нового пользователя radabot и перейдите в его домашний каталог:
 ```shell
 $ adduser --disabled-login radabot
 $ cd ~radabot
 ```
 3. Скопируйте код бота в текущий каталог и настройте bot/data/config.json файл.
-4. Установить пакеты "php", "php-mbstring", "php-curl" и "php-simplexml":
+4. Установите пакеты "php", php-mbstring", "php-curl" и "php-simplexml":
 ```shell
 $ apt install php php-mbstring php-curl php-simplexml
 ```
-5. Установить пакет python и python-pip:
+5. Установите пакет "python" и "python-pip":
 ```shell
 $ apt install python python-pip
 ```
