@@ -35,6 +35,16 @@ function fun_kek($finput){
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
 
+	$mode = bot_get_array_value($argv, 1, 1);
+
+	if($mode != 1 && $mode != 2){
+		$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, "%appeal%, используйте:", [
+			'!кек 1 - Кек слева направо',
+			'!кек 2 - Кек справа налево'
+		]);
+		return;
+	}
+
 	$first_photo_id = -1;
 	for($i = 0; $i < count($data->object->attachments); $i++){
 		if($data->object->attachments[$i]->type == "photo"){
@@ -56,13 +66,27 @@ function fun_kek($finput){
 
 		// Обработка фотографии
 		$im = imagecreatefromjpeg($path);
+		$im_width = imagesx($im);
 		$im_height = imagesy($im);
-		$im2_width = ceil(imagesx($im) / 2);
-		$im2 = imagecrop($im, ['x' => 0, 'y' => 0, 'width' => $im2_width, 'height' => $im_height]);
-		$im = imagecreatetruecolor($im2_width * 2, $im_height);
-		imagecopy($im, $im2, 0, 0, 0, 0, $im2_width, $im_height);
-		imageflip($im2, IMG_FLIP_HORIZONTAL);
-		imagecopy($im, $im2, $im2_width, 0, 0, 0, $im2_width, $im_height);
+		switch ($mode) {
+			case 2:
+			$im2_width = ceil($im_width / 2);
+			$im2 = imagecrop($im, ['x' => $im2_width, 'y' => 0, 'width' => $im2_width, 'height' => $im_height]);
+			$im = imagecreatetruecolor($im2_width * 2, $im_height);
+			imagecopy($im, $im2, $im2_width, 0, 0, 0, $im2_width, $im_height);
+			imageflip($im2, IMG_FLIP_HORIZONTAL);
+			imagecopy($im, $im2, 0, 0, 0, 0, $im2_width, $im_height);
+			break;
+			
+			default:
+			$im2_width = ceil($im_width / 2);
+			$im2 = imagecrop($im, ['x' => 0, 'y' => 0, 'width' => $im2_width, 'height' => $im_height]);
+			$im = imagecreatetruecolor($im2_width * 2, $im_height);
+			imagecopy($im, $im2, 0, 0, 0, 0, $im2_width, $im_height);
+			imageflip($im2, IMG_FLIP_HORIZONTAL);
+			imagecopy($im, $im2, $im2_width, 0, 0, 0, $im2_width, $im_height);
+			break;
+		}
 		imagepng($im, $path);
 		imagedestroy($im);
 		imagedestroy($im2);
