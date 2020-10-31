@@ -47,7 +47,7 @@ def queue_handler():
 				process_name = "chat{}".format(peer_id)
 				process = Processes.get(process_name)
 				if process == None:
-					Processes[process_name] = subprocess.Popen(["/usr/bin/php", "radabot-system.php", json.dumps(event).encode('utf-8')])
+					Processes[process_name] = subprocess.Popen(["/usr/bin/php7.0", "radabot-system.php", json.dumps(event).encode('utf-8')])
 					EventQueue.remove(event)
 			else:
 				EventQueue.remove(event)

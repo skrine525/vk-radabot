@@ -11,9 +11,9 @@ $ adduser --disabled-login radabot
 $ cd ~radabot
 ```
 3. Скопируйте код бота в текущий каталог и настройте bot/data/config.json файл.
-4. Установите пакеты "php", php-mbstring", "php-curl" и "php-simplexml":
+4. Установите пакеты "php7.0", php7.0-mbstring", "php7.0-curl", "php7.0-gd" и "php7.0-simplexml":
 ```shell
-$ apt install php php-mbstring php-curl php-simplexml
+$ apt install php7.0 php7.0-mbstring php7.0-curl php7.0-gd php7.0-simplexml
 ```
 5. Установите пакет "python" и "python-pip":
 ```shell

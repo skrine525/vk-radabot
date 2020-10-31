@@ -18,11 +18,65 @@ function fun_initcmd($event){
 	$event->addTextMessageCommand("!shrug", 'fun_shrug');
 	$event->addTextMessageCommand("!tableflip", 'fun_tableflip');
 	$event->addTextMessageCommand("!unflip", 'fun_unflip');
+	$event->addTextMessageCommand("!кек", 'fun_kek');
 
 	// Инициализация команд [кто/кого/кому]
 	$event->addTextMessageCommand("!кто", 'fun_whois_nom');
 	$event->addTextMessageCommand("!кого", 'fun_whois_gen');
 	$event->addTextMessageCommand("!кому", 'fun_whois_dat');
+}
+
+function fun_kek($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$argv = $finput->argv;
+	$db = $finput->db;
+
+	$messagesModule = new Bot\Messages($db);
+	$messagesModule->setAppealID($data->object->from_id);
+
+	$first_photo_id = -1;
+	for($i = 0; $i < count($data->object->attachments); $i++){
+		if($data->object->attachments[$i]->type == "photo"){
+			$first_photo_id = $i;
+			break;
+		}
+	}
+	if ($first_photo_id != -1){
+		$photo_sizes = $data->object->attachments[$first_photo_id]->photo->sizes;
+		$photo_url_index = 0;
+		for($i = 0; $i < count($photo_sizes); $i++){
+			if($photo_sizes[$i]->height > $photo_sizes[$photo_url_index]->height){
+				$photo_url_index = $i;
+			}
+		}
+		$photo_url = $photo_sizes[$photo_url_index]->url;
+		$path = BOT_TMPDIR."/photo".mt_rand(0, 65535).".jpg";
+		file_put_contents($path, file_get_contents($photo_url));		// Загрузка фото
+
+		// Обработка фотографии
+		$im = imagecreatefromjpeg($path);
+		$im_height = imagesy($im);
+		$im2_width = ceil(imagesx($im) / 2);
+		$im2 = imagecrop($im, ['x' => 0, 'y' => 0, 'width' => $im2_width, 'height' => $im_height]);
+		$im = imagecreatetruecolor($im2_width * 2, $im_height);
+		imagecopy($im, $im2, 0, 0, 0, 0, $im2_width, $im_height);
+		imageflip($im2, IMG_FLIP_HORIZONTAL);
+		imagecopy($im, $im2, $im2_width, 0, 0, 0, $im2_width, $im_height);
+		imagepng($im, $path);
+		imagedestroy($im);
+		imagedestroy($im2);
+		unset($im_height);
+		unset($im2_width);
+
+		$res1 =  json_decode(vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."return API.photos.getMessagesUploadServer({'peer_id':{$data->object->peer_id}});"));
+		$res2 = json_decode(vk_uploadDocs(array('photo' => new CURLFile($path)), $res1->response->upload_url));
+		unlink($path);													// Удаление фото
+		$file_json = json_encode(array('photo' => $res2->photo, 'server' => $res2->server, 'hash' => $res2->hash));
+		vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."var doc=API.photos.saveMessagesPhoto({$file_json});API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', Кек:','attachment':'photo'+doc[0].owner_id+'_'+doc[0].id,'disable_mentions':true});");
+	} else {
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, &#9940;Фото не найдено!");
+	}
 }
 
 function fun_db_get($db){

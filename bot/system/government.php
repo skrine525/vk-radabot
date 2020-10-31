@@ -582,7 +582,6 @@ function government_flag($finput){
 	} else {
 		if($data->object->from_id == $gov["president_id"]){
 			$first_photo_id = -1;
-			$photo = "";
 			for($i = 0; $i < count($data->object->attachments); $i++){
 				if($data->object->attachments[$i]->type == "photo"){
 					$first_photo_id = $i;
