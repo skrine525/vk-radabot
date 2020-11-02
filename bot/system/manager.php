@@ -1298,12 +1298,9 @@ function manager_rank($finput){
 			}
 
 			$rank_name = RankSystem::getRankNameByID(1, true);
-			$response = json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id).bot_test_rights_exe($data->object->peer_id, $data->object->from_id, false, "%appeal%, ⛔Чтобы получить ранг {$rank_name} нужно иметь статус администратора в беседе.")."
-					API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Ранг {$rank_name} [rank_1] успешно получен.','disable_mentions':true});
-					return 'ok';
-				"))->response;
+			$response = json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id).bot_test_rights_exe($data->object->peer_id, $data->object->from_id, "API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ⛔Чтобы получить ранг {$rank_name} нужно иметь статус администратора в беседе.','disable_mentions':true});return 0;")."API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Ранг {$rank_name} [rank_1] успешно получен.','disable_mentions':true});return 1;"))->response;
 
-			if($response == 'ok'){
+			if($response == 1){
 				$ranksys->setUserRank($data->object->from_id, 1);
 				$db->save();
 			}

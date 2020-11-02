@@ -60,7 +60,7 @@ lp_key = lp_data["key"]
 lp_ts = lp_data["ts"]
 del lp_data
 
-queue_thread = threading.Thread(target=queue_handler)
+queue_thread = threading.Thread(target=queue_handler, daemon=True)
 queue_thread.start()
 
 log("Radabot is started")

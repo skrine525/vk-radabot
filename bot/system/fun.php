@@ -87,17 +87,16 @@ function fun_kek($finput){
 			imagecopy($im, $im2, $im2_width, 0, 0, 0, $im2_width, $im_height);
 			break;
 		}
-		imagepng($im, $path);
+		imagejpeg($im, $path);
 		imagedestroy($im);
 		imagedestroy($im2);
-		unset($im_height);
-		unset($im2_width);
 
 		$res1 =  json_decode(vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."return API.photos.getMessagesUploadServer({'peer_id':{$data->object->peer_id}});"));
 		$res2 = json_decode(vk_uploadDocs(array('photo' => new CURLFile($path)), $res1->response->upload_url));
-		unlink($path);													// Удаление фото
 		$file_json = json_encode(array('photo' => $res2->photo, 'server' => $res2->server, 'hash' => $res2->hash));
 		vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."var doc=API.photos.saveMessagesPhoto({$file_json});API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', Кек:','attachment':'photo'+doc[0].owner_id+'_'+doc[0].id,'disable_mentions':true});");
+
+		unlink($path);
 	} else {
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, &#9940;Фото не найдено!");
 	}
@@ -600,7 +599,7 @@ function fun_howmuch($finput){
 		$unitname = $argv[1];
 	else
 		$unitname = "";
-	$add = mb_substr($data->object->text, 9+mb_strlen($unitname));
+	$add = mb_substr($data->object->text, 10+mb_strlen($unitname));
 
 	if($unitname == "" || $add == ""){
 		$botModule->sendCommandListFromArray($data, ", используйте:", array("Сколько <ед. измерения> <дополнение>"));

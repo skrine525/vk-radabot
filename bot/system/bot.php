@@ -175,21 +175,21 @@ namespace Bot{
 					return false;
 				}
 
-				// Обработка тектовых команд
-				$result = $this->runTextMessageCommand($this->data);
-				if($result == Event::COMMAND_RESULT_OK)
-					return true;
-				elseif($result == Event::COMMAND_RESULT_NO_DB){
-					bot_message_not_reg($this->data);
-					return false;
-				}
-
 				// Обработка клавиатурных команд
 				$result = $this->runTextButtonCommand($this->data);
 				if($result == Event::COMMAND_RESULT_OK)
 					return true;
 				elseif($result == Event::COMMAND_RESULT_NO_DB){
-					bot_message_not_reg($data);
+					bot_message_not_reg($this->data, $this->db);
+					return false;
+				}
+
+				// Обработка тектовых команд
+				$result = $this->runTextMessageCommand($this->data);
+				if($result == Event::COMMAND_RESULT_OK)
+					return true;
+				elseif($result == Event::COMMAND_RESULT_NO_DB){
+					bot_message_not_reg($this->data, $this->db);
 					return false;
 				}
 
@@ -219,7 +219,11 @@ namespace Bot{
 				if($result == Event::COMMAND_RESULT_OK)
 					return true;
 				elseif($result == Event::COMMAND_RESULT_NO_DB){
-					bot_message_not_reg($this->data);
+					bot_message_not_reg($this->data, $this->db);
+					return false;
+				}
+				else{
+					bot_show_snackbar($this->data->object->event_id, $this->data->object->user_id, $this->data->object->peer_id, '⛔ Неизвестная команда.');
 					return false;
 				}
 				break;
@@ -357,6 +361,9 @@ namespace Bot{
 }
 
 namespace{
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 	// Базовые константы бота
 	define('BOT_DIR', dirname(__DIR__)); 								// Корневая директория бота
 	define('BOT_DATADIR', BOT_DIR."/data"); 							// Директория данных
@@ -427,6 +434,9 @@ namespace{
 			$event->exit(); // Очищение памяти
 		}
 	}
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	// Legacy Module
 	class BotModule{
@@ -614,6 +624,7 @@ namespace{
 		$event->addCallbackButtonCommand("bot_menu", 'bot_menu_cb');
 		$event->addCallbackButtonCommand("bot_cmdlist", 'bot_cmdlist_cb');
 		$event->addCallbackButtonCommand('bot_tictactoe', 'bot_tictactoe_cb');
+		$event->addCallbackButtonCommand('bot_reg', 'bot_register_cb', true);
 	}
 
 	function bot_register($finput){ // Регистрация чата
@@ -624,9 +635,9 @@ namespace{
 
 		$messagesModule = new Bot\Messages($db);
 		if (bot_check_reg($db) == false){
-			$response = json_decode(vk_execute($messagesModule->makeExeAppealByID($data->object->from_id).bot_test_rights_exe($data->object->peer_id, $data->object->from_id, true, "%appeal%, &#9940;У вас нет прав для этой команды.")."var chat=API.messages.getConversationsById({'peer_ids':[{$data->object->peer_id}],'extended':1}).items[0];
-				if(chat.peer.type!='chat'){API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', эта беседа не является групповым чатом.','disable_mentions':true});return{'result':0};}API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', беседа успешно зарегистрирована.','disable_mentions':true});return{'result':1};"))->response;
-			if($response->result == 1){
+			$response = json_decode(vk_execute($messagesModule->makeExeAppealByID($data->object->from_id).bot_test_rights_exe($data->object->peer_id, $data->object->from_id, "API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', &#9940;У вас нет прав для этой команды.','disable_mentions':true});return 0;", true)."var chat=API.messages.getConversationsById({'peer_ids':[{$data->object->peer_id}],'extended':1}).items[0];
+				if(chat.peer.type!='chat'){API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', эта беседа не является групповым чатом.','disable_mentions':true});return{'result':0};}API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Беседа успешно зарегистрирована.','disable_mentions':true});return 1;"))->response;
+			if($response == 1){
 				$chat_id = $data->object->peer_id - 2000000000;
 				$db->setValue(array("chat_id"), $chat_id);
 				$db->setValue(array("owner_id"), $data->object->from_id);
@@ -638,6 +649,30 @@ namespace{
 			vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."return API.messages.send({'peer_id':{$data->object->peer_id}, 'message':appeal+'{$msg}','disable_mentions':true});");
 		}
 	}
+
+	function bot_register_cb($finput){ // Регистрация чата
+		// Инициализация базовых переменных
+		$data = $finput->data; 
+		$payload = $finput->payload;
+		$db = $finput->db;
+
+		$messagesModule = new Bot\Messages($db);
+		if (bot_check_reg($db) == false){
+			$snackbar1_json = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "&#9940; У вас нет прав для этой команды."), JSON_UNESCAPED_UNICODE)));
+			$snackbar2_json = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "&#9940; Эта беседа не является групповым."), JSON_UNESCAPED_UNICODE)));
+			$response = json_decode(vk_execute($messagesModule->makeExeAppealByID($data->object->user_id).bot_test_rights_exe($data->object->peer_id, $data->object->user_id, "API.messages.sendMessageEventAnswer({$snackbar1_json});return 0;", true)."var chat=API.messages.getConversationsById({'peer_ids':[{$data->object->peer_id}],'extended':1}).items[0];
+				if(chat.peer.type!='chat'){API.messages.sendMessageEventAnswer({$snackbar2_json});return 0;}API.messages.edit({'peer_id':{$data->object->peer_id},'conversation_message_id':{$data->object->conversation_message_id},'message':appeal+', ✅Беседа успешно зарегистрирована.','disable_mentions':true});return 1;"))->response;
+			if($response == 1){
+				$chat_id = $data->object->peer_id - 2000000000;
+				$db->setValue(array("chat_id"), $chat_id);
+				$db->setValue(array("owner_id"), $data->object->user_id);
+				$db->save();
+			}	
+		}
+		else
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '&#9940; Данная беседа уже зарегистрирована.');
+	}
+
 
 	function bot_parse_argv($text){
 		$argv = array();
@@ -775,12 +810,13 @@ namespace{
 				$argv = $finput->argv;
 				$db = $finput->db;
 
-				$messagesModule  = new BotModule($db);
+				$messagesModule  = new Bot\Messages($db);
+				$messagesModule->setAppealID($data->object->from_id);
 
 				$command = mb_substr($data->object->text, 7);
 
 				if($command == ""){
-					$messagesModule->sendSilentMessage($data->object->peer_id, "%apepal%, ⛔Используйте: !runcb <команда>");
+					$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте: !runcb <команда>");
 					return;
 				}
 
@@ -838,51 +874,12 @@ namespace{
 		}
 	}
 
-	function bot_test_rights_exe($peer_id, $user_id, $check_owner = false, $msgInvalidRights = "%__DEFAULTMSG__%"){ // Тестирование прав через VKScript
-		$messageRequest = json_encode(array('peer_id' => $peer_id, 'message' => $msgInvalidRights, 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
-		$messageRequest = vk_parse_vars($messageRequest, array("appeal", "__DEFAULTMSG__"));
-		$code = "
-			var from_id = {$user_id};
-			var peer_id = {$peer_id};
-			var members = API.messages.getConversationMembers({'peer_id':peer_id});
-			var from_id_index = -1;
-			var i = 0; while (i < members.items.length){
-				if(members.items[i].member_id == from_id){
-					from_id_index = i;
-					i = members.items.length;
-				};
-				i = i + 1;
-			};
-		";
-		if($check_owner){
-			$code .= "
-				if(!members.items[from_id_index].is_owner){
-				var user_name = '';
-				var i = 0; while(i < members.profiles.length){
-					if (from_id == members.profiles[i].id){
-						user_name = '@id' + from_id + ' (' + members.profiles[i].first_name + ')';
-					}
-					i = i + 1;
-				};
-				var __DEFAULTMSG__ = user_name + ', ⛔ты не создатель беседы.';
-				API.messages.send({$messageRequest});
-				return 'Error: user have not rights';
-			}";
-		} else {
-			$code .= "
-				if(!members.items[from_id_index].is_admin){
-				var user_name = '';
-				var i = 0; while(i < members.profiles.length){
-					if (from_id == members.profiles[i].id){
-						user_name = '@id' + from_id + ' (' + members.profiles[i].first_name + ')';
-					}
-					i = i + 1;
-				};
-				var __DEFAULTMSG__ = user_name + ', ⛔ты не администратор беседы.';
-				API.messages.send({$messageRequest});
-				return 'Error: user have not rights';
-			}";
-		}
+	function bot_test_rights_exe($peer_id, $member_id, $action_code, $check_owner = false){ // Тестирование прав через VKScript
+		$code = "var members=API.messages.getConversationMembers({'peer_id':{$peer_id}});var member={};var i=0;while(i<members.items.length){if(members.items[i].member_id=={$member_id}){member=members.items[i];i=members.items.length;};i=i+1;};";
+		if($check_owner)
+			$code .= "if(!member.is_owner){{$action_code}}";
+		else
+			$code .= "if(!member.is_admin){{$action_code}}";
 		return $code;
 	}
 
@@ -898,8 +895,8 @@ namespace{
 
 		$string = "";
 
-		for($i = 0; $i < count($array); $i++){
-			$string .= $emoji[$array[$i]];
+		foreach ($array as $key => $value) {
+			$string .= $emoji[$value];
 		}
 
 		return $string;
@@ -925,10 +922,15 @@ namespace{
 
 	}
 
-	function bot_message_not_reg($data){ // Legacy
+	function bot_message_not_reg($data, $db){ // Legacy
 		$messagesModule = new Bot\Messages($db);
-		$messagesModule->setAppealID($data->object->from_id);
-		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔беседа не зарегистрирована. Используйте \"!reg\".");
+		$keyboard = vk_keyboard_inline([[vk_callback_button("Зарегистировать", ['bot_reg'], 'positive')]]);
+		if($data->type == 'message_new'){
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔беседа не зарегистрирована. Используйте кнопку ниже.", ['keyboard' => $keyboard]);
+		}
+		else if($data->type == 'message_event')
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Беседа не зарегистрирована.");
 	}
 
 	function bot_getconfig($name){
@@ -943,7 +945,7 @@ namespace{
 
 	function bot_keyboard_remove($data){
 		$keyboard = vk_keyboard(false, array());
-		$messagesModule = new Bot\Messages($db);
+		$messagesModule = new Bot\Messages();
 		$messagesModule->sendSilentMessage($data->object->peer_id, '✅Клавиатура убрана.', array('keyboard' => $keyboard));
 	}
 

@@ -9,18 +9,18 @@ function vk_call($method, $parametres){
 	$parametres['access_token'] = bot_getconfig('VK_GROUP_TOKEN');
 	$parametres['v'] = VK_API_VERSION;
 
-	$options = array(
-   		'http' => array(  
+	$options = [
+   		'http' => [
             'method'  => 'POST',
             'header'  => 'Content-type: application/x-www-form-urlencoded', 
             'content' => http_build_query($parametres)
-        )  
-	);
+        ]
+	];
 	return file_get_contents("https://api.vk.com/method/{$method}", false, stream_context_create($options));
 }
 
 function vk_execute($code){
-	return vk_call('execute', array('code' => $code));
+	return vk_call('execute', ['code' => $code]);
 }
 
 function vk_longpoll($data, $ts, $wait = 25){
@@ -28,18 +28,18 @@ function vk_longpoll($data, $ts, $wait = 25){
 }
 
 function vk_userexecute($code){
-	$sys = array(
+	$sys = [
 		'access_token' => bot_getconfig("VK_USER_TOKEN"),
 		'v' => VK_API_VERSION
-	);
+	];
 
-	$options = array(
-   		'http' => array(  
+	$options = [
+   		'http' => [
             'method'  => 'POST',
             'header'  => 'Content-type: application/x-www-form-urlencoded', 
-            'content' => http_build_query(array('code' => $code)).'&'.http_build_query($sys)
-        )  
-	);
+            'content' => http_build_query(['code' => $code]).'&'.http_build_query($sys)
+        ]
+	];
 	return file_get_contents('https://api.vk.com/method/execute', false, stream_context_create($options));
 }
 
@@ -49,23 +49,23 @@ function vk_text_button($label, $payload, $color){
 	$payload_json = "";
 	if(gettype($payload) == "array")
 		$payload_json = json_encode($payload, JSON_UNESCAPED_UNICODE);
-	return array('action' => array('type' => 'text', 'payload' => $payload_json, 'label' => $label), 'color' => $color);
+	return ['action' => ['type' => 'text', 'payload' => $payload_json, 'label' => $label], 'color' => $color];
 }
 
 function vk_callback_button($label, $payload, $color){
 	$payload_json = "";
 	if(gettype($payload) == "array")
 		$payload_json = json_encode($payload, JSON_UNESCAPED_UNICODE);
-	return array('action' => array('type' => 'callback', 'payload' => $payload_json, 'label' => $label), 'color' => $color);
+	return ['action' => ['type' => 'callback', 'payload' => $payload_json, 'label' => $label], 'color' => $color];
 }
 
-function vk_keyboard($one_time, $buttons = array()){
-	$keyboard_json = json_encode(array('one_time' => $one_time, 'buttons' => $buttons), JSON_UNESCAPED_UNICODE);
+function vk_keyboard($one_time, $buttons = []){
+	$keyboard_json = json_encode(['one_time' => $one_time, 'buttons' => $buttons], JSON_UNESCAPED_UNICODE);
 	return $keyboard_json;
 }
 
-function vk_keyboard_inline($buttons = array()){
-	$keyboard_json = json_encode(array('inline' => true, 'buttons' => $buttons), JSON_UNESCAPED_UNICODE);
+function vk_keyboard_inline($buttons = []){
+	$keyboard_json = json_encode(['inline' => true, 'buttons' => $buttons], JSON_UNESCAPED_UNICODE);
 	return $keyboard_json;
 }
 
