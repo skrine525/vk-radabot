@@ -259,10 +259,10 @@ namespace Bot{
 				$user_nick = false;
 
 			if($user_nick !== false){
-				return "var user = API.users.get({'user_ids':[{$user_id}],'fields':'screen_name'})[0]; var {$varname} = '@'+user.screen_name+' ({$user_nick})'; user = null;";
+				return "var user=API.users.get({'user_ids':[{$user_id}],'fields':'screen_name'})[0]; var {$varname}='@'+user.screen_name+' ({$user_nick})'; user=null;";
 			}
 			else{
-				return "var user = API.users.get({'user_ids':[{$user_id}],'fields':'screen_name'})[0]; var {$varname} = '@'+user.screen_name+' ('+user.first_name.substr(0, 2)+'. '+user.last_name+')'; user = null;";
+				return "var user=API.users.get({'user_ids':[{$user_id}],'fields':'screen_name'})[0]; var {$varname}='@'+user.screen_name+' ('+user.first_name.substr(0, 2)+'. '+user.last_name+')'; user =null;";
 			}
 		}
 
@@ -374,16 +374,16 @@ namespace{
 	mb_internal_encoding("UTF-8");										// UTF-8 как основная кодировка для mbstring
 
 	// Составные модули бота
-	require_once(BOT_DIR."/system/vk.php"); 							// Модуль, отвечающий за все взаимодействия с VK API
-	require_once(BOT_DIR."/system/database.php"); 						// Модуль, отвечающий за взаимодействие основной базы данных бота
-	require_once(BOT_DIR."/system/government.php");	 					// Модуль, отвечающий за работу гос. устройства беседы
-	require_once(BOT_DIR."/system/economy.php"); 						// Модуль, отвечающий за систему Экономики
-	require_once(BOT_DIR."/system/fun.php"); 							// Модуль, отвечающий за развлечения
-	require_once(BOT_DIR."/system/roleplay.php"); 						// Модуль, отвечающий за Roleplay команды
-	require_once(BOT_DIR."/system/manager.php"); 						// Модуль, отвечающий за управление беседой
-	require_once(BOT_DIR."/system/giphy.php"); 							// Модуль, отвечающий за функции взаимодействия с GIPHY API
-	require_once(BOT_DIR."/system/word_game.php"); 						// Модуль, отвечающий за игры Слова и Words
-	require_once(BOT_DIR."/system/stats.php"); 							// Модуль, отвечающий за ведение статистики в беседах
+	require_once(__DIR__."/vk.php"); 							// Модуль, отвечающий за все взаимодействия с VK API
+	require_once(__DIR__."/database.php"); 						// Модуль, отвечающий за взаимодействие основной базы данных бота
+	require_once(__DIR__."/government.php");	 					// Модуль, отвечающий за работу гос. устройства беседы
+	require_once(__DIR__."/economy.php"); 						// Модуль, отвечающий за систему Экономики
+	require_once(__DIR__."/fun.php"); 							// Модуль, отвечающий за развлечения
+	require_once(__DIR__."/roleplay.php"); 						// Модуль, отвечающий за Roleplay команды
+	require_once(__DIR__."/manager.php"); 						// Модуль, отвечающий за управление беседой
+	require_once(__DIR__."/giphy.php"); 							// Модуль, отвечающий за функции взаимодействия с GIPHY API
+	require_once(__DIR__."/word_game.php"); 						// Модуль, отвечающий за игры Слова и Words
+	require_once(__DIR__."/stats.php"); 							// Модуль, отвечающий за ведение статистики в беседах
 
 	function bot_handle_event($data){
 		if($data->object->peer_id < 2000000000){ // Запрет использование бота в лс
@@ -407,7 +407,7 @@ namespace{
 			government_initcmd($event);						// Инициализация команд Гос. устройства
 			manager_initcmd($event);						// Инициализация команд модуля manager
 			stats_initcmd($event);							// Инициализация команд модуля stats
-			roleplay_cmdinit($event);						// RP-команды
+			roleplay_initcmd($event);						// RP-команды
 			fun_initcmd($event);							// Fun-команды
 			giphy_initcmd($event);							// Инициализация команд модуля giphy
 			wordgame_initcmd($event);						// Игра Слова
@@ -456,7 +456,7 @@ namespace{
 				return "var user = API.users.get({'user_ids':[{$user_id}],'fields':'screen_name'})[0]; var {$varname} = '@'+user.screen_name+' ({$user_nick})'; user = null;";
 			}
 			else{
-				return "var user = API.users.get({'user_ids':[{$user_id}],'fields':'screen_name'})[0]; var {$varname} = '@'+user.screen_name+' ('+user.first_name.substr(0, 2)+'. '+user.last_name+')'; user = null;";
+				return "var user = API.users.get({'user_ids':[{$user_id}],'fields':'screen_name'})[0]; var {$varname} = '@'+user.screen_name+' ('+user.first_name.substr(0, 2)+'. '+user.last_name+')';user = null;";
 			}
 		}
 

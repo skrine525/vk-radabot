@@ -71,7 +71,7 @@ function fun_kek($finput){
 		switch ($mode) {
 			case 2:
 			$im2_width = ceil($im_width / 2);
-			$im2 = imagecrop($im, ['x' => $im2_width, 'y' => 0, 'width' => $im2_width, 'height' => $im_height]);
+			$im2 = imagecrop($im, ['x' => $im2_width-1, 'y' => 0, 'width' => $im2_width, 'height' => $im_height]);
 			$im = imagecreatetruecolor($im2_width * 2, $im_height);
 			imagecopy($im, $im2, $im2_width, 0, 0, 0, $im2_width, $im_height);
 			imageflip($im2, IMG_FLIP_HORIZONTAL);
@@ -216,8 +216,7 @@ function fun_memes_control_panel($finput){
 			$photo_url = $photo_sizes[$photo_url_index]->url;
 			$path = BOT_TMPDIR."/photo".mt_rand(0, 65535).".jpg";
 			file_put_contents($path, file_get_contents($photo_url));
-			$response =  json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-				return API.photos.getMessagesUploadServer({'peer_id':{$data->object->peer_id}});"));
+			$response =  json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."return API.photos.getMessagesUploadServer({'peer_id':{$data->object->peer_id}});"));
 			$res = json_decode(vk_uploadDocs(array('photo' => new CURLFile($path)), $response->response->upload_url));
 			unlink($path);
 			$res_json = json_encode(array('photo' => $res->photo, 'server' => $res->server, 'hash' => $res->hash));
@@ -270,10 +269,7 @@ function fun_memes_control_panel($finput){
 				return;
 			}
 
-			$res = json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-				API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Все мемы в беседе были удалены!','disable_mentions':true});
-				return 'ok';
-				"))->response;
+			json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Все мемы в беседе были удалены!','disable_mentions':true});"))->response;
 			$db->unsetValue(array("fun", "memes"));
 			$db->save();
 		} else {
@@ -288,10 +284,7 @@ function fun_memes_control_panel($finput){
 					return;
 				}
 
-				$res = json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-				API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Мем \"{$meme_name}\" удален!','disable_mentions':true});
-				return 'ok';
-				"))->response;
+				json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Мем \"{$meme_name}\" удален!','disable_mentions':true});"))->response;
 				$db->unsetValue(array("fun", "memes", $meme_name));
 				$db->save();
 			}
@@ -330,12 +323,7 @@ function fun_memes_control_panel($finput){
 			$msg = "%__APPEAL__%, информация о меме:\n✏Имя: {$meme_name}\n🤵Владелец: %__OWNERNAME__%\n📅Добавлен: {$added_time}\n📂Содержимое: ⬇️⬇️⬇️";
 			$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'attachment' => $memes[$meme_name]["content"], 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 			$request = vk_parse_vars($request, array("__OWNERNAME__", "__APPEAL__"));
-			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-				var owner = API.users.get({'user_ids':[{$memes[$meme_name]["owner_id"]}]})[0];
-				var __APPEAL__ = appeal; appeal = null;
-				var __OWNERNAME__ = '@id{$memes[$meme_name]["owner_id"]} ('+owner.first_name+' '+owner.last_name+')';
-				return API.messages.send({$request});
-				");
+			vk_execute($botModule->makeExeAppealByID($data->object->from_id, '__APPEAL__')."var owner = API.users.get({'user_ids':[{$memes[$meme_name]["owner_id"]}]})[0];var __OWNERNAME__ = '@id{$memes[$meme_name]["owner_id"]} ('+owner.first_name+' '+owner.last_name+')';return API.messages.send({$request});");
 		} else {
 			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔мема с именем \"{$meme_name}\" не существует.", $data->object->from_id);
 		}
@@ -502,20 +490,7 @@ function fun_amina($data, $db){
 
 function fun_like_avatar($data, $db){
 	$botModule = new BotModule($db);
-	$response = json_decode(vk_userexecute("
-		var amina = API.users.get()[0];
-		var user = API.users.get({'user_ids':[{$data->object->from_id}],'fields':'photo_id'})[0];
-		var owner_id = '{$data->object->from_id}';
-		var id = user.photo_id.substr(owner_id.length+1, user.photo_id.length);
-		if(API.likes.isLiked({'user_id':amina.id,'type':'photo','owner_id':owner_id,'item_id':id}).liked == 0){
-			var like = API.likes.add({'type':'photo','owner_id':owner_id,'item_id':id});
-			return {'result':1,'likes':like.likes};
-		}
-		else
-		{
-			return {'result':0};
-		}
-		"))->response;
+	$response = json_decode(vk_userexecute("var user=API.users.get()[0];var user=API.users.get({'user_ids':[{$data->object->from_id}],'fields':'photo_id'})[0];var owner_id='{$data->object->from_id}';var id=user.photo_id.substr(owner_id.length+1, user.photo_id.length);if(API.likes.isLiked({'user_id':user.id,'type':'photo','owner_id':owner_id,'item_id':id}).liked==0){var like=API.likes.add({'type':'photo','owner_id':owner_id,'item_id':id});return {'result':1,'likes':like.likes};}else{return {'result':0};}"))->response;
 	if($response->result == 1)
 		$botModule->sendSilentMessage($data->object->peer_id, ", Теперь у тебя {$response->likes} ❤.", $data->object->from_id);
 	else
@@ -527,8 +502,8 @@ function fun_like_wallpost($data, $db){
 	if($data->object->attachments[0]->type == "wall"){
 		$wall_post = $data->object->attachments[0]->wall;
 		$response = json_decode(vk_userexecute("
-		var amina = API.users.get()[0];
-		if(API.likes.isLiked({'user_id':amina.id,'type':'post','owner_id':{$wall_post->to_id},'item_id':{$wall_post->id}}).liked == 0){
+		var user = API.users.get()[0];
+		if(API.likes.isLiked({'user_id':user.id,'type':'post','owner_id':{$wall_post->to_id},'item_id':{$wall_post->id}}).liked == 0){
 			var like = API.likes.add({'type':'post','owner_id':{$wall_post->to_id},'item_id':{$wall_post->id}});
 			return {'result':1,'likes':like.likes};
 		}
@@ -574,16 +549,14 @@ function fun_choose($finput){
 
 	if(sizeof($options) < 2){
 		$msg = ", что-то мало вариантов.🤔 Я так не могу.😡";
-		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
 		return;
 	}
 
 	$random_number = mt_rand(0, 65535) % sizeof($options);
 	$print_text = $options[$random_number];
 	$msg = ", 🤔я выбираю: " . $print_text;
-	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-		return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
+	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
 }
 
 function fun_howmuch($finput){
@@ -592,7 +565,8 @@ function fun_howmuch($finput){
 	$argv = $finput->argv;
 	$db = $finput->db;
 
-	$botModule = new BotModule($db);
+	$messagesModule = new Bot\Messages($db);
+	$messagesModule->setAppealID($data->object->from_id);
 	$rnd = mt_rand(0, 100);
 
 	if(array_key_exists(1, $argv))
@@ -602,7 +576,7 @@ function fun_howmuch($finput){
 	$add = mb_substr($data->object->text, 10+mb_strlen($unitname));
 
 	if($unitname == "" || $add == ""){
-		$botModule->sendCommandListFromArray($data, ", используйте:", array("Сколько <ед. измерения> <дополнение>"));
+		$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, "%appeal%, используйте:", array("Сколько <ед. измерения> <дополнение>"));
 		return;
 	}
 
@@ -627,7 +601,7 @@ function fun_howmuch($finput){
 
 	$add = mb_strtoupper(mb_substr($add, 0, 1)).mb_strtolower(mb_substr($add, 1)); // Делает первую букву верхнего регистра, а остальные - нижнего
 
-	$botModule->sendSilentMessage($data->object->peer_id, ", {$add} {$rnd} {$unitname}.", $data->object->from_id);
+	$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, {$add} {$rnd} {$unitname}.");
 }
 
 function fun_bottle($finput){
@@ -699,15 +673,7 @@ function fun_whois_nom($finput){
 
 	$random_number = mt_rand(0, 65535);
 
-	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-		var peer_id = {$data->object->peer_id};
-		var from_id = {$data->object->from_id};
-		var random_number = {$random_number};
-		var members = API.messages.getConversationMembers({'peer_id':peer_id});
-		var member = members.profiles[random_number % members.profiles.length];
-		var msg = appeal+', 🤔Я думаю это @id'+ member.id + ' ('+member.first_name+' '+member.last_name+') - {$text}.';
-		API.messages.send({'peer_id':peer_id,'message':msg});
-	");
+	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var from_id={$data->object->from_id};var random_number={$random_number};var members=API.messages.getConversationMembers({'peer_id':peer_id});var member=members.profiles[random_number % members.profiles.length];var msg=appeal+', 🤔Я думаю это @id'+ member.id + ' ('+member.first_name+' '+member.last_name+') - {$text}.';API.messages.send({'peer_id':peer_id,'message':msg});");
 }
 
 function fun_whois_gen($finput){
@@ -729,15 +695,7 @@ function fun_whois_gen($finput){
 
 	$random_number = mt_rand(0, 65535);
 
-	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-		var peer_id = {$data->object->peer_id};
-		var from_id = {$data->object->from_id};
-		var random_number = {$random_number};
-		var members = API.messages.getConversationMembers({'peer_id':peer_id,'fields':'first_name_gen,last_name_gen'});
-		var member = members.profiles[random_number % members.profiles.length];
-		var msg = appeal+', 🤔Я думаю это @id'+ member.id + ' ('+member.first_name_gen+' '+member.last_name_gen+') - {$text}.';
-		API.messages.send({'peer_id':peer_id,'message':msg});
-	");
+	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var from_id={$data->object->from_id};var random_number={$random_number};var members=API.messages.getConversationMembers({'peer_id':peer_id,'fields':'first_name_gen,last_name_gen'});var member=members.profiles[random_number % members.profiles.length];var msg=appeal+', 🤔Я думаю это @id'+ member.id + ' ('+member.first_name_gen+' '+member.last_name_gen+') - {$text}.';API.messages.send({'peer_id':peer_id,'message':msg});");
 }
 
 function fun_whois_dat($finput){
@@ -759,15 +717,7 @@ function fun_whois_dat($finput){
 
 	$random_number = mt_rand(0, 65535);
 
-	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-		var peer_id = {$data->object->peer_id};
-		var from_id = {$data->object->from_id};
-		var random_number = {$random_number};
-		var members = API.messages.getConversationMembers({'peer_id':peer_id,'fields':'first_name_dat,last_name_dat'});
-		var member = members.profiles[random_number % members.profiles.length];
-		var msg = appeal+', 🤔Я думаю это @id'+ member.id + ' ('+member.first_name_dat+' '+member.last_name_dat+') - {$text}.';
-		API.messages.send({'peer_id':peer_id,'message':msg});
-	");
+	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var from_id={$data->object->from_id};var random_number={$random_number};var members=API.messages.getConversationMembers({'peer_id':peer_id,'fields':'first_name_dat,last_name_dat'});var member=members.profiles[random_number % members.profiles.length];var msg=appeal+', 🤔Я думаю это @id'+ member.id + ' ('+member.first_name_dat+' '+member.last_name_dat+') - {$text}.';API.messages.send({'peer_id':peer_id,'message':msg});");
 }
 
 function fun_tts($finput){

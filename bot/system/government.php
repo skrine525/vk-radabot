@@ -385,7 +385,7 @@ function government_president($finput){
 	$presidential_power_text = round($gov["presidential_power"], 2);
 	if(!array_key_exists(1, $argv)){
 		if($gov["president_id"] != 0){
-			$msg = "%appeal%,\n&#128104;&#8205;&#9878;Президент: %president_name%.\n💪🏻Власть: {$presidential_power_text}%";
+			$msg = "%appeal%,\n&#128104;&#8205;&#9878;Президент: %president_name%.\n💪🏻Легитимность: {$presidential_power_text}%";
 			$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 			$request = vk_parse_vars($request, array("appeal", "president_name"));
 			vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."var president = API.users.get({'user_ids':[{$gov["president_id"]}]})[0];var president_name = '@id{$gov["president_id"]} ('+president.first_name+' '+president.last_name+')';return API.messages.send({$request});");

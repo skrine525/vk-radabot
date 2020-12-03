@@ -1267,10 +1267,10 @@ namespace{
 				}
 			}
 
-			$message = "%appeal%, Магазин.\n\n📝Раздел: {$section_name}";
+			$message = "%appeal%, Выберите раздел.";
 			$keyboard_buttons = array(
 				array(
-					vk_callback_button("Каталог", array('economy_shop', $testing_user_id, 1, $section_code), 'positive')
+					vk_callback_button($section_name, array('economy_shop', $testing_user_id, 1, $section_code), 'positive')
 				),
 				$controlButtons,
 				array(

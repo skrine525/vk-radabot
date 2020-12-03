@@ -237,7 +237,7 @@ namespace Roleplay{
 
 namespace{
 	// Инициализация команд
-	function roleplay_cmdinit(&$event){
+	function roleplay_initcmd(&$event){
 		$event->addTextMessageCommand("!me", 'roleplay_me');
 		$event->addTextMessageCommand("!do", 'roleplay_do');
 		$event->addTextMessageCommand("!try", 'roleplay_try');
