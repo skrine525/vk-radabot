@@ -108,7 +108,8 @@ class ChatModes{
 		'auto_referendum' => array('label' => 'Авто выборы', 'default_state' => false),
 		'economy_enabled' => array('label' => 'Экономика', 'default_state' => false),
 		'roleplay_enabled' => array('label' => 'РП', 'default_state' => true),
-		'games_enabled' => array('label' => "Игры", 'default_state' => true)
+		'games_enabled' => array('label' => "Игры", 'default_state' => true),
+		'legacy_enabled' => array('label' => "Legacy", 'default_state' => true)
 	);
 
 	private $db;

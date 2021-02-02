@@ -392,6 +392,7 @@ namespace{
 	require_once(__DIR__."/giphy.php"); 								// Модуль, отвечающий за функции взаимодействия с GIPHY API
 	require_once(__DIR__."/word_game.php"); 							// Модуль, отвечающий за игры Слова и Words
 	require_once(__DIR__."/stats.php"); 								// Модуль, отвечающий за ведение статистики в беседах
+	require_once(__DIR__."/legacy.php");								// Модуль, отвечающий за Legacy функции
 
 	$GLOBALS['modules_importtime_end'] = microtime(true);				// Время подключения модулей: Конец
 
