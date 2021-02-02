@@ -525,7 +525,7 @@ namespace{
 		$event->addTextMessageCommand("!образование", "economy_education");
 		$event->addTextMessageCommand("!forbes", "economy_most_rich_users");
 		$event->addTextMessageCommand("!бизнес", "economy_company");
-		$event->addTextMessageCommand("подарить", "economy_give");
+		$event->addTextMessageCommand("!подарить", "economy_give");
 		$event->addTextMessageCommand("!казино", "CasinoRouletteGame::main");
 		$event->addTextMessageCommand("!ставка", "CasinoRouletteGame::bet");
 
@@ -815,7 +815,7 @@ namespace{
 
 		$date = time(); // Переменная времени
 
-		// Переменная тестирования пользователя
+		// Функция тестирования пользователя
 		$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
 		if($testing_user_id !== $data->object->user_id){
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
@@ -1059,7 +1059,7 @@ namespace{
 		$keyboard_buttons = array();
 		$message = "";
 
-		// Переменная тестирования пользователя
+		// Функция тестирования пользователя
 		$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
 		if($testing_user_id !== $data->object->user_id){
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
@@ -1212,7 +1212,7 @@ namespace{
 		$keyboard_buttons = array();
 		$message = "";
 
-		// Переменная тестирования пользователя
+		// Функция тестирования пользователя
 		$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
 		if($testing_user_id !== $data->object->user_id){
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
@@ -1943,7 +1943,7 @@ namespace{
 		$keyboard_buttons = array();
 		$message = "";
 
-		// Переменная тестирования пользователя
+		// Функция тестирования пользователя
 		$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
 		if($testing_user_id !== $data->object->user_id){
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
@@ -3348,20 +3348,7 @@ namespace{
 			if($user_economy->changeItem($items[$index]->type, $items[$index]->id, -$argvt2)){
 				$member_economy->changeItem($items[$index]->type, $items[$index]->id, $argvt2);
 				$db->save();
-				vk_execute("
-					var users = API.users.get({'user_ids':[{$member_id},{$data->object->from_id}],'fields':'first_name_dat,last_name_dat,sex'});
-					var member = users[0];
-					var from = users[1];
-
-					var msg = '';
-					if(from.sex == 1){
-						msg = '@id{$data->object->from_id} ('+from.first_name+' '+from.last_name+') подарила {$giving_item_info->name} x{$argvt2} @id{$member_id} ('+member.first_name_dat+' '+member.last_name_dat+')';
-					}
-					else{
-						msg = '@id{$data->object->from_id} ('+from.first_name+' '+from.last_name+') подарил {$giving_item_info->name} x{$argvt2} @id{$member_id} ('+member.first_name_dat+' '+member.last_name_dat+')';
-					}
-					API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});
-					");
+				vk_execute("var users=API.users.get({'user_ids':[{$member_id},{$data->object->from_id}],'fields':'first_name_dat,last_name_dat,sex'});var member=users[0];var from=users[1];var msg='';if(from.sex==1){msg='@id{$data->object->from_id} ('+from.first_name+' '+from.last_name+') подарила {$giving_item_info->name} x{$argvt2} @id{$member_id} ('+member.first_name_dat+' '+member.last_name_dat+').';}else{msg='@id{$data->object->from_id} ('+from.first_name+' '+from.last_name+') подарил {$giving_item_info->name} x{$argvt2} @id{$member_id} ('+member.first_name_dat+' '+member.last_name_dat+').';}API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});");
 			}
 			else{
 				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас нет столько {$giving_item_info->name}.", $data->object->from_id);

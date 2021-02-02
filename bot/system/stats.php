@@ -3,21 +3,23 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Stats API
 
+// Стандартное значение статистики пользователя
+define('DB_STATS_DEFAULT',array(
+	'msg_count' => 0,
+	'msg_count_in_succession' => 0,
+	'simbol_count' => 0,
+	'audio_msg_count' => 0,
+	'photo_count' => 0,
+	'audio_count' => 0,
+	'video_count' => 0,
+	'sticker_count' => 0,
+	'bump_count' => 0,
+	'command_used_count' => 0,
+	'button_pressed_count' => 0
+));
+
 // Получение статистики пользователя
 function stats_api_getuser($db, $user_id){
-	// Стандартное значение статистики пользователя
-	define('DB_STATS_DEFAULT',array(
-		'msg_count' => 0,
-		'msg_count_in_succession' => 0,
-		'simbol_count' => 0,
-		'audio_msg_count' => 0,
-		'photo_count' => 0,
-		'audio_count' => 0,
-		'video_count' => 0,
-		'sticker_count' => 0,
-		'bump_count' => 0
-	));
-	
 	$db_stats = $db->getValue(array("chat_stats", "users", "id{$user_id}"), array());
 	$stats = array();
 	foreach (DB_STATS_DEFAULT as $key => $value) {
@@ -41,7 +43,15 @@ function stats_initcmd($event){
 	$event->addTextMessageCommand("!стата", 'stats_cmd_handler');
 }
 
-function stats_update($data, $db){
+function stats_update_messageevent($event, $data, $db){
+	if(property_exists($data->object, "payload") && gettype($data->object->payload) == 'array' && array_key_exists(0, $data->object->payload) && $event->isCallbackButtonCommand($data->object->payload[0])){
+		$stats = stats_api_getuser($db, $data->object->user_id);
+		$stats["button_pressed_count"]++;
+		stats_api_setuser($db, $data->object->user_id, $stats);
+	}
+}
+
+function stats_update_messagenew($event, $data, $db){
 	$stats = stats_api_getuser($db, $data->object->from_id);
 	$last_message_user_id = $db->getValue(array("chat_stats", "last_message_user_id"), 0);
 
@@ -74,6 +84,18 @@ function stats_update($data, $db){
 			case 'audio':
 				$stats["audio_count"]++;
 				break;
+		}
+	}
+
+	if(property_exists($data->object, "payload") && !is_null($data->object->payload)){
+		$payload = (object) json_decode($data->object->payload);
+		if(property_exists($payload, "command") && $event->isTextButtonCommand($payload->command))
+			$stats['button_pressed_count']++;
+	}
+	else{
+		$argv = bot_parse_argv($data->object->text); // Извлекаем аргументы из сообщения
+		if(array_key_exists(0, $argv) && $event->isTextMessageCommand($argv[0])){
+			$stats["command_used_count"]++;
 		}
 	}
 
@@ -118,10 +140,10 @@ function stats_cmd_handler($finput){
 			$rating_text = "Нет данных";
 
 		if($data->object->from_id == $member_id)
-			$msg = "%appeal%, статистика:\n📧Сообщений: {$stats["msg_count"]}\n&#12288;📝Подряд: {$stats["msg_count_in_succession"]}\n🔍Символов: {$stats["simbol_count"]}\n📟Гол. сообщений: {$stats["audio_msg_count"]}\n\n📷Фотографий: {$stats["photo_count"]}\n📹Видео: {$stats["video_count"]}\n🎧Аудиозаписей: {$stats["audio_count"]}\n🤡Стикеров: {$stats["sticker_count"]}\n\n👊🏻Получено люлей: {$stats["bump_count"]}\n\n👑Активность: {$rating_text}";
+			$pre_msg = "%appeal%, статистика:";
 		else
-			$msg = "%appeal%, статистика @id{$member_id} (пользователя):\n📧Сообщений: {$stats["msg_count"]}\n&#12288;📝Подряд: {$stats["msg_count_in_succession"]}\n🔍Символов: {$stats["simbol_count"]}\n📟Гол. сообщений: {$stats["audio_msg_count"]}\n\n📷Фотографий: {$stats["photo_count"]}\n📹Видео: {$stats["video_count"]}\n🎧Аудиозаписей: {$stats["audio_count"]}\n🤡Стикеров: {$stats["sticker_count"]}\n\n👊🏻Получено люлей: {$stats["bump_count"]}\n\n👑Активность: {$rating_text}";
-
+			$pre_msg = "%appeal%, статистика @id{$member_id} (пользователя):";
+		$msg = "{$pre_msg}\n📧Сообщений: {$stats["msg_count"]}\n&#12288;📝Подряд: {$stats["msg_count_in_succession"]}\n🔍Символов: {$stats["simbol_count"]}\n📟Гол. сообщений: {$stats["audio_msg_count"]}\n\n📷Фотографий: {$stats["photo_count"]}\n📹Видео: {$stats["video_count"]}\n🎧Аудиозаписей: {$stats["audio_count"]}\n🤡Стикеров: {$stats["sticker_count"]}\n\n🛠Команд выполнено: {$stats["command_used_count"]}\n🔘Нажато кнопок: {$stats["button_pressed_count"]}\n👊🏻Получено люлей: {$stats["bump_count"]}\n\n👑Активность: {$rating_text}";
 		$messagesModule->sendSilentMessage($data->object->peer_id, $msg);
 	}
 	elseif($command == "обнулить"){

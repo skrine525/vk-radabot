@@ -53,41 +53,70 @@ def queue_handler():
 				EventQueue.remove(event)
 		time.sleep(0.05)
 
+if __name__ == "__main__":
+	log("Radabot is started")
+	active = False
 
-lp_data = json.loads(vk_call('groups.getLongPollServer', {'group_id': config_get('VK_GROUP_ID')}))["response"]
-lp_server = lp_data["server"]
-lp_key = lp_data["key"]
-lp_ts = lp_data["ts"]
-del lp_data
-
-queue_thread = threading.Thread(target=queue_handler, daemon=True)
-queue_thread.start()
-
-log("Radabot is started")
-
-while True:
-	try:
-		data_text = vk_longpoll(lp_server, lp_key, lp_ts)
-		data = json.loads(data_text)
-		failed = data.get('failed', None)
-
-		if(failed == 1):
-			lp_ts = data["ts"]
-			log("VK Failed 1")
-		elif(failed == 2):
-			lp_data = json.loads(vk_call('groups.getLongPollServer', {'group_id': config_get('VK_GROUP_ID')}))["response"]
-			lp_key = lp_data["key"]
-			del lp_data
-			log("VK Failed 2")
-		elif(failed == 3):
-			lp_data = json.loads(vk_call('groups.getLongPollServer', {'group_id': config_get('VK_GROUP_ID')}))["response"]
-			lp_key = lp_data["key"]
-			lp_ts = lp_data["ts"]
-			del lp_data
-			log("VK Failed 3")
+	attempts_count = 1
+	while True:
+		vk_response_dict = json.loads(vk_call('groups.getLongPollServer', {'group_id': config_get('VK_GROUP_ID')}))
+		response_data = vk_response_dict.get('response', None)
+		if response_data != None:
+			lp_server = response_data["server"]
+			lp_key = response_data["key"]
+			lp_ts = response_data["ts"]
+			active = True
+			del vk_response_dict
+			del response_data
+			log("Longpoll data received successfully")
+			break
 		else:
-			for event in data["updates"]:
-				EventQueue.append(event)
-			lp_ts = data["ts"]
-	except requests.exceptions.ConnectionError:
-		log("Connection Error")
+			log("Attempt #{}: Failed to receive longpoll data".format(attempts_count))
+			attempts_count = attempts_count + 1
+		if attempts_count > 5:
+			break
+		time.sleep(0.25)
+	del attempts_count
+
+	if active:
+		queue_thread = threading.Thread(target=queue_handler, daemon=True)
+		queue_thread.start()
+
+	while active:
+		try:
+			data_text = vk_longpoll(lp_server, lp_key, lp_ts)
+			data_dict = json.loads(data_text)
+			failed = data_dict.get('failed', None)
+
+			if failed == 1:
+				lp_ts = data_dict["ts"]
+				log("New lp_ts received successfully")
+			elif failed == 2:
+				vk_response_dict = json.loads(vk_call('groups.getLongPollServer', {'group_id': config_get('VK_GROUP_ID')}))
+				response_data = vk_response_dict.get('response', None)
+				if response_data != None:
+					lp_key = response_data['key']
+					log("New lp_key received")
+				else:
+					log("Failed to receive new lp_key successfully")
+				del vk_response_dict
+				del response_data
+			elif failed == 3:
+				vk_response_dict = json.loads(vk_call('groups.getLongPollServer', {'group_id': config_get('VK_GROUP_ID')}))
+				response_data = vk_response_dict.get('response', None)
+				if response_data != None:
+					lp_key = response_data["key"]
+					lp_ts = response_data["ts"]
+					log("New lp_key & lp_ts received successfully")
+				else:
+					log("Failed to receive new lp_key & lp_ts")
+				del vk_response_dict
+				del response_data
+			else:
+				for event in data_dict["updates"]:
+					EventQueue.append(event)
+				lp_ts = data_dict["ts"]
+		except requests.exceptions.ConnectionError:
+			log("Connection Error")
+
+	log("Radabot is stoped")

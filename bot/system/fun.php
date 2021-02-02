@@ -22,8 +22,11 @@ function fun_initcmd($event){
 
 	// Инициализация команд [кто/кого/кому]
 	$event->addTextMessageCommand("!кто", 'fun_whois_nom');
-	$event->addTextMessageCommand("!кого", 'fun_whois_gen');
+	$event->addTextMessageCommand("!кого", 'fun_whois_acc');
 	$event->addTextMessageCommand("!кому", 'fun_whois_dat');
+
+	// Callback-кнопки
+	$event->addCallbackButtonCommand("fun_memes", 'fun_memes_control_panel_cb');
 }
 
 function fun_kek($finput){
@@ -291,10 +294,7 @@ function fun_memes_control_panel($finput){
 		}
 	}
 	elseif($command == "list"){
-		$meme_names = array();
-		foreach ($db->getValue(array("fun", "memes"), array()) as $key => $val) {
-    		$meme_names[] = $key;
-		}
+		$meme_names = array_keys($db->getValue(array("fun", "memes")));
 		if(count($meme_names) == 0){
 			$botModule->sendSilentMessage($data->object->peer_id, ", в беседе нет мемов.", $data->object->from_id);
 			return;
@@ -321,7 +321,30 @@ function fun_memes_control_panel($finput){
 		if(!is_null($memes[$meme_name])){
 			$added_time = gmdate("d.m.Y H:i:s", $memes[$meme_name]["date"]+10800)." по МСК";
 			$msg = "%__APPEAL__%, информация о меме:\n✏Имя: {$meme_name}\n🤵Владелец: %__OWNERNAME__%\n📅Добавлен: {$added_time}\n📂Содержимое: ⬇️⬇️⬇️";
-			$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'attachment' => $memes[$meme_name]["content"], 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
+			$request_array = array('peer_id' => $data->object->peer_id, 'message' => $msg, 'attachment' => $memes[$meme_name]["content"], 'disable_mentions' => true);
+
+			$meme_names = array_keys($memes);
+			$meme_names_count = count($meme_names);
+			if($meme_names_count){
+				$index = array_search($meme_name, $meme_names);
+				$previous_element = $index - 1;
+				$next_element = $index + 1;
+				if($previous_element <= 0)
+					$previous_element = $meme_names_count - 1;
+				if($next_element >= $meme_names_count)
+					$next_element = 0;
+				$previous_element_str = bot_int_to_emoji_str($previous_element+1);
+				$next_element_str = bot_int_to_emoji_str($next_element+1);
+				$request_array['keyboard'] = vk_keyboard_inline(array(	
+				array(
+					vk_callback_button("{$previous_element_str}⬅", array("fun_memes", $testing_user_id, 1, $previous_element), "secondary"),
+					vk_callback_button("➡{$next_element_str}", array("fun_memes", $testing_user_id, 1, $next_element), "secondary"),
+				),
+				array(vk_callback_button("Закрыть", array('bot_menu', $testing_user_id, 0), "negative"))
+			));
+			}
+
+			$request = json_encode($request_array, JSON_UNESCAPED_UNICODE);
 			$request = vk_parse_vars($request, array("__OWNERNAME__", "__APPEAL__"));
 			vk_execute($botModule->makeExeAppealByID($data->object->from_id, '__APPEAL__')."var owner = API.users.get({'user_ids':[{$memes[$meme_name]["owner_id"]}]})[0];var __OWNERNAME__ = '@id{$memes[$meme_name]["owner_id"]} ('+owner.first_name+' '+owner.last_name+')';return API.messages.send({$request});");
 		} else {
@@ -340,6 +363,77 @@ function fun_memes_control_panel($finput){
 	}
 }
 
+function fun_memes_control_panel_cb($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$payload = $finput->payload;
+	$db = $finput->db;
+
+	// Функция тестирования пользователя
+	$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
+	if($testing_user_id !== $data->object->user_id){
+		$ranksys = new RankSystem($db);
+		if(!$ranksys->checkRank($data->object->user_id, 1)){
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
+			return;
+		}
+	}
+
+	$messagesModule = new Bot\Messages($db);
+
+	$command = bot_get_array_value($payload, 2, 0);
+
+	switch ($command) {
+	case 1:
+	$meme_index = bot_get_array_value($payload, 3, -1);
+
+	if($meme_index < 0){
+		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Внутренняя ошибка: Неверно указан мем.');
+		return;
+	}
+
+	$memes = $db->getValue(array("fun", "memes"), array());
+	$meme_names = array_keys($memes);
+	$meme_values = array_values($memes);
+
+	if(!is_null($meme_values[$meme_index])){
+		$added_time = gmdate("d.m.Y H:i:s", $meme_values[$meme_index]["date"]+10800)." по МСК";
+		$msg = "%__APPEAL__%, информация о меме:\n✏Имя: {$meme_names[$meme_index]}\n🤵Владелец: %__OWNERNAME__%\n📅Добавлен: {$added_time}\n📂Содержимое: ⬇️⬇️⬇️";
+		$request_array = array('peer_id' => $data->object->peer_id, 'message' => $msg, 'attachment' => $meme_values[$meme_index]["content"], 'disable_mentions' => true, 'conversation_message_id' => $data->object->conversation_message_id);
+
+		$meme_values_count = count($meme_values);
+		if($meme_values_count){
+			$previous_element = $meme_index - 1;
+			$next_element = $meme_index + 1;
+			if($previous_element <= 0)
+				$previous_element = $meme_values_count - 1;
+			if($next_element >= $meme_values_count)
+				$next_element = 0;
+			$previous_element_str = bot_int_to_emoji_str($previous_element+1);
+			$next_element_str = bot_int_to_emoji_str($next_element+1);
+			$request_array['keyboard'] = vk_keyboard_inline(array(
+				array(
+					vk_callback_button("{$previous_element_str}⬅", array("fun_memes", $testing_user_id, 1, $previous_element), "secondary"),
+					vk_callback_button("➡{$next_element_str}", array("fun_memes", $testing_user_id, 1, $next_element), "secondary"),
+				),
+				array(vk_callback_button("Закрыть", array('bot_menu', $testing_user_id, 0), "negative"))
+			));
+		}
+
+		$request = json_encode($request_array, JSON_UNESCAPED_UNICODE);
+		$request = vk_parse_vars($request, array("__OWNERNAME__", "__APPEAL__"));
+		vk_execute($messagesModule->makeExeAppealByID($data->object->user_id, '__APPEAL__')."var owner = API.users.get({'user_ids':[{$meme_values[$meme_index]["owner_id"]}]})[0];var __OWNERNAME__ = '@id{$meme_values[$meme_index]["owner_id"]} ('+owner.first_name+' '+owner.last_name+')';return API.messages.edit({$request});");
+	} else {
+		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Внутренняя ошибка: Мем не найден.');
+	}
+	break;
+		
+	default:
+	bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Внутренняя ошибка: Неизвестная команда.');
+	break;
+	}
+}
+
 function fun_memes_handler($data, $db){
 	$chatModes = new ChatModes($db);
 	if(!$chatModes->getModeValue("allow_memes"))
@@ -351,9 +445,7 @@ function fun_memes_handler($data, $db){
 		$botModule = new BotModule($db);
 		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%,", 'attachment' => $meme["content"], 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 		$request = vk_parse_var($request, "appeal");
-		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-			return API.messages.send({$request});
-			");
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."return API.messages.send({$request});");
 	}
 }
 
@@ -676,7 +768,7 @@ function fun_whois_nom($finput){
 	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var from_id={$data->object->from_id};var random_number={$random_number};var members=API.messages.getConversationMembers({'peer_id':peer_id});var member=members.profiles[random_number % members.profiles.length];var msg=appeal+', 🤔Я думаю это @id'+ member.id + ' ('+member.first_name+' '+member.last_name+') - {$text}.';API.messages.send({'peer_id':peer_id,'message':msg});");
 }
 
-function fun_whois_gen($finput){
+function fun_whois_acc($finput){
 	// Инициализация базовых переменных
 	$data = $finput->data; 
 	$argv = $finput->argv;
@@ -695,7 +787,7 @@ function fun_whois_gen($finput){
 
 	$random_number = mt_rand(0, 65535);
 
-	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var from_id={$data->object->from_id};var random_number={$random_number};var members=API.messages.getConversationMembers({'peer_id':peer_id,'fields':'first_name_gen,last_name_gen'});var member=members.profiles[random_number % members.profiles.length];var msg=appeal+', 🤔Я думаю это @id'+ member.id + ' ('+member.first_name_gen+' '+member.last_name_gen+') - {$text}.';API.messages.send({'peer_id':peer_id,'message':msg});");
+	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var from_id={$data->object->from_id};var random_number={$random_number};var members=API.messages.getConversationMembers({'peer_id':peer_id,'fields':'first_name_acc,last_name_acc'});var member=members.profiles[random_number % members.profiles.length];var msg=appeal+', 🤔Я думаю это @id'+ member.id + ' ('+member.first_name_acc+' '+member.last_name_acc+') - {$text}.';API.messages.send({'peer_id':peer_id,'message':msg});");
 }
 
 function fun_whois_dat($finput){

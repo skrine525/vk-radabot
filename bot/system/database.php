@@ -3,10 +3,12 @@
 class Database{
 	private $path;
 	private $database;
+	private $saves_count;
 
 	function __construct($path){
 		$this->path = $path;
 		$this->database = $this->readDatabaseFile();
+		$this->saves_count = 0;
 	}
 
 	private function readDatabaseFile(){
@@ -20,8 +22,24 @@ class Database{
 		return boolval(file_put_contents($this->path, json_encode($this->database,  JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT)));
 	}
 
-	public function save(){
-		return $this->writeDatabaseFile();
+	public function getSavesCount(){
+		return $this->saves_count;
+	}
+
+	public function resetSavesCount(){
+		$this->saves_count = 0;
+	}
+
+	public function save($force = false){
+		if(!$force && !$this->isExists())
+			return false;
+
+		if($this->writeDatabaseFile()){
+			$this->saves_count++;
+			return true;
+		}
+		
+		return false;
 	}
 
 	public function getValue($keys, $default = null){

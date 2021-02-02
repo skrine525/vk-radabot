@@ -8,7 +8,6 @@ namespace Bot{
 		private $textMessageCommands;			// Массив текстовых команд
 		private $textButtonCommands;			// Массив команд Text-кнопок
 		private $callbackButtonCommands;		// Массив команд Callback-кнопок
-		private $defaultFunc;
 
 		// Константы
 		const COMMAND_RESULT_OK = 0;			// Константа результата выполнения команды без ошибок
@@ -37,7 +36,7 @@ namespace Bot{
 	  	}
 
 	  	public function addTextMessageCommand($command, $callback, $ignore_db = false){
-	  		if(!array_key_exists($command, $this->textMessageCommands)){
+	  		if(!$this->isTextMessageCommand($command) && is_callable($callback)){
 	  			$this->textMessageCommands[$command] = (object) array(
 	  				'callback' => $callback,
 	  				'ignore_db' => $ignore_db
@@ -48,8 +47,12 @@ namespace Bot{
 	  			return false;
 	  	}
 
+	  	public function isTextMessageCommand($command){
+	  		return array_key_exists($command, $this->textMessageCommands);
+	  	}
+
 	  	public function addTextButtonCommand($command, $callback, $ignore_db = false){
-	  		if(!array_key_exists($command, $this->textButtonCommands)){
+	  		if(!$this->isTextButtonCommand($command) && is_callable($callback)){
 	  			$this->textButtonCommands[$command] = (object) array(
 	  				'callback' => $callback,
 	  				'ignore_db' => $ignore_db
@@ -60,8 +63,12 @@ namespace Bot{
 	  			return false;
 	  	}
 
+	  	public function isTextButtonCommand($command){
+	  		return array_key_exists($command, $this->textButtonCommands);
+	  	}
+
 	  	public function addCallbackButtonCommand($command, $callback, $ignore_db = false){
-	  		if(!array_key_exists($command, $this->callbackButtonCommands)){
+	  		if(!$this->isCallbackButtonCommand($command) && is_callable($callback)){
 	  			$this->callbackButtonCommands[$command] = (object) array(
 	  				'callback' => $callback,
 	  				'ignore_db' => $ignore_db
@@ -72,8 +79,8 @@ namespace Bot{
 	  			return false;
 	  	}
 
-	  	public function setDefaultFunction($func){
-	  		$this->defaultFunc = $func;
+	  	public function isCallbackButtonCommand($command){
+	  		return array_key_exists($command, $this->callbackButtonCommands);
 	  	}
 
 	  	public function getTextMessageCommandList(){
@@ -93,11 +100,11 @@ namespace Bot{
 	  			$argv = bot_parse_argv($data->object->text); // Извлекаем аргументы из сообщения
 				$command = mb_strtolower(bot_get_array_value($argv, 0, "")); // Переводим команду в нижний регистр
 
-				if(array_key_exists($command, $this->textMessageCommands)){
+				if($this->isTextMessageCommand($command)){
 					$command_data = $this->textMessageCommands[$command];
 
 					// Проверка на существование беседы в Базе данных, если команда не способна игнорировать это
-					if(!$command_data->ignore_db && !bot_check_reg($this->db))
+					if(!$command_data->ignore_db && !$this->db->isExists())
 						return Event::COMMAND_RESULT_NO_DB;
 
 					$finput = (object) array(
@@ -118,11 +125,11 @@ namespace Bot{
 	  		if(gettype($data) == "object"){
 	  			if(property_exists($data->object, "payload")){
 					$payload = (object) json_decode($data->object->payload);
-					if(!is_null($payload) && property_exists($payload, "command") && array_key_exists($payload->command, $this->textButtonCommands)){
+					if(!is_null($payload) && property_exists($payload, "command") && $this->isTextButtonCommand($payload->command)){
 						$command_data = $this->textButtonCommands[$payload->command];
 
 						// Проверка на существование беседы в Базе данных, если команда не способна игнорировать это
-						if(!$command_data->ignore_db && !bot_check_reg($this->db))
+						if(!$command_data->ignore_db && !$this->db->isExists())
 							return Event::COMMAND_RESULT_NO_DB;
 
 						$finput = (object) array(
@@ -145,11 +152,11 @@ namespace Bot{
 	  		if(gettype($data) == "object"){
 	  			if(property_exists($data->object, "payload") && gettype($data->object->payload) == 'array'){
 					$payload = $data->object->payload;
-					if(array_key_exists(0, $payload)&& array_key_exists($payload[0], $this->callbackButtonCommands)){
+					if(array_key_exists(0, $payload) && $this->isCallbackButtonCommand($payload[0])){
 						$command_data = $this->callbackButtonCommands[$payload[0]];
 						
 						// Проверка на существование беседы в Базе данных, если команда не способна игнорировать это
-						if(!$command_data->ignore_db && !bot_check_reg($this->db))
+						if(!$command_data->ignore_db && !$this->db->isExists())
 							return Event::COMMAND_RESULT_NO_DB;
 
 						$finput = (object) array(
@@ -168,7 +175,7 @@ namespace Bot{
 	  		return Event::COMMAND_RESULT_UNKNOWN;
 	  	}
 
-	  	public function handle(){
+	  	public function handle($defaultFunc = null){
 	  		switch($this->data->type){
 				case 'message_new':
 				if($this->data->object->from_id <= 0){ // Игнорирование сообщений других чат-ботов
@@ -194,8 +201,8 @@ namespace Bot{
 				}
 
 				// Обработка не командный сообщений
-				if(!is_null($this->defaultFunc)){
-					if(!bot_check_reg($this->db)){ // Проверка на регистрацию в системе
+				if(!is_null($defaultFunc) && is_callable($defaultFunc)){
+					if(!$this->db->isExists()){ // Проверка на регистрацию в системе
 						return false;
 					}
 					$finput = (object) array(
@@ -203,8 +210,7 @@ namespace Bot{
 						'db' => $this->db,
 						'event' => $this
 					);
-					$method = $this->defaultFunc; // Получение значения Callback'а
-					call_user_func_array($method, array($finput)); // Выполнение Callback'а
+					call_user_func_array($defaultFunc, array($finput)); // Выполнение Callback'а
 					return true;
 				}
 				break;
@@ -373,17 +379,21 @@ namespace{
 
 	mb_internal_encoding("UTF-8");										// UTF-8 как основная кодировка для mbstring
 
+	$GLOBALS['modules_importtime_start'] = microtime(true);				// Время подключения модулей: Начало
+
 	// Составные модули бота
-	require_once(__DIR__."/vk.php"); 							// Модуль, отвечающий за все взаимодействия с VK API
-	require_once(__DIR__."/database.php"); 						// Модуль, отвечающий за взаимодействие основной базы данных бота
-	require_once(__DIR__."/government.php");	 					// Модуль, отвечающий за работу гос. устройства беседы
-	require_once(__DIR__."/economy.php"); 						// Модуль, отвечающий за систему Экономики
-	require_once(__DIR__."/fun.php"); 							// Модуль, отвечающий за развлечения
-	require_once(__DIR__."/roleplay.php"); 						// Модуль, отвечающий за Roleplay команды
-	require_once(__DIR__."/manager.php"); 						// Модуль, отвечающий за управление беседой
-	require_once(__DIR__."/giphy.php"); 							// Модуль, отвечающий за функции взаимодействия с GIPHY API
-	require_once(__DIR__."/word_game.php"); 						// Модуль, отвечающий за игры Слова и Words
-	require_once(__DIR__."/stats.php"); 							// Модуль, отвечающий за ведение статистики в беседах
+	require_once(__DIR__."/vk.php"); 									// Модуль, отвечающий за все взаимодействия с VK API
+	require_once(__DIR__."/database.php"); 								// Модуль, отвечающий за взаимодействие основной базы данных бота
+	require_once(__DIR__."/government.php");	 						// Модуль, отвечающий за работу гос. устройства беседы
+	require_once(__DIR__."/economy.php"); 								// Модуль, отвечающий за систему Экономики
+	require_once(__DIR__."/fun.php"); 									// Модуль, отвечающий за развлечения
+	require_once(__DIR__."/roleplay.php"); 								// Модуль, отвечающий за Roleplay команды
+	require_once(__DIR__."/manager.php"); 								// Модуль, отвечающий за управление беседой
+	require_once(__DIR__."/giphy.php"); 								// Модуль, отвечающий за функции взаимодействия с GIPHY API
+	require_once(__DIR__."/word_game.php"); 							// Модуль, отвечающий за игры Слова и Words
+	require_once(__DIR__."/stats.php"); 								// Модуль, отвечающий за ведение статистики в беседах
+
+	$GLOBALS['modules_importtime_end'] = microtime(true);				// Время подключения модулей: Конец
 
 	function bot_handle_event($data){
 		if($data->object->peer_id < 2000000000){ // Запрет использование бота в лс
@@ -397,11 +407,12 @@ namespace{
 			/// Обработка бота в Беседе
 			///////////////////////////
 
-			// Инициализирует класс
+			// Инициализируем класс
 			$event = new Bot\Event($data);
 
-			bot_pre_handle_function($event);				// Функция предварительной обработки
 			bot_debug_cmdinit($event);						// Инициализация команд отладочного режима
+
+			$GLOBALS['cmd_initime_start'] = microtime(true);// Время инициализации команд: Начало
 
 			bot_initcmd($event);							// Инициализация команд модуля bot
 			government_initcmd($event);						// Инициализация команд Гос. устройства
@@ -413,25 +424,28 @@ namespace{
 			wordgame_initcmd($event);						// Игра Слова
 			economy_initcmd($event);						// Economy
 
-			// Функция обработки событий вне командной среды
-			$event->setDefaultFunction(function ($finput){
+			$GLOBALS['cmd_initime_end'] = microtime(true);	// Время инициализации команд: Конец
+
+			// Обработка
+
+			bot_pre_handle($event);							// Функция предварительной обработки
+			$event->handle(function ($finput){
 				// Инициализация базовых переменных
 				$data = $finput->data; 
 				$db = $finput->db;
 
-				government_referendum_system($data, $db); // Обработчик выборов президента в беседе
+				government_referendum_system($data, $db); 	// Обработчик выборов президента в беседе
 
-				bot_message_action_handler($finput); // Обработчик событий сообщений
+				bot_message_action_handler($finput); 		// Обработчик событий сообщений
 
 				fun_handler($data, $db);
-				stats_update($data, $db); // Ведение статистики в беседе
-				wordgame_gameplay($data, $db); // Освновной обработчик игры Слова
+				wordgame_gameplay($data, $db); 				// Освновной обработчик игры Слова
 
 				$db->save();
-			});
+			}); 											// Обработка события бота
+			bot_post_handle($event);						// Функция вторичной обработки
 
-			$event->handle(); // Обработка
-			$event->exit(); // Очищение памяти
+			$event->exit(); 								// Очищение памяти
 		}
 	}
 
@@ -634,14 +648,14 @@ namespace{
 		$db = $finput->db;
 
 		$messagesModule = new Bot\Messages($db);
-		if (bot_check_reg($db) == false){
+		if (!$db->isExists()){
 			$response = json_decode(vk_execute($messagesModule->makeExeAppealByID($data->object->from_id).bot_test_rights_exe($data->object->peer_id, $data->object->from_id, "API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', &#9940;У вас нет прав для этой команды.','disable_mentions':true});return 0;", true)."var chat=API.messages.getConversationsById({'peer_ids':[{$data->object->peer_id}],'extended':1}).items[0];
 				if(chat.peer.type!='chat'){API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', эта беседа не является групповым чатом.','disable_mentions':true});return{'result':0};}API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Беседа успешно зарегистрирована.','disable_mentions':true});return 1;"))->response;
 			if($response == 1){
 				$chat_id = $data->object->peer_id - 2000000000;
 				$db->setValue(array("chat_id"), $chat_id);
 				$db->setValue(array("owner_id"), $data->object->from_id);
-				$db->save();
+				$db->save(true);
 			}	
 		}
 		else{
@@ -657,7 +671,7 @@ namespace{
 		$db = $finput->db;
 
 		$messagesModule = new Bot\Messages($db);
-		if (bot_check_reg($db) == false){
+		if (!$db->isExists()){
 			$snackbar1_json = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "&#9940; У вас нет прав для этой команды."), JSON_UNESCAPED_UNICODE)));
 			$snackbar2_json = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "&#9940; Эта беседа не является групповым."), JSON_UNESCAPED_UNICODE)));
 			$response = json_decode(vk_execute($messagesModule->makeExeAppealByID($data->object->user_id).bot_test_rights_exe($data->object->peer_id, $data->object->user_id, "API.messages.sendMessageEventAnswer({$snackbar1_json});return 0;", true)."var chat=API.messages.getConversationsById({'peer_ids':[{$data->object->peer_id}],'extended':1}).items[0];
@@ -683,17 +697,37 @@ namespace{
 		return $argv;
 	}
 
-	function bot_pre_handle_function($event){
+	function bot_pre_handle($event){
 		$db = $event->getDatabase();
 		$data = $event->getData();
+		
 
-		if($data->type != "message_new" || $data->object->peer_id < 2000000000 || !bot_check_reg($db)){
-			return;
+		if($data->object->peer_id > 2000000000 && $db->isExists()){
+			switch ($data->type) {
+				case 'message_new':
+
+				// Антифлуд
+				if(AntiFlood::handler($data, $db)){
+					$event->exit();
+					exit;
+				}
+
+				// Статистика
+				stats_update_messagenew($event, $data, $db); 	// Ведение статистики в беседе
+				break;
+
+				case 'message_event':
+				stats_update_messageevent($event, $data, $db); 	// Ведение статистики в беседе
+				break;
+			}
 		}
+	}
 
-		if(AntiFlood::handler($data, $db)){
-			$event->exit();
-			exit;
+	function bot_post_handle($event){
+		$db = $event->getDatabase();
+
+		if($db->getSavesCount() == 0){
+			$db->save();
 		}
 	}
 
@@ -871,6 +905,24 @@ namespace{
 					};
 					");
 			});
+
+			$event->addTextMessageCommand("!debug-info", function ($finput){
+				// Инициализация базовых переменных
+				$data = $finput->data; 
+				$argv = $finput->argv;
+				$db = $finput->db;
+
+				$messagesModule = new Bot\Messages($db);
+				$messagesModule->setAppealID($data->object->from_id);
+
+				$modules_importtime = round($GLOBALS['modules_importtime_end'] - $GLOBALS['modules_importtime_start'], 4);
+				$cmd_inittime = round($GLOBALS['cmd_initime_end'] - $GLOBALS['cmd_initime_start'], 4);
+				$php_memory_usage = round(memory_get_usage() / 1024, 2);
+
+				$msg = "%appeal%,\n⌛Время импорта модулей: {$modules_importtime} сек.\n⌛Время cmdinit: {$cmd_inittime} сек.\n📊Выделено памяти PHP: {$php_memory_usage} КБ";
+
+				$messagesModule->sendSilentMessage($data->object->peer_id, $msg);
+			});
 		}
 	}
 
@@ -903,18 +955,10 @@ namespace{
 	}
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Работа с Database
-	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-	function bot_check_reg($db){ // Проверка на регистрацию
-		return $db->isExists();
-	}
-
-	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Прочее
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	function bot_get_array_value($array, $index, $default = ""){
+	function bot_get_array_value($array, $index, $default = null){ // Будут баги, изменить null на ""
 		if(array_key_exists($index, $array))
 			return $array[$index];
 		else
@@ -1138,7 +1182,7 @@ namespace{
 		$db = $finput->db;
 		$event = $finput->event;
 
-		// Переменная тестирования пользователя
+		// Функция тестирования пользователя
 		$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
 		if($testing_user_id !== $data->object->user_id){
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
@@ -1575,11 +1619,14 @@ namespace{
 		$keyboard_buttons = array();
 		$message = "";
 
-		// Переменная тестирования пользователя
+		// Функция тестирования пользователя
 		$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
 		if($testing_user_id !== $data->object->user_id){
-			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
-			return;
+			$ranksys = new RankSystem($db);
+			if(!$ranksys->checkRank($data->object->user_id, 1)){
+				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
+				return;
+			}
 		}
 
 		// Переменная команды меню
