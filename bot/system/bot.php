@@ -706,7 +706,6 @@ namespace{
 		if($data->object->peer_id > 2000000000 && $db->isExists()){
 			switch ($data->type) {
 				case 'message_new':
-
 				// Антифлуд
 				if(AntiFlood::handler($data, $db)){
 					$event->exit();
@@ -1635,7 +1634,11 @@ namespace{
 
 		switch ($code) {
 			case 0:
-			$message = "✅ Меню закрыто.";
+			$text = bot_get_array_value($payload, 3, false);
+			if(gettype($text) == "string")
+				$message = $text;
+			else
+				$message = "✅ Меню закрыто.";
 			break;
 
 			case 1:

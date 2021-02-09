@@ -294,10 +294,10 @@ function fun_memes_control_panel($finput){
 				$next_element_str = bot_int_to_emoji_str($next_element+1);
 				$request_array['keyboard'] = vk_keyboard_inline(array(	
 				array(
-					vk_callback_button("{$previous_element_str}⬅", array("fun_memes", $testing_user_id, 1, $previous_element), "secondary"),
-					vk_callback_button("➡{$next_element_str}", array("fun_memes", $testing_user_id, 1, $next_element), "secondary"),
+					vk_callback_button("{$previous_element_str}⬅", array("fun_memes", $data->object->from_id, 1, $previous_element), "secondary"),
+					vk_callback_button("➡{$next_element_str}", array("fun_memes", $data->object->from_id, 1, $next_element), "secondary"),
 				),
-				array(vk_callback_button("Закрыть", array('bot_menu', $testing_user_id, 0), "negative"))
+				array(vk_callback_button("Закрыть", array('bot_menu', $data->object->from_id, 0), "negative"))
 			));
 			}
 
@@ -329,11 +329,8 @@ function fun_memes_control_panel_cb($finput){
 	// Функция тестирования пользователя
 	$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
 	if($testing_user_id !== $data->object->user_id){
-		$ranksys = new RankSystem($db);
-		if(!$ranksys->checkRank($data->object->user_id, 1)){
-			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
-			return;
-		}
+		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
+		return;
 	}
 
 	$messagesModule = new Bot\Messages($db);

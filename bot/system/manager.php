@@ -7,34 +7,56 @@
 
 class RankSystem{ // Класс управления рангами
 	const RANKS_ARRAY = array("Владелец", "Администратор", "Президент");
-	const MINRANK_NAME = "Участник";
+	const DEFAULTRANK_NAME = "Участник";
 
 	private $db;
 
-	function __construct(&$database){
-		$this->db = &$database;
+	function __construct($database){
+		$this->db = $database;
 	}
 
-	public static function getRankNameByID($rank, $with_code = false){
-		if(array_key_exists($rank, self::RANKS_ARRAY))
-			if($with_code){
+	public function getRanksList(){
+		$list = array();
+		$db_ranknames = $this->db->getValue(['chat_settings', 'rank_names'], []);
+		foreach (self::RANKS_ARRAY as $key => $value) {
+			$list[] = (object) [
+				'id' => $key,
+				'name' => bot_get_array_value($db_ranknames, "{$key}", $value)
+			];
+		}
+		$list[] = (object) [
+			'id' => self::getDefaultRankValue(),
+			'name' => bot_get_array_value($db_ranknames, "d", self::DEFAULTRANK_NAME)
+		];
+		return $list;
+	}
+
+	public function getRankName($rank, $with_code = false){
+		if(array_key_exists($rank, self::RANKS_ARRAY)){
+			$name = $this->db->getValue(['chat_settings', 'rank_names', "{$rank}"], false);
+			if($name === false)
 				$name = self::RANKS_ARRAY[$rank];
+			if($with_code){
 				return "{$name} [rank_{$rank}]";
 			}
 			else
 				return self::RANKS_ARRAY[$rank];
-		elseif($rank == self::getMinRankValue())
+		}
+		elseif($rank == self::getDefaultRankValue()){
+			$name = $this->db->getValue(['chat_settings', 'rank_names', "d"], false);
+			if($name === false)
+				$name = self::DEFAULTRANK_NAME;
 			if($with_code){
-				$name = self::MINRANK_NAME;
 				return "{$name} [rank_{$rank}]";
 			}
 			else
-				return self::MINRANK_NAME;
+				return $name;
+		}
 		else
 			return "rank_{$rank}";
 	}
 
-	public static function getMinRankValue(){
+	public static function getDefaultRankValue(){
 		return count(self::RANKS_ARRAY);
 	}
 
@@ -43,7 +65,7 @@ class RankSystem{ // Класс управления рангами
 		if($user_id == $owner_id)
 			return 0;
 		else
-			return $this->db->getValue(array("chat_settings", "user_ranks", "id{$user_id}"), self::getMinRankValue());
+			return $this->db->getValue(array("chat_settings", "user_ranks", "id{$user_id}"), self::getDefaultRankValue());
 	}
 
 	public function setUserRank($user_id, $rank){
@@ -54,7 +76,7 @@ class RankSystem{ // Класс управления рангами
 			$this->db->unsetValue(array("chat_settings", "user_ranks", "id{$user_id}"));
 			return true;
 		}
-		elseif($rank+1 <= self::getMinRankValue()){
+		elseif($rank+1 <= self::getDefaultRankValue()){
 			$this->db->setValue(array("chat_settings", "user_ranks", "id{$user_id}"), $rank);
 			return true;
 		}
@@ -93,7 +115,7 @@ class RankSystem{ // Класс управления рангами
 			$ranks[] = (object) array(
 				'user_id' => $user_id,
 				'rank' => $rank,
-				'name' => self::getRankNameByID($rank, true)
+				'name' => $this->getRankName($rank, true)
 			);
 		}
 		return $ranks;
@@ -489,7 +511,7 @@ function manager_ban_user($finput){
 	}
 
 	if($ranksys->checkRank($member_id, 2)){  // Проверка ранга (Президент)
-		$rank_name = RankSystem::getRankNameByID($ranksys->getUserRank($member_id));
+		$rank_name = $ranksys->getRankName($ranksys->getUserRank($member_id));
 		$msg = ", @id{$member_id} (Пользователя) нельзя забанить. Причина: Пользователь имеет ранг {$rank_name}.";
 		$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 		return;
@@ -1190,22 +1212,22 @@ function manager_rank($finput){
 	$argv = $finput->argv;
 	$db = $finput->db;
 
-	$botModule = new BotModule($db);
+	$messagesModule = new Bot\Messages($db);
+	$messagesModule->setAppealID($data->object->from_id);
 
 	if(array_key_exists(1, $argv)){
 		$command = mb_strtolower($argv[1]);
-		if($command == "выдать"){
+		switch ($command) {
+			case 'выдать':
 			$ranksys = new RankSystem($db);
 			if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверка ранга (Администратор)
-				$rank_name = RankSystem::getRankNameByID(1, true);
-				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Для использования данной функции, ваш ранг должен быть как минимум {$rank_name}.", $data->object->from_id);
+				$rank_name = $ranksys->getRankName(1, true);
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Для использования данной функции ваш ранг должен быть не ниже {$rank_name}.");
 				return;
 			}
 
 			if(!array_key_exists(2, $argv) && !array_key_exists(0, $data->object->fwd_messages)){
-				$msg = ", используйте \"!ранг выдать <ранг> <id/упоминание/перес. сообщение>\".";
-				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-					return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, используйте \"!ранг выдать <ранг> <id/упоминание/перес. сообщение>\".");
 				return;
 			}
 
@@ -1217,10 +1239,10 @@ function manager_rank($finput){
 			$from_user_rank = $ranksys->getUserRank($data->object->from_id);
 
 			if($rank == 0){
-				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите ранг.", $data->object->from_id);
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Укажите ранг.");
 				return;
 			} elseif($rank <= $from_user_rank){
-				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы не можете выдать пользователю такой же ранг, как и у вас или выше.", $data->object->from_id);
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Вы не можете выдать пользователю такой же ранг, как и у вас или выше.");
 				return;
 			}
 
@@ -1233,36 +1255,35 @@ function manager_rank($finput){
 			} elseif(array_key_exists(3, $argv) && is_numeric($argv[3])) {
 				$member_id = intval($argv[3]);
 			} else {
-				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите пользователя.", $data->object->from_id);
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Укажите пользователя.");
 				return;
 			}
 
 			$member_rank = $ranksys->getUserRank($member_id);
 			if(RankSystem::cmpRanks($from_user_rank, $member_rank) >= 0){
-				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Пользователь обладает таким же рангом, как и вы, или выше.", $data->object->from_id);
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Пользователь обладает таким же рангом, как и вы, или выше.");
 				return;
 			}
 
 			if($ranksys->setUserRank($member_id, $rank)){
 				$db->save();
-				$rank_name = RankSystem::getRankNameByID($rank, true);
-				$botModule->sendMessage($data->object->peer_id, ", @id{$member_id} (Пользователю) установлен ранг: {$rank_name}.", $data->object->from_id);
+				$rank_name = $ranksys->getRankName($rank, true);
+				$messagesModule->sendMessage($data->object->peer_id, "%appeal%, @id{$member_id} (Пользователю) установлен ранг: {$rank_name}.");
 			} else{
-				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Такого ранга не существует.", $data->object->from_id);
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Такого ранга не существует.");
 			}
-		}
-		elseif($command == "забрать"){
+			break;
+
+			case 'забрать':
 			$ranksys = new RankSystem($db);
 			if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверка ранга (Администратор)
-				$rank_name = RankSystem::getRankNameByID(1, true);
-				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Для использования данной функции, ваш ранг должен быть как минимум {$rank_name}.", $data->object->from_id);
+				$rank_name = $ranksys->getRankName(1, true);
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Для использования данной функции ваш ранг должен быть не ниже {$rank_name}.");
 				return;
 			}
 
 			if(!array_key_exists(2, $argv) && !array_key_exists(0, $data->object->fwd_messages)){
-				$msg = ", используйте \"!ранг забрать <id/упоминание/перес. сообщение>\".";
-				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-					return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, используйте \"!ранг забрать <id/упоминание/перес. сообщение>\".");
 				return;
 			}
 
@@ -1275,7 +1296,7 @@ function manager_rank($finput){
 			} elseif(array_key_exists(2, $argv) && is_numeric($argv[2])) {
 				$member_id = intval($argv[2]);
 			} else {
-				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите пользователя.", $data->object->from_id);
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Укажите пользователя.");
 				return;
 			}
 
@@ -1283,38 +1304,99 @@ function manager_rank($finput){
 			$member_rank = $ranksys->getUserRank($member_id);
 
 			if(RankSystem::cmpRanks($from_user_rank, $member_rank) >= 0){
-				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Пользователь обладает таким же рангом, как и вы, или выше.", $data->object->from_id);
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Пользователь обладает таким же рангом, как и вы, или выше.");
 				return;
 			}
 
 			$ranksys->setUserRank($member_id, 0);
 			$db->save();
-			$botModule->sendMessage($data->object->peer_id, ", @id{$member_id} (Пользователь) больше не имеет ранга!", $data->object->from_id);
-		}
-		elseif($command == "получить"){
+			$messagesModule->sendMessage($data->object->peer_id, "%appeal%, @id{$member_id} (Пользователь) больше не имеет ранга!");
+			break;
+
+			case 'получить':
 			$ranksys = new RankSystem($db);
 			if($ranksys->checkRank($data->object->from_id, 1)){ // Проверка ранга (Администратор)
-				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы уже имеете данный ранг!", $data->object->from_id);
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Вы уже имеете данный ранг!");
 				return;
 			}
 
-			$rank_name = RankSystem::getRankNameByID(1, true);
+			$rank_name = $ranksys->getRankName(1, true);
 			$response = json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id).bot_test_rights_exe($data->object->peer_id, $data->object->from_id, "API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ⛔Чтобы получить ранг {$rank_name} нужно иметь статус администратора в беседе.','disable_mentions':true});return 0;")."API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Ранг {$rank_name} [rank_1] успешно получен.','disable_mentions':true});return 1;"))->response;
 
 			if($response == 1){
 				$ranksys->setUserRank($data->object->from_id, 1);
 				$db->save();
 			}
-		}
-		else{
-			$botModule->sendCommandListFromArray($data, ", используйте:", array("!ранг выдать <ранг> <пользователь> - Выдача ранга пользователю", "!ранг забрать <пользователь> - Лишение ранга пользователя", "!ранг получить - Получение ранга с помощью статуса в беседе"));
+			break;
+
+			case 'название':
+			$ranksys = new RankSystem($db);
+			if(!$ranksys->checkRank($data->object->from_id, 0)){ // Проверка ранга (Администратор)
+				$rank_name = $ranksys->getRankName(1, true);
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Для использования данной функции ваш ранг должен быть не ниже {$rank_name}.");
+				return;
+			}
+
+			$rank = intval(bot_get_array_value($argv, 2, -1));
+			if($rank == -1){
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Укажите ранг.");
+				return;
+			}
+
+			$name = bot_get_array_value($argv, 3, "");
+
+			$message = "";
+			$defaultRankValue = RankSystem::getDefaultRankValue();
+			if($rank == $defaultRankValue){
+				if($name === ""){
+					if($db->unsetValue(["chat_settings", "rank_names", "d"])){
+						$new_name = $ranksys->getRankName($defaultRankValue);
+						$message = "%appeal%, ✅Название стандартного ранга сброшено. Новое название: {$new_name}.";
+						$db->save();
+					}
+					else
+						$message = "%appeal%, ⛔Название ранга имеет стандартный вид.";
+				}
+				else{
+					$db->setValue(["chat_settings", "rank_names", "d"], $name);
+					$new_name = $ranksys->getRankName($defaultRankValue);
+					$message = "%appeal%, ✅Название стандартного ранга установлено. Новое название: {$new_name}.";
+					$db->save();
+				}
+			}
+			elseif($rank+1 <= $defaultRankValue){
+				if($name === ""){
+					if($db->unsetValue(["chat_settings", "rank_names", "{$rank}"])){
+						$new_name = $ranksys->getRankName($rank);
+						$message = "%appeal%, ✅Название ранга [rank_{$rank}] сброшено. Новое название: {$new_name}.";
+						$db->save();
+					}
+					else
+						$message = "%appeal%, ⛔Название ранга имеет стандартный вид.";
+				}
+				else{
+					$db->setValue(["chat_settings", "rank_names", "{$rank}"], $name);
+					$new_name = $ranksys->getRankName($defaultRankValue);
+					$message = "%appeal%, ✅Название ранга [rank_{$rank}] установлено. Новое название: {$new_name}.";
+					$db->save();
+				}
+			}
+			else
+				$message = "%appeal%, ⛔Указанного ранга не существует.";
+
+			$messagesModule->sendSilentMessage($data->object->peer_id, $message);
+			break;
+
+			default:
+			$messagesModule->sendSilentMessageWithListFromArray($data, ", используйте:", array("!ранг выдать <ранг> <пользователь> - Выдача ранга пользователю", "!ранг забрать <пользователь> - Лишение ранга пользователя", "!ранг получить - Получение ранга с помощью статуса в бесее"));
+			break;
 		}
 	}
 	else{
 		$ranksys = new RankSystem($db);
 		$user_rank = $ranksys->getUserRank($data->object->from_id);
-		$rank_name = RankSystem::getRankNameByID($user_rank, true);
-		$botModule->sendSilentMessage($data->object->peer_id, ", Ваш ранг: {$rank_name}.", $data->object->from_id);
+		$rank_name = $ranksys->getRankName($user_rank, true);
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, Ваш ранг: {$rank_name}.");
 	}
 }
 
@@ -1389,16 +1471,17 @@ function manager_rank_list($finput){
 	$argv = $finput->argv;
 	$db = $finput->db;
 
-	$botModule = new BotModule($db);
+	$messagesModule = new Bot\Messages($db);
+	$messagesModule->setAppealID($data->object->from_id);
+	$ranksys = new RankSystem($db);
 
 	$msg = ", 👑список всех доступных рангов (по мере уменьшения прав):";
-	$ranks = RankSystem::RANKS_ARRAY;
-	for($i = 0; $i < count($ranks); $i++){
-		$msg = $msg . "\n• rank_{$i} - {$ranks[$i]}";
+	$ranks = $ranksys->getRanksList();
+	$msg_list = [];
+	foreach ($ranks as $key => $value) {
+		$msg_list[] = "rank_{$value->id} - {$value->name}";
 	}
-	$min_rank = RankSystem::getMinRankValue();
-	$msg = $msg . "\n• rank_{$min_rank} - ".RankSystem::getRankNameByID(RankSystem::getMinRankValue());
-	$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
+	$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, "%appeal%, 👑список всех доступных рангов (по мере уменьшения прав):", $msg_list);
 }
 
 function manager_panel_show($finput){

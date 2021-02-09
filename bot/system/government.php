@@ -954,7 +954,7 @@ function government_referendum_system($data, $db){
 					$ranksys = new RankSystem($db);
 					if($ranksys->getUserRank($gov["president_id"]) == 2)
 						$ranksys->setUserRank($gov["president_id"], 0);
-					if($ranksys->getUserRank($candidate_id) == $ranksys->getMinRankValue())
+					if($ranksys->getUserRank($candidate_id) == $ranksys->getDefaultRankValue())
 						$ranksys->setUserRank($candidate_id, 2);
 					$economy = new Economy\Main($db); // Модуль Экономики
 					if($gov["president_id"] != 0)
@@ -973,7 +973,7 @@ function government_referendum_system($data, $db){
 					$ranksys = new RankSystem($db);
 					if($ranksys->getUserRank($gov["president_id"]) == 2)
 						$ranksys->setUserRank($gov["president_id"], 0);
-					if($ranksys->getUserRank($candidate_id) == $ranksys->getMinRankValue())
+					if($ranksys->getUserRank($candidate_id) == $ranksys->getDefaultRankValue())
 						$ranksys->setUserRank($candidate_id, 2);
 					$economy = new Economy\Main($db); // Модуль Экономики
 					if($gov["president_id"] != 0)
