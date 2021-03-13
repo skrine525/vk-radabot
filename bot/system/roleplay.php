@@ -126,7 +126,7 @@ namespace Roleplay{
 					"{$this->text_command} <id>{$help_message_desc}",
 					"{$this->text_command} <упоминание>{$help_message_desc}",
 					"{$this->text_command} <пер. сообщение>{$help_message_desc}",
-					"{$this->text_command} все/всех/всем/всеми{$help_message_desc}"
+					"{$this->text_command} все{$help_message_desc}"
 				));
 				return false;
 			}
@@ -253,12 +253,12 @@ namespace{
 		$event->addTextMessageCommand("послать", 'roleplay_gofuck');
 		$event->addTextMessageCommand("кастрировать", 'roleplay_castrate');
 		$event->addTextMessageCommand("посадить", "roleplay_sit");
-		$event->addTextMessageCommand("пожать", "roleplay_shake");
 		$event->addTextMessageCommand("лизнуть", "roleplay_lick");
 		$event->addTextMessageCommand("обосрать", "roleplay_shit");
 		$event->addTextMessageCommand("облевать", "roleplay_puckingup");
 		$event->addTextMessageCommand("отшлепать", "roleplay_spank");
 		$event->addTextMessageCommand("отшлёпать", "roleplay_spank");
+		$event->addTextMessageCommand("покашлять", "roleplay_cough");
 	}
 
 	///////////////////////////////////////////////////////////
@@ -691,7 +691,7 @@ namespace{
 		$handler->handle();
 	}
 
-	function roleplay_shake($finput){
+	function roleplay_shakehand($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$argv = $finput->argv;
@@ -706,26 +706,15 @@ namespace{
 			return;
 		}
 
-		switch (mb_strtolower($argv[1])) {
-			case 'руку':
-				$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Пожать руку");
-				$handler->maleMessage = "%FROM_USERNAME% пожал руку %MEMBER_USERNAME_DAT%.🤝🏻";
-				$handler->femaleMessage = "%FROM_USERNAME% пожала руку %MEMBER_USERNAME_DAT%.🤝🏻";
-				$handler->maleMessageToMyself = "%FROM_USERNAME% настолько ЧСВ, что пожал руку сам с себе.🤝🏻";
-				$handler->femaleMessageToMyself = "%FROM_USERNAME% настолько ЧСВ, что пожала руку сама с себе.🤝🏻";
-				$handler->maleMessageToAll = "%FROM_USERNAME% пожал руку всем.🤝🏻";
-				$handler->femaleMessageToAll = "%FROM_USERNAME% пожала руку всем.🤝🏻";
+		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Пожать руку");
+		$handler->maleMessage = "%FROM_USERNAME% пожал руку %MEMBER_USERNAME_DAT%.🤝🏻";
+		$handler->femaleMessage = "%FROM_USERNAME% пожала руку %MEMBER_USERNAME_DAT%.🤝🏻";
+		$handler->maleMessageToMyself = "%FROM_USERNAME% настолько ЧСВ, что пожал руку сам с себе.🤝🏻";
+		$handler->femaleMessageToMyself = "%FROM_USERNAME% настолько ЧСВ, что пожала руку сама с себе.🤝🏻";
+		$handler->maleMessageToAll = "%FROM_USERNAME% пожал руку всем.🤝🏻";
+		$handler->femaleMessageToAll = "%FROM_USERNAME% пожала руку всем.🤝🏻";
 
-				$handler->handle();
-				break;
-			
-			default:
-				$botModule = new botModule($db);
-				$botModule->sendCommandListFromArray($data, ", используйте:", array(
-					'Пожать руку <пользователь> - Жмет руку пользователю'
-				));
-				break;
-		}
+		$handler->handle();
 	}
 
 	function roleplay_lick($finput){
@@ -828,6 +817,58 @@ namespace{
 		$handler->femaleMessageToMyself = "%FROM_USERNAME% отшлепала себя.😻";
 		$handler->maleMessageToAll = "%FROM_USERNAME% отшлепал всех.😻";
 		$handler->femaleMessageToAll = "%FROM_USERNAME% отшлепала всех.😻";
+
+		$handler->handle();
+	}
+
+	function roleplay_cough($finput){
+		// Инициализация базовых переменных
+		$data = $finput->data;
+		$argv = $finput->argv;
+		$db = $finput->db;
+
+		// Проверка режима
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
+			return;
+		}
+
+		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Покашлять");
+		$handler->maleMessage = "%FROM_USERNAME% покашлял на %MEMBER_USERNAME_ACC%.🦠";
+		$handler->femaleMessage = "%FROM_USERNAME% покашляла на %MEMBER_USERNAME_ACC%.🦠";
+		$handler->maleMessageToMyself = "%FROM_USERNAME% покашлял на себя.🦠";
+		$handler->femaleMessageToMyself = "%FROM_USERNAME% покашляла на всех.🦠";
+		$handler->maleMessageToAll = "%FROM_USERNAME% покашлял на всех.🦠";
+		$handler->femaleMessageToAll = "%FROM_USERNAME% покашляла на всех.🦠";
+
+		$handler->handle();
+	}
+
+	function roleplay_highfive($finput){
+		// Инициализация базовых переменных
+		$data = $finput->data;
+		$argv = $finput->argv;
+		$db = $finput->db;
+
+		// Проверка режима
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+			$messagesModule = new Bot\Messages($db);
+			$messagesModule->setAppealID($data->object->from_id);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
+			return;
+		}
+
+		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Дать пять");
+		$handler->maleMessage = "%FROM_USERNAME% дал пять %MEMBER_USERNAME_DAT%.👋🏻";
+		$handler->femaleMessage = "%FROM_USERNAME% дала пять %MEMBER_USERNAME_DAT%.👋🏻";
+		$handler->maleMessageToMyself = "%FROM_USERNAME% дал пять себе.👋🏻";
+		$handler->femaleMessageToMyself = "%FROM_USERNAME% дала пять себе.👋🏻";
+		$handler->maleMessageToAll = "%FROM_USERNAME% дал пять всем.👋🏻";
+		$handler->femaleMessageToAll = "%FROM_USERNAME% дала пять всем.👋🏻";
 
 		$handler->handle();
 	}

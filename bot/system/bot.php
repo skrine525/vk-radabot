@@ -241,6 +241,7 @@ namespace Bot{
 	class Messages{
 		private $db;
 		private $appeal_id;
+		private $appeal_varname;
 
 		// Константы шаблонных сообщений
 		const MESSAGE_NO_RIGHTS = "%appeal%, ⛔У вас нет прав для использования этой команды.";
@@ -250,8 +251,9 @@ namespace Bot{
 			$this->appeal_id = null;
 		}
 
-		public function setAppealID($appeal_id){
+		public function setAppealID($appeal_id, $varname = "appeal"){
 			$this->appeal_id = $appeal_id;
+			$this->appeal_varname = $varname;
 		}
 
 		public function getAppealID(){
@@ -265,10 +267,10 @@ namespace Bot{
 				$user_nick = false;
 
 			if($user_nick !== false){
-				return "var user=API.users.get({'user_ids':[{$user_id}],'fields':'screen_name'})[0]; var {$varname}='@'+user.screen_name+' ({$user_nick})'; user=null;";
+				return "var user=API.users.get({'user_id':{$user_id},'fields':'screen_name'})[0]; var {$varname}='@'+user.screen_name+' ({$user_nick})'; user=null;";
 			}
 			else{
-				return "var user=API.users.get({'user_ids':[{$user_id}],'fields':'screen_name'})[0]; var {$varname}='@'+user.screen_name+' ('+user.first_name.substr(0, 2)+'. '+user.last_name+')'; user =null;";
+				return "var user=API.users.get({'user_id':{$user_id},'fields':'screen_name'})[0]; var {$varname}='@'+user.screen_name+' ('+user.first_name.substr(0, 2)+'. '+user.last_name+')'; user =null;";
 			}
 		}
 
@@ -279,26 +281,26 @@ namespace Bot{
 		function sendMessage($peer_id, $message, $params = array()){ // Отправка сообщений
 			$appeal_code = "";
 			if(gettype($this->appeal_id) == "integer")
-				$appeal_code = $this->makeExeAppealByID($this->appeal_id);
+				$appeal_code = $this->makeExeAppealByID($this->appeal_id, $this->appeal_varname);
 			$request_array = array('peer_id' => $peer_id, 'message' => $message);
 			foreach ($params as $key => $value) {
 				$request_array[$key] = $value;
 			}
 			$json_request = json_encode($request_array, JSON_UNESCAPED_UNICODE);
-			$json_request = vk_parse_var($json_request, "appeal");
+			$json_request = vk_parse_var($json_request, $this->appeal_varname);
 			return vk_execute("{$appeal_code}return API.messages.send({$json_request});");
 		}
 
 		function editMessage($peer_id, $conversation_message_id, $message, $params = array()){
 			$appeal_code = "";
 			if(gettype($this->appeal_id) == "integer")
-				$appeal_code = $this->makeExeAppealByID($this->appeal_id);
+				$appeal_code = $this->makeExeAppealByID($this->appeal_id, $this->appeal_varname);
 			$request_array = array('peer_id' => $peer_id, 'conversation_message_id' => $conversation_message_id, 'message' => $message);
 			foreach ($params as $key => $value) {
 				$request_array[$key] = $value;
 			}
 			$json_request = json_encode($request_array, JSON_UNESCAPED_UNICODE);
-			$json_request = vk_parse_var($json_request, "appeal");
+			$json_request = vk_parse_var($json_request, $this->appeal_varname);
 			return vk_execute("{$appeal_code}return API.messages.edit({$json_request});");
 		}
 
@@ -393,6 +395,7 @@ namespace{
 	require_once(__DIR__."/word_game.php"); 							// Модуль, отвечающий за игры Слова и Words
 	require_once(__DIR__."/stats.php"); 								// Модуль, отвечающий за ведение статистики в беседах
 	require_once(__DIR__."/legacy.php");								// Модуль, отвечающий за Legacy функции
+	require_once(__DIR__."/debug.php");									// Модуля, отвечающий за отладочные функции
 
 	$GLOBALS['modules_importtime_end'] = microtime(true);				// Время подключения модулей: Конец
 
@@ -411,7 +414,7 @@ namespace{
 			// Инициализируем класс
 			$event = new Bot\Event($data);
 
-			bot_debug_cmdinit($event);						// Инициализация команд отладочного режима
+			debug_cmdinit($event);							// Инициализация команд отладочного режима
 
 			$GLOBALS['cmd_initime_start'] = microtime(true);// Время инициализации команд: Начало
 
@@ -455,77 +458,39 @@ namespace{
 
 	// Legacy Module
 	class BotModule{
-		private $db;
+		private $messagesModule;
 
-		public function __construct(&$db = null){
-			$this->db = &$db;
+		public function __construct($db = null){
+			$this->messagesModule = new Bot\Messages($db);
 		}
 
 		public function makeExeAppealByID($user_id, $varname = "appeal"){ // Создание переменной appeal с обращением к пользователю, посредством VKScript и vk_execute()
-			if(!is_null($this->db))
-				$user_nick = $this->db->getValue(array("chat_settings", "user_nicknames", "id{$user_id}"), false);
-			else
-				$user_nick = false;
-
-			if($user_nick !== false){
-				return "var user = API.users.get({'user_ids':[{$user_id}],'fields':'screen_name'})[0]; var {$varname} = '@'+user.screen_name+' ({$user_nick})'; user = null;";
-			}
-			else{
-				return "var user = API.users.get({'user_ids':[{$user_id}],'fields':'screen_name'})[0]; var {$varname} = '@'+user.screen_name+' ('+user.first_name.substr(0, 2)+'. '+user.last_name+')';user = null;";
-			}
+			return $this->messagesModule->makeExeAppealByID($user_id, $varname);
 		}
 
 		function sendMessage($peer_id, $message, $from_id = null, $params = array()){ // Отправка сообщений
-			$appeal_code = "";
-			if(gettype($from_id) == "integer"){
-				$appeal_code = $this->makeExeAppealByID($from_id);
-				$message = "%appeal%{$message}";
-			}
-			$request_array = array('peer_id' => $peer_id, 'message' => $message);
-			foreach ($params as $key => $value) {
-				$request_array[$key] = $value;
-			}
-			$json_request = json_encode($request_array, JSON_UNESCAPED_UNICODE);
-			$json_request = vk_parse_var($json_request, "appeal");
-			return vk_execute("{$appeal_code}return API.messages.send({$json_request});");
+			$this->messagesModule->setAppealID($from_id);
+			return $this->messagesModule->sendMessage($peer_id, "%appeal%{$message}", $params);
 		}
 
 		function editMessage($peer_id, $conversation_message_id, $from_id = null, $message, $params = array()){
-			$appeal_code = "";
-			if(gettype($from_id) == "integer"){
-				$appeal_code = $this->makeExeAppealByID($from_id);
-				$message = "%appeal%{$message}";
-			}
-			$request_array = array('peer_id' => $peer_id, 'conversation_message_id' => $conversation_message_id, 'message' => $message);
-			foreach ($params as $key => $value) {
-				$request_array[$key] = $value;
-			}
-			$json_request = json_encode($request_array, JSON_UNESCAPED_UNICODE);
-			$json_request = vk_parse_var($json_request, "appeal");
-			return vk_execute("{$appeal_code}return API.messages.edit({$json_request});");
+			$this->messagesModule->setAppealID($from_id);
+			return $this->messagesModule->editMessage($peer_id, $conversation_message_id, "%appeal%{$message}", $params);
 		}
 
 		function sendSilentMessage($peer_id, $message, $from_id = null, $params = array()){ // Отправка сообщений без упоминаний
-			if(gettype($params) == "array")
-				$params['disable_mentions'] = true;
-			else
-				$params = array('disable_mentions' => true);
-			return $this->sendMessage($peer_id, $message, $from_id, $params);
+			$this->messagesModule->setAppealID($from_id);
+			return $this->messagesModule->sendSilentMessage($peer_id, "%appeal%{$message}", $params);
 		}
 
 		function sendSystemMsg_NoRights($data){
-			$this->sendSilentMessage($data->object->peer_id, ", ⛔У вас нет прав для использования этой команды.", $data->object->from_id);
+			$this->messagesModule->setAppealID($data->object->from_id);
+			return $this->messagesModule->sendSilentMessage($data->object->peer_id, Bot\Messages::MESSAGE_NO_RIGHTS);
 		}
 
 		function sendCommandListFromArray($data, $message = "", $list = array(), $keyboard = null){ // Legacy
-			$msg = $message;
-			for($i = 0; $i < count($list); $i++){
-				$msg = $msg . "\n• " . $list[$i];
-			}
-			if(is_null($keyboard))
-				$this->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
-			else
-				$this->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
+			$this->messagesModule->setAppealID($data->object->from_id);
+			return $this->messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, "%appeal%{$message}", $list, $keyboard);
 		}
 	}
 
@@ -632,6 +597,10 @@ namespace{
 		$event->addTextMessageCommand("!зов", 'bot_call_all');
 		$event->addTextMessageCommand("!крестики-нолики", 'bot_tictactoe');
 
+		// Многословные команды
+		$event->addTextMessageCommand("пожать", "bot_shakecmd");
+		$event->addTextMessageCommand("дать", "bot_givecmd");
+
 		// Обработчик для запуска текстовых команд из под аргумента кнопки
 		$event->addTextButtonCommand("bot_runtc", 'bot_keyboard_rtct_handler'); // Запуск текстовых команд из под Text-кнопки
 
@@ -681,7 +650,7 @@ namespace{
 				$chat_id = $data->object->peer_id - 2000000000;
 				$db->setValue(array("chat_id"), $chat_id);
 				$db->setValue(array("owner_id"), $data->object->user_id);
-				$db->save();
+				$db->save(true);
 			}	
 		}
 		else
@@ -755,175 +724,6 @@ namespace{
 	function bot_debug($str){ // Debug function
 		$messagesModule = new Bot\Module();
 		$messagesModule->sendMessage(bot_getconfig('DEBUG_USER_ID'), "DEBUG: {$str}");
-	}
-
-	// Инициализация команд
-	function bot_debug_cmdinit($event){ // Добавление DEBUG-команд специальному пользователю
-		// Проверка на доступ
-		$data = $event->getData();
-		if($data->type == "message_new" && $data->object->from_id === bot_getconfig('DEBUG_USER_ID'))
-			$access = true;
-		elseif($data->type == "message_event" && $data->object->user_id === bot_getconfig('DEBUG_USER_ID'))
-			$access = true;
-		else
-			$access = false;
-
-		if($access){
-			$event->addTextMessageCommand("!docmd", function ($finput){
-				// Инициализация базовых переменных
-				$data = $finput->data; 
-				$argv = $finput->argv;
-				$db = $finput->db;
-
-				$messagesModule  = new Bot\Messages($db);
-				$messagesModule->setAppealID($data->object->from_id);
-
-				$member = bot_get_array_value($argv, 1 , "");
-
-				if(is_numeric($member)){
-					$member_id = intval($member);
-				}
-				elseif(bot_is_mention($member)){
-					$member_id = bot_get_id_from_mention($member);
-				}
-				else{
-					$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте: !docmd <пользователь> <команда>");
-					return;
-				}
-
-				$command = mb_substr($data->object->text, 8 + mb_strlen($member));
-
-				if($command == ""){
-					$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте: !docmd <пользователь> <команда>");
-					return;
-				}
-				$modified_data = $data;
-				$modified_data->object->from_id = $member_id;
-				$modified_data->object->text = $command;
-				$result = $finput->event->runTextMessageCommand($modified_data);
-				if($result == Bot\Event::COMMAND_RESULT_UNKNOWN)
-					$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Ошибка. Данной команды не существует."); // Вывод ошибки
-			});
-
-			$event->addTextMessageCommand("!test-template", function ($finput){
-				// Инициализация базовых переменных
-				$data = $finput->data; 
-				$argv = $finput->argv;
-				$db = $finput->db;
-
-				$messagesModule = new Bot\Messages($db);
-				$messagesModule->setAppealID($data->object->from_id);
-
-				$template = json_encode(array(
-					'type' => 'carousel',
-					'elements' => array(
-						array(
-							'title' => "Назавание 1",
-							'description' => "Описание 1",
-							'buttons' => array(vk_callback_button("Кнопка 1", array('bot_menu', $data->object->from_id), 'positive'))
-						),
-						array(
-							'title' => "Назавание 2",
-							'description' => "Описание 2",
-							'buttons' => array(vk_callback_button("Кнопка 1", array('bot_menu', $data->object->from_id), 'positive'))
-						),
-						array(
-							'title' => "Назавание 3",
-							'description' => "Описание 3",
-							'buttons' => array(vk_callback_button("Кнопка 1", array('bot_menu', $data->object->from_id), 'positive'))
-						)
-					)
-				), JSON_UNESCAPED_UNICODE);
-
-				$messagesModule->sendSilentMessage($data->object->peer_id, "Template test!", array('template' => $template));
-			});
-
-			$event->addTextMessageCommand('!runcb', function ($finput){
-				// Инициализация базовых переменных
-				$data = $finput->data; 
-				$argv = $finput->argv;
-				$db = $finput->db;
-
-				$messagesModule  = new Bot\Messages($db);
-				$messagesModule->setAppealID($data->object->from_id);
-
-				$command = mb_substr($data->object->text, 7);
-
-				if($command == ""){
-					$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте: !runcb <команда>");
-					return;
-				}
-
-				$keyboard = vk_keyboard_inline(array(
-					array(
-						vk_callback_button('Запусить команду', array('bot_runcb', $command), 'negative')
-					)
-				));
-
-				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, Чтобы запустить команду [{$command}] используйте кнопку ниже.", array('keyboard' => $keyboard)); // Вывод ошибки
-			});
-
-			$event->addCallbackButtonCommand('bot_runcb', function ($finput){
-				// Инициализация базовых переменных
-				$data = $finput->data; 
-				$payload = $finput->payload;
-				$db = $finput->db;
-				$event = $finput->event;
-
-				$command = bot_get_array_value($payload, 1, "");
-				if($command == ""){
-					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ [bot_runcb]: Требуется аргумент.");
-					return;
-				}
-
-				$modified_data = $data;
-				$modified_data->object->payload = array($command);
-
-				$result = $event->runCallbackButtonCommand($modified_data);
-				if($result != Bot\Event::COMMAND_RESULT_OK){
-					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ [bot_runcb]: Команды [$command] не существует.");
-				}
-			});
-
-			$event->addTextMessageCommand("!kick-all", function ($finput){
-				// Инициализация базовых переменных
-				$data = $finput->data; 
-				$argv = $finput->argv;
-				$db = $finput->db;
-
-				$messagesModule  = new BotModule($db);
-
-				vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."
-					var peer_id = {$data->object->peer_id};
-					var chat_id = peer_id - 2000000000;
-					var members = API.messages.getConversationMembers({'peer_id':peer_id});
-					API.messages.send({'peer_id':peer_id,'message':appeal+', запущен процесс удаления всех пользователей из беседы.','disable_mentions':true});
-					var i = 0;
-					while(i < members.profiles.length){
-						API.messages.removeChatUser({'chat_id':chat_id,'member_id':members.profiles[i].id});
-						i = i + 1;
-					};
-					");
-			});
-
-			$event->addTextMessageCommand("!debug-info", function ($finput){
-				// Инициализация базовых переменных
-				$data = $finput->data; 
-				$argv = $finput->argv;
-				$db = $finput->db;
-
-				$messagesModule = new Bot\Messages($db);
-				$messagesModule->setAppealID($data->object->from_id);
-
-				$modules_importtime = round($GLOBALS['modules_importtime_end'] - $GLOBALS['modules_importtime_start'], 4);
-				$cmd_inittime = round($GLOBALS['cmd_initime_end'] - $GLOBALS['cmd_initime_start'], 4);
-				$php_memory_usage = round(memory_get_usage() / 1024, 2);
-
-				$msg = "%appeal%,\n⌛Время импорта модулей: {$modules_importtime} сек.\n⌛Время cmdinit: {$cmd_inittime} сек.\n📊Выделено памяти PHP: {$php_memory_usage} КБ";
-
-				$messagesModule->sendSilentMessage($data->object->peer_id, $msg);
-			});
-		}
 	}
 
 	function bot_test_rights_exe($peer_id, $member_id, $action_code, $check_owner = false){ // Тестирование прав через VKScript
@@ -1609,6 +1409,40 @@ namespace{
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, Запустить Центральное Меню можно кнопкой ниже.", array('keyboard' => $keyboard));
 	}
 
+	function bot_shakecmd($finput){
+		$sub_command = mb_strtolower($finput->argv[1]);
+		switch ($sub_command) {
+			case 'руку':
+				roleplay_shakehand($finput);
+				break;
+			
+			default:
+				$messagesModule = new Bot\Messages($finput->db);
+				$messagesModule->setAppealID($finput->data->object->from_id);
+				$messagesModule->sendSilentMessageWithListFromArray($finput->data->object->peer_id, "%appeal%,  используйте:", [
+					'Пожать руку <пользователь> - Жмет руку пользователю'
+				]);
+				break;
+		}
+	}
+
+	function bot_givecmd($finput){
+		$sub_command = mb_strtolower($finput->argv[1]);
+		switch ($sub_command) {
+			case 'пять':
+				roleplay_highfive($finput);
+				break;
+			
+			default:
+				$messagesModule = new Bot\Messages($finput->db);
+				$messagesModule->setAppealID($finput->data->object->from_id);
+				$messagesModule->sendSilentMessageWithListFromArray($finput->data->object->peer_id, "%appeal%,  используйте:", [
+					'Дать пять <пользователь> - Дать пять пользователю'
+				]);
+				break;
+		}
+	}
+
 	function bot_menu_cb($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
@@ -1689,8 +1523,10 @@ namespace{
 					$keyboard_buttons[] = $list_buttons;
 				}
 			}
-			else
+			else{
 				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Внутренняя ошибка: Неверный номер списка.");
+				return;
+			}
 			
 			$keyboard_buttons[] = array(vk_callback_button("Закрыть", array('bot_menu', $testing_user_id, 0), 'negative'));
 			$message = "%appeal%, Центральное Меню.";

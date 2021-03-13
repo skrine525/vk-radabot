@@ -1106,33 +1106,7 @@ function fun_show_marriage_list($finput){
 
 		$marriages_json = json_encode($list_out, JSON_UNESCAPED_UNICODE);
 
-		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-			var marriages = {$marriages_json};
-			var current_date = {$date};
-			var partner_1_info = API.users.get({'user_ids':marriages@.partner_1});
-			var partner_2_info = API.users.get({'user_ids':marriages@.partner_2});
-			var msg = appeal+', история браков беседы [$list_number/{$list_max_number}]:';
-			var i = 0; while(i < marriages.length){
-				var partner_1; var partner_2;
-				var j = 0; while(j < partner_1_info.length){
-					if(partner_1_info[j].id == marriages[i].partner_1){
-						partner_1 = partner_1_info[j];
-						j = partner_1_info.length;
-					}
-					j = j + 1;
-				}
-				var j = 0; while(j < partner_2_info.length){
-					if(partner_2_info[j].id == marriages[i].partner_2){
-						partner_2 = partner_2_info[j];
-						j = partner_2_info.length;
-					}
-					j = j + 1;
-				}
-					msg = msg + '\\n✅@id'+marriages[i].partner_1+' ('+partner_1.first_name.substr(0, 2)+'. '+partner_1.last_name+') и @id'+marriages[i].partner_2+' ('+partner_2.first_name.substr(0, 2)+'. '+partner_2.last_name+') ('+marriages[i].str_info+')';
-				i = i + 1;
-			}
-			API.messages.send({'peer_id':{$data->object->peer_id},'message':msg,'disable_mentions':true});
-			");
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."var marriages={$marriages_json};var current_date={$date};var partner_1_info=API.users.get({'user_ids':marriages@.partner_1});var partner_2_info=API.users.get({'user_ids':marriages@.partner_2});var msg=appeal+', история браков беседы [$list_number/{$list_max_number}]:';var i=0;while(i<marriages.length){var partner_1; var partner_2;var j=0;while(j<partner_1_info.length){if(partner_1_info[j].id==marriages[i].partner_1){partner_1=partner_1_info[j];j=partner_1_info.length;}j=j+1;}var j=0;while(j<partner_2_info.length){if(partner_2_info[j].id==marriages[i].partner_2){partner_2=partner_2_info[j];j=partner_2_info.length;}j=j+1;}msg = msg+'\\n✅@id'+marriages[i].partner_1+' ('+partner_1.first_name+') и @id'+marriages[i].partner_2+' ('+partner_2.first_name+') ('+marriages[i].str_info+')';i=i+1;}API.messages.send({'peer_id':{$data->object->peer_id},'message':msg,'disable_mentions':true});");
 	}
 	elseif($word == ""){
 		$list = array();
@@ -1185,19 +1159,7 @@ function fun_show_marriage_list($finput){
 
 		$marriages_json = json_encode($list_out, JSON_UNESCAPED_UNICODE);
 
-		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-			var marriages = {$marriages_json};
-			var current_date = {$date};
-			var partner_1_info = API.users.get({'user_ids':marriages@.partner_1});
-			var partner_2_info = API.users.get({'user_ids':marriages@.partner_2});
-			var msg = appeal+', 🤵👰браки в беседе [$list_number/{$list_max_number}]:';
-			var i = 0; while(i < marriages.length){
-				var days = ((current_date - marriages[i].start_time) - (current_date - marriages[i].start_time) % 86400) / 86400;
-				msg = msg + '\\n❤@id'+marriages[i].partner_1+' ('+partner_1_info[i].first_name.substr(0, 2)+'. '+partner_1_info[i].last_name+') и @id'+marriages[i].partner_2+' ('+partner_2_info[i].first_name.substr(0, 2)+'. '+partner_2_info[i].last_name+')❤ ('+days+' д.)';
-				i = i + 1;
-			}
-			API.messages.send({'peer_id':{$data->object->peer_id},'message':msg,'disable_mentions':true});
-			");
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."var marriages={$marriages_json};var current_date={$date};var partner_1_info=API.users.get({'user_ids':marriages@.partner_1});var partner_2_info=API.users.get({'user_ids':marriages@.partner_2});var msg=appeal+', 🤵👰браки в беседе [$list_number/{$list_max_number}]:';var i=0;while(i<marriages.length){var days=((current_date-marriages[i].start_time)-(current_date-marriages[i].start_time)%86400)/86400;msg=msg+'\\n❤@id'+marriages[i].partner_1+' ('+partner_1_info[i].first_name+') и @id'+marriages[i].partner_2+' ('+partner_2_info[i].first_name+')❤ ('+days+' д.)';i=i+1;}API.messages.send({'peer_id':{$data->object->peer_id},'message':msg,'disable_mentions':true});");
 	}
 	else{
 		$botModule->sendCommandListFromArray($data, ", используйте:", array(

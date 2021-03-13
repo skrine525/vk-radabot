@@ -46,7 +46,7 @@ namespace Legacy{
 	}
 
 	class SysMemes{
-		const MEMES = array('мемы', 'f', 'topa', 'андрей', 'олег', 'ябловод', 'люба', 'керил', 'юля', 'олды тут?', 'кб', 'некита', 'егор', 'ксюша', 'дрочить', 'саня', 'аля', 'дрочить на чулки', 'дрочить на карину', 'дрочить на амину', 'оффники', 'пашел нахуй', 'лохи беседы', 'дата регистрации', 'memory_get_usage', "memory_get_usage_real");
+		const MEMES = array('мемы', 'f', 'topa', 'андрей', 'олег', 'ябловод', 'люба', 'керил', 'юля', 'олды тут?', 'кб', 'некита', 'егор', 'ксюша', 'дрочить', 'саня', 'аля', 'дрочить на чулки', 'дрочить на карину', 'дрочить на амину', 'оффники', 'пашел нахуй', 'лохи беседы', 'дата регистрации', 'попить чай');
 
 		public static function isExists($meme_name){
 			$exists = false;
@@ -305,12 +305,12 @@ namespace Legacy{
 				$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 				break;
 
-				case 'memory_get_usage':
-				$botModule->sendSilentMessage($data->object->peer_id, ", Memory Used: ".memory_get_usage()." B.", $data->object->from_id);
-				break;
-
-				case 'memory_get_usage_real':
-				$botModule->sendSilentMessage($data->object->peer_id, ", Memory Used: ".memory_get_usage(true)." B.", $data->object->from_id);
+				case 'попить чай':
+				if($data->object->from_id == 443460504){
+					vk_execute("var user=API.users.get({'user_id':443460504,'fields':'screen_name'})[0];var msg='@'+user.screen_name+' ('+user.first_name+' '+user.last_name+') '+' попил чай.☕';return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});");
+				}
+				else
+					$botModule->sendSilentMessage($data->object->peer_id, ", Это действите может выполнять только один человек!", $data->object->from_id);
 				break;
 			}
 
