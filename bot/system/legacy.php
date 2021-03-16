@@ -2,47 +2,193 @@
 
 // Модуля для размещения Legacy функций
 namespace Legacy{
-	function fun_db_get($db){
-		if(array_key_exists('fun', $db))
-			return $db["fun"];
-		else
-			return array();
+	function fun_limnum(&$num, $min, $max){
+		$num = $num > $max ? $max : $num;
+		$num = $num < $min ? $min : $num;
 	}
 
-	function fun_db_set(&$db, $array){
-		$db["fun"] = $array;
+	function fun_pet_dbcheck(&$pet){
+		// Ограничение переменных
+
+		fun_limnum($pet["hungry"], 0, 100);
+		fun_limnum($pet["thirst"], 0, 100);
+		fun_limnum($pet["happiness"], 0, 100);
+		fun_limnum($pet["cheerfulness"], 0, 100);
 	}
 
-	function fun_luba_menu($data, $fun, $msg, $botModule){
+	function fun_pet_dbget($db){
+		$pet_database = $db->getValue(['fun', 'pet'], []);
+		$pet = array();
+
+		$time = time(); // Переменная времени
+
+		// Стандартные значения
+		$petdb_default = [
+			"hungry" => 50,
+			"thirst" => 50,
+			"happiness" => 50,
+			"cheerfulness" => 50,
+			"sleeping" => false,
+			"last_update_time" => $time
+		];
+
+		foreach ($petdb_default as $key => $value) {
+			if(array_key_exists($key, $pet_database))
+				$pet[$key] = $pet_database[$key];
+			else
+				$pet[$key] = $value;
+		}
+
+		$time_passed = $time - $pet["last_update_time"];
+		if($time_passed >= 600){
+			$passed_times = intdiv($time_passed, 600);
+
+			$pet["hungry"] -= 2 * $passed_times;
+			$pet["thirst"] -= 4 * $passed_times;
+			$pet["happiness"] -= 3 * $passed_times;
+
+			if($pet["sleeping"])
+				$pet["cheerfulness"] += 8 * $passed_times;
+			else
+				$pet["cheerfulness"] -= 4 * $passed_times;
+		}
+		fun_pet_dbcheck($pet);
+
+		return $pet;
+	}
+
+	function fun_pet_dbset($db, $pet){
+		$db->setValue(['fun', 'pet'], $pet);
+	}
+
+	function fun_pet_menu($data, $pet, $msg, $messagesModule, $testing_user_id){
 		$keyboard_array = array();
-		if(!$fun["luba"]["isSleeping"]){
+		if(!$pet["sleeping"]){
 			$b1 = array(
-				vk_text_button("Покормить", array('command'=>'fun','meme_id'=>5,'act'=>0), "primary"),
-				vk_text_button("Дать попить", array('command'=>'fun','meme_id'=>5,'act'=>1), "primary"),
+				vk_callback_button("Покормить", ['fun_pet', $testing_user_id, 0], "primary"),
+				vk_callback_button("Дать попить", ['fun_pet', $testing_user_id, 1], "primary"),
 
 			);
 			$b2 = array(
-				vk_text_button("Поиграть", array('command'=>'fun','meme_id'=>5,'act'=>4), "primary"),
-				vk_text_button("Погладить", array('command'=>'fun','meme_id'=>5,'act'=>5), "primary"),
+				vk_callback_button("Поиграть", ['fun_pet', $testing_user_id, 4], "primary"),
+				vk_callback_button("Погладить", ['fun_pet', $testing_user_id, 5], "primary"),
 			);
 			$b3 = array(
-				vk_text_button("Спать", array('command'=>'fun','meme_id'=>5,'act'=>2), "positive"),
-				vk_text_button("Закрыть", array('command'=>'fun','meme_id'=>5,'act'=>3), "negative")
+				vk_callback_button("Спать", ['fun_pet', $testing_user_id, 2], "positive"),
+				vk_callback_button("Закрыть", ['bot_menu', $testing_user_id, 0, "%appeal%, 😸Возвращайся поскорей."], "negative")
 			);
 			$keyboard_array = array($b1, $b2, $b3);
 		} else {
-			$b1 = array(vk_text_button("Разбудить", array('command'=>'fun','meme_id'=>5,'act'=>2), "positive"));
-			$b2 = array(vk_text_button("Закрыть", array('command'=>'fun','meme_id'=>5,'act'=>3), "negative"));
+			$b1 = array(vk_callback_button("Разбудить", ['fun_pet', $testing_user_id, 2], "positive"));
+			$b2 = array(vk_callback_button("Закрыть", ['bot_menu', $testing_user_id, 0, "%appeal%, 😸Возвращайся поскорей."], "negative"));
 			$keyboard_array = array($b1, $b2);
 		}
-		$keyboard = vk_keyboard(true, $keyboard_array);
-		$hungry = $fun["luba"]["hungry"];
-		$thirst = $fun["luba"]["thirst"];
-		$happiness = $fun["luba"]["happiness"];
-		$cheerfulness = $fun["luba"]["cheerfulness"];
-		$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%{$msg}\n✅Сытость: {$hungry}/100\n✅Жажда: {$thirst}/100\n✅Счастье: {$happiness}/100\n✅Бодрость: {$cheerfulness}/100", 'keyboard' => $keyboard), JSON_UNESCAPED_UNICODE);
-		$json_request = vk_parse_var($json_request, "appeal");
-		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."return API.messages.send({$json_request});");
+		$keyboard = vk_keyboard_inline($keyboard_array);
+
+		fun_pet_dbcheck($pet);
+		$hungry = $pet["hungry"];
+		$thirst = $pet["thirst"];
+		$happiness = $pet["happiness"];
+		$cheerfulness = $pet["cheerfulness"];
+
+		switch ($data->type) {
+			case 'message_new':
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%{$msg}\n✅Сытость: {$hungry}/100\n✅Жажда: {$thirst}/100\n✅Счастье: {$happiness}/100\n✅Бодрость: {$cheerfulness}/100", ['keyboard' => $keyboard]);
+			break;
+
+			case 'message_event':
+			$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, "%appeal%{$msg}\n✅Сытость: {$hungry}/100\n✅Жажда: {$thirst}/100\n✅Счастье: {$happiness}/100\n✅Бодрость: {$cheerfulness}/100", ['keyboard' => $keyboard]);
+			break;
+		}
+	}
+
+	function fun_pet_keyhandler($finput){
+		// Инициализация базовых переменных
+		$data = $finput->data; 
+		$payload = $finput->payload;
+		$db = $finput->db;
+
+		$testing_user_id = bot_get_array_value($payload, 1, 0);
+		if($testing_user_id !== $data->object->user_id){
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '😔 К сожаленю, вам это не доступно!');
+			return;
+		}
+
+		$command = bot_get_array_value($payload, 2, -1);
+		$messagesModule = new \Bot\Messages($db);
+		$messagesModule->setAppealID($data->object->user_id);
+
+		$pet = fun_pet_dbget($db);
+		switch ($command) {
+			case 2:
+			$msg = "";
+			if($pet["sleeping"]){
+				$msg = ", вы разбудили @id317258850 (Любу).😘";
+			} else {
+				$msg = ", вы уложили @id317258850 (Любу) спать.😴";
+			}
+			$pet["sleeping"] = !$pet["sleeping"];
+			fun_pet_menu($data, $pet, $msg, $messagesModule, $testing_user_id);
+			break;
+
+			case 0:
+			if($pet["hungry"] <= 80){
+				$pet["hungry"] = 100;
+				fun_pet_menu($data, $pet, ", вы покормили @id317258850 (Любу).😸", $messagesModule, $testing_user_id);
+			} else {
+				fun_pet_menu($data, $pet, ", @id317258850 (Люба) не хочет кушать.🙄", $messagesModule, $testing_user_id);
+			}
+			break;
+
+			case 1:
+			if($pet["thirst"] <= 80){
+				$pet["thirst"] = 100;
+				fun_pet_menu($data, $pet, ", вы дали попить @id317258850 (Любе).😸", $messagesModule, $testing_user_id);
+			} else {
+				fun_pet_menu($data, $pet, ", @id317258850 (Люба) не хочет пить.🙄", $messagesModule, $testing_user_id);
+			}
+			break;
+
+			case 4:
+			if($pet["hungry"] < 20){
+				fun_pet_menu($data, $pet, ", @id317258850 (Люба) хочет кушать.🥺 Покормите её!", $messagesModule, $testing_user_id);
+				break;
+			} elseif($pet["thirst"] < 20){
+				fun_pet_menu($data, $pet, ", @id317258850 (Люба) хочет пить.🥺 Помогите ей!", $messagesModule, $testing_user_id);
+				break;
+			} elseif($pet["cheerfulness"] < 20){
+				fun_pet_menu($data, $pet, ", @id317258850 (Люба) хочет спать. Уложите ее в кроватку.😴", $messagesModule, $testing_user_id);
+				break;
+			} elseif($pet["happiness"] > 50){
+				fun_pet_menu($data, $pet, ", @id317258850 (Люба) не хочет играть.🙄", $messagesModule, $testing_user_id);
+				break;
+			}
+				$pet["happiness"] += 50;
+				$pet["hungry"] -= 10;
+				$pet["thirst"] -= 10;
+				$pet["cheerfulness"] -= 15;
+				fun_pet_menu($data, $pet, ", вы поиграли с @id317258850 (Любой).🤗", $messagesModule, $testing_user_id);
+			break;
+
+			case 5:
+			if($pet["hungry"] < 20){
+				fun_pet_menu($data, $pet, ", @id317258850 (Люба) хочет кушать.🥺 Покормите её!", $messagesModule, $testing_user_id);
+				break;
+			} elseif($pet["thirst"] < 20){
+				fun_pet_menu($data, $pet, ", @id317258850 (Люба) хочет пить.🥺 Помогите ей!", $messagesModule, $testing_user_id);
+				break;
+			} elseif($pet["cheerfulness"] < 20){
+				fun_pet_menu($data, $pet, ", @id317258850 (Люба) хочет спать. Уложите ее в кроватку.😴", $messagesModule, $testing_user_id);
+				break;
+			} elseif($pet["happiness"] > 80){
+				fun_pet_menu($data, $pet, ", @id317258850 (Люба) не хочет, чтобы её гладили.🙄", $messagesModule, $testing_user_id);
+				break;
+			}
+			$pet["happiness"] += 20;
+			fun_pet_menu($data, $pet, ", вы погладили @id317258850 (Любу).🤗", $messagesModule, $testing_user_id);
+			break;
+		}
+		fun_pet_dbset($db, $pet);
 	}
 
 	class SysMemes{
@@ -113,7 +259,7 @@ namespace Legacy{
 				return 'ok';
 				break;
 
-				case 'люба':
+				case '-люба':
 				$s1 = array(vk_text_button("Люба❤", array('command'=>'fun','meme_id'=>1), "positive"), vk_text_button("Люба🖤", array('command'=>'fun','meme_id'=>1), "primary"), vk_text_button("Люба💙", array('command'=>'fun','meme_id'=>1), "positive"));
 				$s2 = array(vk_text_button("Люба💚", array('command'=>'fun','meme_id'=>1), "primary"), vk_text_button("Люба💛", array('command'=>'fun','meme_id'=>1), "positive"), vk_text_button("Люба💖", array('command'=>'fun','meme_id'=>1), "primary"));
 				$keyboard = vk_keyboard(true, array($s1, $s2));
@@ -129,24 +275,13 @@ namespace Legacy{
 				return 'ok';
 				break;
 
-				case '-люба':
-				$fun = fun_db_get($db);
-				$botModule = new \BotModule($db);
-				if(!array_key_exists("luba", $fun)){
-					$fun["luba"]["hungry"] = 50;
-					$fun["luba"]["thirst"] = 50;
-					$fun["luba"]["happiness"] = 50;
-					$fun["luba"]["isSleeping"] = false;
-					$fun["luba"]["cheerfulness"] = 50;
-					$fun["luba"]["last_db_update_date"] = time();
-				}
-				$hungry = $fun["luba"]["hungry"];
-				$thirst = $fun["luba"]["thirst"];
-				$happiness = $fun["luba"]["happiness"];
-				$cheerfulness = $fun["luba"]["cheerfulness"];
+				case 'люба':
+				$pet = fun_pet_dbget($db);
+				$messagesModule = new \Bot\Messages($db);
+				$messagesModule->setAppealID($data->object->from_id);
 				$msg = ", @id317258850 (Люба) - это котеночек😺. Ухаживайте за ней и делайте ее счастливой.";
-				fun_luba_menu($data, $fun, $msg, $botModule);
-				fun_db_set($db, $fun);
+				fun_pet_menu($data, $pet, $msg, $messagesModule, $data->object->from_id);
+				fun_pet_dbset($db, $pet);
 				return;
 				break;
 
@@ -307,7 +442,7 @@ namespace Legacy{
 
 				case 'попить чай':
 				if($data->object->from_id == 443460504){
-					vk_execute("var user=API.users.get({'user_id':443460504,'fields':'screen_name'})[0];var msg='@'+user.screen_name+' ('+user.first_name+' '+user.last_name+') '+' попил чай.☕';return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});");
+					vk_execute("var user=API.users.get({'user_id':443460504,'fields':'screen_name'})[0];var msg='@'+user.screen_name+' ('+user.first_name+' '+user.last_name+') попил чай.☕';return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});");
 				}
 				else
 					$botModule->sendSilentMessage($data->object->peer_id, ", Это действите может выполнять только один человек!", $data->object->from_id);
@@ -421,80 +556,6 @@ namespace Legacy{
 						vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 							return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 							");
-						break;
-
-						case 5:
-						$fun = fun_db_get($db);
-						switch ($payload->act) {
-							case 2:
-							$msg = "";
-							if($fun["luba"]["isSleeping"]){
-								$msg = ", вы разбудили @id317258850 (Любу).😘";
-							} else {
-								$msg = ", вы уложили @id317258850 (Любу) спать.😴";
-							}
-							$fun["luba"]["isSleeping"] = !$fun["luba"]["isSleeping"];
-							fun_luba_menu($data, $fun, $msg, $botModule);
-							break;
-
-							case 0:
-							if($fun["luba"]["hungry"] <= 80){
-								$fun["luba"]["hungry"] = 100;
-								fun_luba_menu($data, $fun, ", вы покормили @id317258850 (Любу).😸", $botModule);
-							} else {
-								fun_luba_menu($data, $fun, ", @id317258850 (Люба) не хочет кушать.🙄", $botModule);
-							}
-							break;
-
-							case 1:
-							if($fun["luba"]["thirst"] <= 80){
-								$fun["luba"]["thirst"] = 100;
-								fun_luba_menu($data, $fun, ", вы дали попить @id317258850 (Любе).😸", $botModule);
-							} else {
-								fun_luba_menu($data, $fun, ", @id317258850 (Люба) не хочет пить.🙄", $botModule);
-							}
-							break;
-
-							case 4:
-							if($fun["luba"]["hungry"] < 20){
-								fun_luba_menu($data, $fun, ", @id317258850 (Люба) хочет кушать.🥺 Покормите её!", $botModule);
-								break;
-							} elseif($fun["luba"]["thirst"] < 20){
-								fun_luba_menu($data, $fun, ", @id317258850 (Люба) хочет пить.🥺 Помогите ей!", $botModule);
-								break;
-							} elseif($fun["luba"]["cheerfulness"] < 20){
-								fun_luba_menu($data, $fun, ", @id317258850 (Люба) хочет спать. Уложите ее в кроватку.😴", $botModule);
-								break;
-							} elseif($fun["luba"]["happiness"] > 50){
-								fun_luba_menu($data, $fun, ", @id317258850 (Люба) не хочет играть.🙄", $botModule);
-								break;
-							}
-								$fun["luba"]["happiness"] += 50;
-								$fun["luba"]["hungry"] -= 10;
-								$fun["luba"]["thirst"] -= 10;
-								$fun["luba"]["cheerfulness"] -= 15;
-								fun_luba_menu($data, $fun, ", вы поиграли с @id317258850 (Любой).🤗", $botModule);
-							break;
-
-							case 5:
-							if($fun["luba"]["hungry"] < 20){
-								fun_luba_menu($data, $fun, ", @id317258850 (Люба) хочет кушать.🥺 Покормите её!", $botModule);
-								break;
-							} elseif($fun["luba"]["thirst"] < 20){
-								fun_luba_menu($data, $fun, ", @id317258850 (Люба) хочет пить.🥺 Помогите ей!", $botModule);
-								break;
-							} elseif($fun["luba"]["cheerfulness"] < 20){
-								fun_luba_menu($data, $fun, ", @id317258850 (Люба) хочет спать. Уложите ее в кроватку.😴", $botModule);
-								break;
-							} elseif($fun["luba"]["happiness"] > 80){
-								fun_luba_menu($data, $fun, ", @id317258850 (Люба) не хочет, чтобы её гладили.🙄", $botModule);
-								break;
-							}
-							$fun["luba"]["happiness"] += 20;
-							fun_luba_menu($data, $fun, ", вы погладили @id317258850 (Любу).🤗", $botModule);
-							break;
-						}
-						fun_db_set($db, $fun);
 						break;
 
 						case 6:

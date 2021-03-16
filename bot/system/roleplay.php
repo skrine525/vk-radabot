@@ -122,7 +122,7 @@ namespace Roleplay{
 				$messagesModule->sendSilentMessageWithListFromArray($this->data->object->peer_id, "%appeal%, Используйте:", array(
 					"{$this->text_command} <имя>{$help_message_desc}",
 					"{$this->text_command} <фамилия>{$help_message_desc}",
-					"{$this->text_command} <имя и Фамилия>{$help_message_desc}",
+					"{$this->text_command} <имя и фамилия>{$help_message_desc}",
 					"{$this->text_command} <id>{$help_message_desc}",
 					"{$this->text_command} <упоминание>{$help_message_desc}",
 					"{$this->text_command} <пер. сообщение>{$help_message_desc}",

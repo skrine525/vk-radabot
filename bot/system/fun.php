@@ -27,6 +27,7 @@ function fun_initcmd($event){
 
 	// Callback-кнопки
 	$event->addCallbackButtonCommand("fun_memes", 'fun_memes_control_panel_cb');
+	$event->addCallbackButtonCommand("fun_pet", "Legacy\\fun_pet_keyhandler");				// Legacy поддержка питомца
 }
 
 function fun_kek($finput){
