@@ -6,9 +6,10 @@ function debug_cmdinit($event){
 
 	// Проверка на доступ
 	$data = $event->getData();
-	if($data->type == "message_new" && $data->object->from_id === bot_getconfig('DEBUG_USER_ID'))
+	$debug_userid = bot_getconfig('DEBUG_USER_ID');
+	if($data->type == "message_new" && $data->object->from_id === $debug_userid)
 		$access = true;
-	elseif($data->type == "message_event" && $data->object->user_id === bot_getconfig('DEBUG_USER_ID'))
+	elseif($data->type == "message_event" && $data->object->user_id === $debug_userid)
 		$access = true;
 	else
 		$access = false;
@@ -21,9 +22,11 @@ function debug_cmdinit($event){
 		$event->addTextMessageCommand('!kick-all', 'debug_kickall');
 		$event->addTextMessageCommand('!debug-info', 'debug_info');
 		$event->addTextMessageCommand('!db-edit', 'debug_dbedit_tc');
+		$event->addTextMessageCommand('!special-permits', 'debug_specialpermissions_menu');
 
 		$event->addCallbackButtonCommand('bot_runcb', 'debug_runcb_cb');
 		$event->addCallbackButtonCommand('debug_dbedit', 'debug_dbedit_cb');
+		$event->addCallbackButtonCommand('debug_spermits', 'debug_specialpermissions_menu_cb');
 	}
 }
 
@@ -457,6 +460,194 @@ function debug_dbedit_cb($finput){
 	$messagesModule->setAppealID($data->object->user_id);
 	$keyboard = vk_keyboard_inline($keyboard_buttons);
 	$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $message, array('keyboard' => $keyboard));
+}
+
+function debug_specialpermissions_menu($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$argv = $finput->argv;
+	$db = $finput->db;
+
+	$messagesModule = new Bot\Messages($db);
+	$messagesModule->setAppealID($data->object->from_id);
+
+	$permissionSystem = new PermissionSystem($db);
+
+	if(array_key_exists(0, $data->object->fwd_messages))
+		$member_id = $data->object->fwd_messages[0]->from_id;
+	elseif(array_key_exists(1, $argv) && bot_is_mention($argv[1]))
+		$member_id = bot_get_id_from_mention($argv[1]);
+	elseif(array_key_exists(1, $argv) && is_numeric($argv[1]))
+		$member_id = intval($argv[1]);
+	else $member_id = 0;
+
+	if($member_id == 0){
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Пользователь не указан.");
+		return;
+	}
+	elseif($member_id <= 0){
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Редактировать разрешения можно только пользователям.");
+		return;
+	}
+
+	$elements = array();
+	foreach (PermissionSystem::PERMISSION_LIST as $key => $value) {
+		if($value['type'] == 2 || $value['type'] == 3)
+			$elements[] = ['id' => $key, 'label' => $value['label']];
+	}
+
+	$list_size = 3;
+	$list_number = 1;
+	$listBuilder = new Bot\ListBuilder($elements, $list_size);
+	$list = $listBuilder->build($list_number);
+	$keyboard_buttons = [];
+	if($list->result){
+		for($i = 0; $i < $list_size; $i++){
+			if(array_key_exists($i, $list->list->out)){
+				if($permissionSystem->checkUserPermission($member_id, $list->list->out[$i]["id"]))
+					$color = 'positive';
+				else
+					$color = 'negative';
+				$keyboard_buttons[] = [vk_callback_button($list->list->out[$i]["label"], ["debug_spermits", $data->object->from_id, $member_id, $list_number, $list->list->out[$i]["id"]], $color)];
+			}
+			else
+				$keyboard_buttons[] = [vk_callback_button("&#12288;", ["debug_spermits", $data->object->from_id, $member_id, $list_number, false], 'primary')];
+		}
+
+		if($list->list->max_number > 1){
+			$list_buttons = array();
+			if($list->list->number != 1){
+				$previous_list = $list->list->number - 1;
+				$emoji_str = bot_int_to_emoji_str($previous_list);
+				$list_buttons[] = vk_callback_button("{$emoji_str} ⬅", array('debug_spermits', $data->object->from_id, $member_id, $previous_list), 'secondary');
+			}
+			if($list->list->number != $list->list->max_number){
+				$next_list = $list->list->number + 1;
+				$emoji_str = bot_int_to_emoji_str($next_list);
+				$list_buttons[] = vk_callback_button("➡ {$emoji_str}", array('debug_spermits', $data->object->from_id, $member_id, $next_list), 'secondary');
+			}
+			$keyboard_buttons[] = $list_buttons;
+		}
+	}
+	else{
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Произошла ошибка: Не удалось сгенерировать список.");
+		return;
+	}
+	$keyboard_buttons[] = [vk_callback_button("Закрыть", ['bot_menu', $data->object->from_id, 0], "negative")];
+
+	$keyboard = vk_keyboard_inline($keyboard_buttons);
+	$exe_json = json_encode(['keyboard' => $keyboard], JSON_UNESCAPED_UNICODE);
+	vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."
+		var member=API.users.get({'user_id':{$member_id},'fields':'first_name_dat,last_name_dat'})[0];
+		var json={$exe_json};
+		return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', Настройка специальных прав @id{$member_id} ('+member.first_name_dat+' '+member.last_name_dat+').','disable_mentions':true,'keyboard':json.keyboard});");
+}
+
+function debug_specialpermissions_menu_cb($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$payload = $finput->payload;
+	$db = $finput->db;
+
+	$permissionSystem = new PermissionSystem($db);
+
+	$message = "";
+	$keyboard_buttons = [];
+
+	/*
+	// Функция тестирования пользователя
+	$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
+	if($testing_user_id !== $data->object->user_id){
+		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
+		return;
+	}
+	*/
+
+	$member_id = intval(bot_get_array_value($payload, 2, 0));
+	if($member_id <= 0){
+		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Внутренняя ошибка: Неверной указан ID пользователя!');
+		return;
+	}
+
+	$list_number = bot_get_array_value($payload, 3, 1);
+
+	$permission_id = bot_get_array_value($payload, 4, null);
+	if(!is_null($permission_id)){
+		if(gettype($permission_id) != "string"){
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Этот элемент пусто!');
+			return;
+		}
+		$current_state = $permissionSystem->checkUserPermission($member_id, $permission_id);
+		if(is_null($current_state) || PermissionSystem::PERMISSION_LIST[$permission_id]['type'] == 0 || PermissionSystem::PERMISSION_LIST[$permission_id]['type'] == 1){
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Внутренняя ошибка: Неверной указан ID разрешения!');
+			return;
+		}
+		else{
+			if($current_state)
+				$result = $permissionSystem->deleteUserPermission($member_id, $permission_id);
+			else
+				$result = $permissionSystem->addUserPermission($member_id, $permission_id);
+
+			if(!$result){
+				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Внутренняя ошибка: Неудалось изменить разрешение!');
+				return;
+			}
+		}
+	}
+
+	$elements = array();
+	foreach (PermissionSystem::PERMISSION_LIST as $key => $value) {
+		if($value['type'] == 2 || $value['type'] == 3)
+			$elements[] = ['id' => $key, 'label' => $value['label']];
+	}
+
+	$list_size = 3;
+	$listBuilder = new Bot\ListBuilder($elements, $list_size);
+	$list = $listBuilder->build($list_number);
+	if($list->result){
+		for($i = 0; $i < $list_size; $i++){
+			if(array_key_exists($i, $list->list->out)){
+				if($permissionSystem->checkUserPermission($member_id, $list->list->out[$i]["id"]))
+					$color = 'positive';
+				else
+					$color = 'negative';
+				$keyboard_buttons[] = [vk_callback_button($list->list->out[$i]["label"], ["debug_spermits", $data->object->user_id, $member_id, $list_number, $list->list->out[$i]["id"]], $color)];
+			}
+			else
+				$keyboard_buttons[] = [vk_callback_button("&#12288;", ["debug_spermits", $data->object->user_id, $member_id, $list_number, 0], 'primary')];
+		}
+
+		if($list->list->max_number > 1){
+			$list_buttons = array();
+			if($list->list->number != 1){
+				$previous_list = $list->list->number - 1;
+				$emoji_str = bot_int_to_emoji_str($previous_list);
+				$list_buttons[] = vk_callback_button("{$emoji_str} ⬅", array('debug_spermits', $data->object->user_id, $member_id, $previous_list), 'secondary');
+			}
+			if($list->list->number != $list->list->max_number){
+				$next_list = $list->list->number + 1;
+				$emoji_str = bot_int_to_emoji_str($next_list);
+				$list_buttons[] = vk_callback_button("➡ {$emoji_str}", array('debug_spermits', $data->object->user_id, $member_id, $next_list), 'secondary');
+			}
+			$keyboard_buttons[] = $list_buttons;
+		}
+	}
+	else{
+		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Внутренняя ошибка: Не удалось сгенерировать список!');
+		return;
+	}
+	$keyboard_buttons[] = [vk_callback_button("Закрыть", ['bot_menu', $data->object->user_id, 0], "negative")];
+
+	$messagesModule = new Bot\Messages($db);
+	$messagesModule->setAppealID($data->object->user_id);
+	$keyboard = vk_keyboard_inline($keyboard_buttons);
+	$exe_json = json_encode(['keyboard' => $keyboard], JSON_UNESCAPED_UNICODE);
+	$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $message, ['keyboard' => $keyboard]);
+	vk_execute($messagesModule->makeExeAppealByID($data->object->user_id)."
+		var member=API.users.get({'user_id':{$member_id},'fields':'first_name_dat,last_name_dat'})[0];
+		var json={$exe_json};
+		return API.messages.edit({'peer_id':{$data->object->peer_id},'conversation_message_id':{$data->object->conversation_message_id},'message':appeal+', Настройка специальных прав @id{$member_id} ('+member.first_name_dat+' '+member.last_name_dat+').','disable_mentions':true,'keyboard':json.keyboard});
+		");
 }
 
 ?>

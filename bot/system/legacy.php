@@ -441,11 +441,12 @@ namespace Legacy{
 				break;
 
 				case 'попить чай':
-				if($data->object->from_id == 443460504){
-					vk_execute("var user=API.users.get({'user_id':443460504,'fields':'screen_name'})[0];var msg='@'+user.screen_name+' ('+user.first_name+' '+user.last_name+') попил чай.☕';return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});");
+				$permissionSystem = new \PermissionSystem($db);
+				if($permissionSystem->checkUserPermission($data->object->from_id, 'drink_tea')){
+					vk_execute("var user=API.users.get({'user_id':{$data->object->from_id},'fields':'screen_name'})[0];var msg='@'+user.screen_name+' ('+user.first_name+' '+user.last_name+') попил чай.☕';return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});");
 				}
 				else
-					$botModule->sendSilentMessage($data->object->peer_id, ", Это действите может выполнять только один человек!", $data->object->from_id);
+					$botModule->sendSilentMessage($data->object->peer_id, ", У вас нет права пить чай!", $data->object->from_id);
 				break;
 			}
 

@@ -224,8 +224,8 @@ function fun_memes_control_panel($finput){
 		}
 
 		if($meme_name == "*all"){
-			$ranksys = new RankSystem($db);
-			if(!$ranksys->checkRank($data->object->from_id, 0)){ // Проверка ранга (Владелец)
+			$permissionSystem = new PermissionSystem($db);
+			if(!$permissionSystem->checkUserPermission($data->object->from_id, 'customize_chat')){ // Проверка разрешения
 				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы не можете удалять мемы других пользователей.", $data->object->from_id);
 				return;
 			}
@@ -239,8 +239,8 @@ function fun_memes_control_panel($finput){
 				$db->unsetValue(array("fun", "memes", $meme_name));
 				$db->save();
 			} else {
-				$ranksys = new RankSystem($db);
-				if(!$ranksys->checkRank($data->object->from_id, 1)){ // Проверка ранга (Администратор)
+				$permissionSystem = new PermissionSystem($db);
+				if(!$permissionSystem->checkUserPermission($data->object->from_id, 'customize_chat')){ // Проверка разрешения
 					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы не можете удалять мемы других пользователей.", $data->object->from_id);
 					return;
 				}

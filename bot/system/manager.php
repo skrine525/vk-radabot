@@ -4,7 +4,6 @@
 /// API
 
 // Rank API
-
 class RankSystem{ // Класс управления рангами
 	const RANKS_ARRAY = array("Владелец", "Администратор", "Президент");
 	const DEFAULTRANK_NAME = "Участник";
@@ -119,6 +118,116 @@ class RankSystem{ // Класс управления рангами
 			);
 		}
 		return $ranks;
+	}
+}
+
+// Permission API
+class PermissionSystem{
+	// Список всех режимов.
+	// Типы режимов: 0 - Стандартный (Отключенный), 1 - Стандартный (Включенный), 2 - Особый (Отключенный), 3 - Особый (Включенный)
+	const PERMISSION_LIST = [
+		'change_nick' => ['label' => 'Управлять никами', 'type' => 0],
+		'customize_chat' => ['label' => 'Управлять чатом', 'type' => 0],
+		'manage_punishments' => ['label' => 'Управлять наказаниями', 'type' => 0],
+		'prohibit_autokick' => ['label' => 'Запретить автокик', 'type' => 0],
+		'prohibit_antiflood' => ['label' => 'Запретить антифлуд', 'type' => 0],
+		'set_permits' => ['label' => 'Управлять правами', 'type' => 0],
+		'drink_tea' => ['label' => 'Пить чай', 'type' => 2]
+	];
+
+	private $db;
+	private $owner_id;
+
+	function __construct($db){
+		$this->db = $db;
+		$this->owner_id = $this->db->getValue(["owner_id"]);
+	}
+
+	public function getChatOwnerID(){
+		return $this->owner_id;
+	}
+
+	public function isPermissionExists($permission_id){
+		return array_key_exists($permission_id, self::PERMISSION_LIST);
+	}
+
+	public function getUserPermissions($user_id){
+		$permissions = [];
+		if($user_id == $this->owner_id){
+			$db_permissions = $this->db->getValue(['chat_settings', 'user_permissions', "id{$user_id}"], []);
+			foreach (self::PERMISSION_LIST as $key => $value) {
+				if($value['type'] == 0 || $value['type'] == 1)
+					$permissions[] = $key;
+				elseif(array_key_exists($key, $db_permissions) && $db_permissions[$key])
+					$permissions[] = $key;
+				elseif($value['type'] == 3)
+					$permissions[] = $key;
+			}
+		}
+		else{
+			$db_permissions = $this->db->getValue(['chat_settings', 'user_permissions', "id{$user_id}"], []);
+			foreach (self::PERMISSION_LIST as $key => $value) {
+				if(array_key_exists($key, $db_permissions) && $db_permissions[$key])
+					$permissions[] = $key;
+				elseif($value['type'] == 1 || $value['type'] == 3)
+					$permissions[] = $key;
+			}
+		}
+		return $permissions;
+	}
+
+	public function checkUserPermission($user_id, $permission_id){
+		if(!$this->isPermissionExists($permission_id))
+			return null;
+
+		if($user_id == $this->owner_id){
+			if(self::PERMISSION_LIST[$permission_id]['type'] == 2)
+				$default_state = false;
+			elseif(self::PERMISSION_LIST[$permission_id]['type'] == 0 || self::PERMISSION_LIST[$permission_id]['type'] == 1 || self::PERMISSION_LIST[$permission_id]['type'] == 3)
+				$default_state = true;
+		}
+		else{
+			if(self::PERMISSION_LIST[$permission_id]['type'] == 0 || self::PERMISSION_LIST[$permission_id]['type'] == 2)
+				$default_state = false;
+			elseif(self::PERMISSION_LIST[$permission_id]['type'] == 1 || self::PERMISSION_LIST[$permission_id]['type'] == 3)
+				$default_state = true;
+		}
+
+		return $this->db->getValue(['chat_settings', 'user_permissions', "id{$user_id}", $permission_id], $default_state);
+	}
+
+	public function addUserPermission($user_id, $permission_id){
+		// Проверка на владельца и существования разрешения
+		if(!$this->isPermissionExists($permission_id) || $user_id <= 0 || ($user_id == $this->owner_id && (self::PERMISSION_LIST[$permission_id]['type'] == 0 || self::PERMISSION_LIST[$permission_id]['type'] == 1)))
+			return false;
+
+		if(!$this->checkUserPermission($user_id, $permission_id)){
+			if(self::PERMISSION_LIST[$permission_id]['type'] == 0 || self::PERMISSION_LIST[$permission_id]['type'] == 2)
+				$this->db->setValue(['chat_settings', 'user_permissions', "id{$user_id}", $permission_id], true);
+			elseif(self::PERMISSION_LIST[$permission_id]['type'] == 1 || self::PERMISSION_LIST[$permission_id]['type'] == 3)
+				$this->db->unsetValue(['chat_settings', 'user_permissions', "id{$user_id}", $permission_id]);
+
+			return true;
+		}
+		else
+			return false;
+	}
+
+	public function deleteUserPermission($user_id, $permission_id){
+		// Проверка на владельца и существования разрешения
+		if(!$this->isPermissionExists($permission_id) || $user_id <= 0 || ($user_id == $this->owner_id && (self::PERMISSION_LIST[$permission_id]['type'] == 0 || self::PERMISSION_LIST[$permission_id]['type'] == 1)))
+			return false;
+
+		if($this->checkUserPermission($user_id, $permission_id)){
+			if(self::PERMISSION_LIST[$permission_id]['type'] == 0 || self::PERMISSION_LIST[$permission_id]['type'] == 2)
+				$this->db->unsetValue(['chat_settings', 'user_permissions', "id{$user_id}", $permission_id]);
+			elseif(self::PERMISSION_LIST[$permission_id]['type'] == 1 || self::PERMISSION_LIST[$permission_id]['type'] == 3)
+				$this->db->setValue(['chat_settings', 'user_permissions', "id{$user_id}", $permission_id], false);
+			
+			return true;
+		}
+		else
+			return false;
 	}
 }
 
@@ -292,9 +401,9 @@ class AntiFlood{
 		$floodSystem = new AntiFlood($data->object->peer_id);
 		if($floodSystem->checkMember($data)){
 			$messagesModule = new Bot\Messages($db);
-			$ranksys = new RankSystem($db);
+			$permissionSystem = new PermissionSystem($db);
 
-			if($ranksys->checkRank($data->object->from_id, 2)) // Проверка ранга (Президент)
+			if($permissionSystem->checkUserPermission($data->object->from_id, 'prohibit_antiflood')) // Проверка разрешения
 				return false;
 
 			$r = json_decode(vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var member_id={$data->object->from_id};var user=API.users.get({'user_ids':member_id})[0];var members=API.messages.getConversationMembers({'peer_id':peer_id});var user_index=-1;var i=0;while(i<members.items.length){if(members.items[i].member_id==user.id){user_index=i;i=members.items.length;};i=i+1;};if(!members.items[user_index].is_admin&&user_index!=-1){var msg='Пользователь '+appeal+' был кикнут. Причина: Флуд.';API.messages.send({'peer_id':peer_id,'message':msg});API.messages.removeChatUser({'chat_id':peer_id-2000000000,'member_id':user.id});return true;}return false;"));
@@ -319,20 +428,22 @@ function manager_initcmd($event){
 	$event->addTextMessageCommand("!banlist", 'manager_banlist_user');
 	$event->addTextMessageCommand("!kick", 'manager_kick_user');
 	$event->addTextMessageCommand("!ник", 'manager_nick');
-	$event->addTextMessageCommand("!ранг", 'manager_rank');
-	$event->addTextMessageCommand("!ранглист", 'manager_rank_list');
-	$event->addTextMessageCommand("!ранги", 'manager_show_user_ranks');
+	//$event->addTextMessageCommand("!ранг", 'manager_rank');
+	//$event->addTextMessageCommand("!ранглист", 'manager_rank_list');
+	//$event->addTextMessageCommand("!ранги", 'manager_show_user_ranks');
 	$event->addTextMessageCommand("!приветствие", 'manager_greeting');
 	$event->addTextMessageCommand("!modes", "manager_mode_list");
 	$event->addTextMessageCommand("!панель", "manager_panel_control");
 	$event->addTextMessageCommand("панель", "manager_panel_show");
+	$event->addTextMessageCommand("!права", 'manager_permissions_menu');
 
 	// Прочее
 	$event->addTextMessageCommand("!ники", 'manager_show_nicknames');
 
-	// Обработка персональной панели
+	// Callback-кнопки
 	$event->addCallbackButtonCommand("manager_panel", 'manager_panel_keyboard_handler');
 	$event->addCallbackButtonCommand("manager_mode", 'manager_mode_cpanel_cb');
+	$event->addCallbackButtonCommand("manager_permits", 'manager_permissions_menu_cb');
 }
 
 function manager_mode_list($finput){
@@ -418,8 +529,8 @@ function manager_mode_cpanel_cb($finput){
 	$mode_name = bot_get_array_value($payload, 3, false);
 
 	if($mode_name !== false){
-		$ranksys = new RankSystem($db);
-		if(!$ranksys->checkRank($data->object->user_id, 1)){ // Проверка ранга (Администратор)
+		$permissionSystem = new PermissionSystem($db);
+		if(!$permissionSystem->checkUserPermission($data->object->user_id, 'customize_chat')){ // Проверка разрешения
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ У вас нет прав для использования этой функции.");
 			return;
 		}
@@ -485,11 +596,11 @@ function manager_ban_user($finput){
 	$argv = $finput->argv;
 	$db = $finput->db;
 
-	$ranksys = new RankSystem($db);
+	$permissionSystem = new PermissionSystem($db);
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
 
-	if(!$ranksys->checkRank($data->object->from_id, 2)){ // Проверка ранга (Президент)
+	if(!$permissionSystem->checkUserPermission($data->object->from_id, 'manage_punishments')){ // Проверка разрешения
 		$messagesModule->sendSilentMessage($data->object->peer_id, Bot\Messages::MESSAGE_NO_RIGHTS);
 		return;
 	}
@@ -510,7 +621,7 @@ function manager_ban_user($finput){
 		return;
 	}
 
-	if($ranksys->checkRank($member_id, 2)){  // Проверка ранга (Президент)
+	if($permissionSystem->checkUserPermission($data->object->member_id, 'manage_punishments')){  // Проверка разрешения
 		$rank_name = $ranksys->getRankName($ranksys->getUserRank($member_id));
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, @id{$member_id} (Пользователя) нельзя забанить. Причина: Пользователь имеет ранг {$rank_name}.");
 		return;
@@ -542,9 +653,9 @@ function manager_unban_user($finput){
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
-	$ranksys = new RankSystem($db);
+	$permissionSystem = new PermissionSystem($db);
 
-	if(!$ranksys->checkRank($data->object->from_id, 2)){ // Проверка ранга (Президент)
+	if(!$permissionSystem->checkUserPermission($data->object->from_id, 'manage_punishments')){ // Проверка ранга (Президент)
 		$botModule->sendSystemMsg_NoRights($data);
 		return;
 	}
@@ -614,11 +725,7 @@ function manager_unban_user($finput){
 			}
 		}
 	}
-
-	$member_ids_exe_array = $unbanned_member_ids[0];
-	for($i = 1; $i < sizeof($unbanned_member_ids); $i++){
-		$member_ids_exe_array = $member_ids_exe_array.','.$unbanned_member_ids[$i];
-	}
+	$member_ids_exe_array = implode(',', $unbanned_member_ids);
 
 	$res = json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 		var peer_id = {$data->object->peer_id};
@@ -772,8 +879,8 @@ function manager_kick_user($finput){
 
 	$botModule = new BotModule($db);
 
-	$ranksys = new RankSystem($db);
-	if(!$ranksys->checkRank($data->object->from_id, 2)){ // Проверка ранга (Президент)
+	$permissionSystem = new PermissionSystem($db);
+	if(!$permissionSystem->checkUserPermission($data->object->from_id, 'manage_punishments')){ // Проверка разрешения
 		$botModule->sendSystemMsg_NoRights($data);
 		return;
 	}
@@ -834,16 +941,12 @@ function manager_kick_user($finput){
 	}
 
 	for($i = 0; $i < count($member_ids); $i++){
-		if($ranksys->checkRank($member_ids[$i], 2)){  // Проверка ранга (Президент)
-			//unset($member_ids[$i]);
-			$member_ids[$i] = 0;
-		}
+		if($permissionSystem->checkUserPermission($member_ids[$i], 'manage_punishments'))
+			unset($member_ids[$i]);
 	}
+	sort($member_ids);
 
-	$member_ids_exe_array = $member_ids[0];
-	for($i = 1; $i < sizeof($member_ids); $i++){
-		$member_ids_exe_array = $member_ids_exe_array.','.$member_ids[$i];
-	}
+	$member_ids_exe_array = implode(',', $member_ids);
 
 	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
 		var peer_id = {$data->object->peer_id};
@@ -945,8 +1048,8 @@ function manager_nick($finput){
 			}
 
 			if(mb_strlen($nick) <= 15){
-				$ranksys = new RankSystem($db);
-				if(!$ranksys->checkRank($data->object->from_id, 2)){ // Проверка ранга (Президент)
+				$permissionSystem = new PermissionSystem($db);
+				if(!$permissionSystem->checkUserPermission($data->object->from_id, 'change_nick')){ // Проверка разрешения
 					$messagesModule->sendSilentMessage($data->object->peer_id, Bot\Messages::MESSAGE_NO_RIGHTS);
 					return;
 				}
@@ -980,8 +1083,8 @@ function manager_remove_nick($data, &$db){
 			");
 	}
 	else{
-		$ranksys = new RankSystem($db);
-		if(!$ranksys->checkRank($data->object->from_id, 2)){ // Проверка ранга (Президент)
+		$permissionSystem = new PermissionSystem($db);
+		if(!$permissionSystem->checkUserPermission($data->object->from_id, 'change_nick')){ // Проверка разрешения
 			$botModule->sendSystemMsg_NoRights($data);
 			return;
 		}
@@ -1073,10 +1176,10 @@ function manager_greeting($finput){
 	$argv = $finput->argv;
 	$db = $finput->db;
 
-	$ranksys = new RankSystem($db);
+	$permissionSystem = new PermissionSystem($db);
 	$botModule = new BotModule($db);
 
-	if(!$ranksys->checkRank($data->object->from_id, 2)){ // Проверка ранга (Президент)
+	if(!$permissionSystem->checkUserPermission($data->object->from_id, 'customize_chat')){ // Проверка разрешения
 		$botModule->sendSystemMsg_NoRights($data);
 		return;
 	}
@@ -1728,6 +1831,219 @@ function manager_panel_keyboard_handler($finput){
 		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Данного элемента не существует.");
 		return;
 	}
+}
+
+function manager_permissions_menu($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$argv = $finput->argv;
+	$db = $finput->db;
+
+	$messagesModule = new Bot\Messages($db);
+	$messagesModule->setAppealID($data->object->from_id);
+
+	$permissionSystem = new PermissionSystem($db);
+
+	if(array_key_exists(0, $data->object->fwd_messages))
+		$member_id = $data->object->fwd_messages[0]->from_id;
+	elseif(array_key_exists(1, $argv) && bot_is_mention($argv[1]))
+		$member_id = bot_get_id_from_mention($argv[1]);
+	elseif(array_key_exists(1, $argv) && is_numeric($argv[1]))
+		$member_id = intval($argv[1]);
+	else $member_id = 0;
+
+	if($member_id == 0){
+		$user_permissions = $permissionSystem->getUserPermissions($data->object->from_id);
+		if(count($user_permissions) > 0){
+			$names = [];
+			foreach ($user_permissions as $key => $value) {
+				$names[] = PermissionSystem::PERMISSION_LIST[$value]["label"];
+			}
+			$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, "%appeal%, Ваши права:", $names);
+		}
+		else
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔У вас нет прав.");
+		return;
+	}
+	elseif($member_id <= 0){
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Редактировать разрешения можно только пользователям.");
+		return;
+	}
+	elseif($member_id == $permissionSystem->getChatOwnerID()){
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Нельзя изменять разрешения владельцу.");
+		return;
+	}
+
+	if(!$permissionSystem->checkUserPermission($data->object->from_id, 'set_permits')){
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔У вас нет разрешения управлять разрешениями.");
+		return;
+	}
+
+	$elements = array();
+	foreach (PermissionSystem::PERMISSION_LIST as $key => $value) {
+		if($value['type'] == 0 || $value['type'] == 1)
+			$elements[] = ['id' => $key, 'label' => $value['label']];
+	}
+
+	$list_size = 3;
+	$list_number = 1;
+	$listBuilder = new Bot\ListBuilder($elements, $list_size);
+	$list = $listBuilder->build($list_number);
+	$keyboard_buttons = [];
+	if($list->result){
+		for($i = 0; $i < $list_size; $i++){
+			if(array_key_exists($i, $list->list->out)){
+				if($permissionSystem->checkUserPermission($member_id, $list->list->out[$i]["id"]))
+					$color = 'positive';
+				else
+					$color = 'negative';
+				$keyboard_buttons[] = [vk_callback_button($list->list->out[$i]["label"], ["manager_permits", $data->object->from_id, $member_id, $list_number, $list->list->out[$i]["id"]], $color)];
+			}
+			else
+				$keyboard_buttons[] = [vk_callback_button("&#12288;", ["manager_permits", $data->object->from_id, $member_id, $list_number, false], 'primary')];
+		}
+
+		if($list->list->max_number > 1){
+			$list_buttons = array();
+			if($list->list->number != 1){
+				$previous_list = $list->list->number - 1;
+				$emoji_str = bot_int_to_emoji_str($previous_list);
+				$list_buttons[] = vk_callback_button("{$emoji_str} ⬅", array('manager_permits', $data->object->from_id, $member_id, $previous_list), 'secondary');
+			}
+			if($list->list->number != $list->list->max_number){
+				$next_list = $list->list->number + 1;
+				$emoji_str = bot_int_to_emoji_str($next_list);
+				$list_buttons[] = vk_callback_button("➡ {$emoji_str}", array('manager_permits', $data->object->from_id, $member_id, $next_list), 'secondary');
+			}
+			$keyboard_buttons[] = $list_buttons;
+		}
+	}
+	else{
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Произошла ошибка: Не удалось сгенерировать список.");
+		return;
+	}
+	$keyboard_buttons[] = [vk_callback_button("Закрыть", ['bot_menu', $data->object->from_id, 0], "negative")];
+
+	$keyboard = vk_keyboard_inline($keyboard_buttons);
+	$exe_json = json_encode(['keyboard' => $keyboard], JSON_UNESCAPED_UNICODE);
+	vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."
+		var member=API.users.get({'user_id':{$member_id},'fields':'first_name_dat,last_name_dat'})[0];
+		var json={$exe_json};
+		return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', Настройка прав @id{$member_id} ('+member.first_name_dat+' '+member.last_name_dat+').','disable_mentions':true,'keyboard':json.keyboard});");
+}
+
+function manager_permissions_menu_cb($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$payload = $finput->payload;
+	$db = $finput->db;
+
+	$permissionSystem = new PermissionSystem($db);
+
+	$message = "";
+	$keyboard_buttons = [];
+
+	// Функция тестирования пользователя
+	$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
+	if($testing_user_id !== $data->object->user_id){
+		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
+		return;
+	}
+
+	if(!$permissionSystem->checkUserPermission($data->object->user_id, 'set_permits')){
+		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет разрешения управлять разрешениями.');
+		return;
+	}
+
+	$member_id = intval(bot_get_array_value($payload, 2, 0));
+	if($member_id <= 0){
+		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Внутренняя ошибка: Неверной указан ID пользователя!');
+		return;
+	}
+	elseif($member_id == $permissionSystem->getChatOwnerID()){
+		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Внутренняя ошибка: Нельзя изменять разрешения владельцу!');
+		return;
+	}
+
+	$list_number = bot_get_array_value($payload, 3, 1);
+
+	$permission_id = bot_get_array_value($payload, 4, null);
+	if(!is_null($permission_id)){
+		if(gettype($permission_id) != "string"){
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Этот элемент пусто!');
+			return;
+		}
+		$current_state = $permissionSystem->checkUserPermission($member_id, $permission_id);
+		if(is_null($current_state) || PermissionSystem::PERMISSION_LIST[$permission_id]['type'] == 2 || PermissionSystem::PERMISSION_LIST[$permission_id]['type'] == 3){
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Внутренняя ошибка: Неверной указан ID разрешения!');
+			return;
+		}
+		else{
+			if($current_state)
+				$result = $permissionSystem->deleteUserPermission($member_id, $permission_id);
+			else
+				$result = $permissionSystem->addUserPermission($member_id, $permission_id);
+
+			if(!$result){
+				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Внутренняя ошибка: Неудалось изменить разрешение!');
+				return;
+			}
+		}
+	}
+
+	$elements = array();
+	foreach (PermissionSystem::PERMISSION_LIST as $key => $value) {
+		if($value['type'] == 0 || $value['type'] == 1)
+			$elements[] = ['id' => $key, 'label' => $value['label']];
+	}
+
+	$list_size = 3;
+	$listBuilder = new Bot\ListBuilder($elements, $list_size);
+	$list = $listBuilder->build($list_number);
+	if($list->result){
+		for($i = 0; $i < $list_size; $i++){
+			if(array_key_exists($i, $list->list->out)){
+				if($permissionSystem->checkUserPermission($member_id, $list->list->out[$i]["id"]))
+					$color = 'positive';
+				else
+					$color = 'negative';
+				$keyboard_buttons[] = [vk_callback_button($list->list->out[$i]["label"], ["manager_permits", $testing_user_id, $member_id, $list_number, $list->list->out[$i]["id"]], $color)];
+			}
+			else
+				$keyboard_buttons[] = [vk_callback_button("&#12288;", ["manager_permits", $testing_user_id, $member_id, $list_number, 0], 'primary')];
+		}
+
+		if($list->list->max_number > 1){
+			$list_buttons = array();
+			if($list->list->number != 1){
+				$previous_list = $list->list->number - 1;
+				$emoji_str = bot_int_to_emoji_str($previous_list);
+				$list_buttons[] = vk_callback_button("{$emoji_str} ⬅", array('manager_permits', $testing_user_id, $member_id, $previous_list), 'secondary');
+			}
+			if($list->list->number != $list->list->max_number){
+				$next_list = $list->list->number + 1;
+				$emoji_str = bot_int_to_emoji_str($next_list);
+				$list_buttons[] = vk_callback_button("➡ {$emoji_str}", array('manager_permits', $testing_user_id, $member_id, $next_list), 'secondary');
+			}
+			$keyboard_buttons[] = $list_buttons;
+		}
+	}
+	else{
+		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Внутренняя ошибка: Не удалось сгенерировать список!');
+		return;
+	}
+	$keyboard_buttons[] = [vk_callback_button("Закрыть", ['bot_menu', $testing_user_id, 0], "negative")];
+
+	$messagesModule = new Bot\Messages($db);
+	$messagesModule->setAppealID($data->object->user_id);
+	$keyboard = vk_keyboard_inline($keyboard_buttons);
+	$exe_json = json_encode(['keyboard' => $keyboard], JSON_UNESCAPED_UNICODE);
+	$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $message, ['keyboard' => $keyboard]);
+	vk_execute($messagesModule->makeExeAppealByID($data->object->user_id)."
+		var member=API.users.get({'user_id':{$member_id},'fields':'first_name_dat,last_name_dat'})[0];
+		var json={$exe_json};
+		return API.messages.edit({'peer_id':{$data->object->peer_id},'conversation_message_id':{$data->object->conversation_message_id},'message':appeal+', Настройка прав @id{$member_id} ('+member.first_name_dat+' '+member.last_name_dat+').','disable_mentions':true,'keyboard':json.keyboard});
+		");
 }
 
 ?>

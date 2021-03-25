@@ -53,8 +53,8 @@ function wordgame_cmd($finput){
 	} elseif (mb_strtolower($argv[1]) == 'стоп') {
 		if(array_key_exists('word_game', $session)){
 			if($session["word_game"]["started_by"] != $data->object->from_id){
-				$ranksys = new RankSystem($db);
-				if(!$ranksys->checkRank($data->object->from_id, 2)){ // Проверка ранга (Президент)
+				$permissionSystem = new PermissionSystem($db);
+				if(!$permissionSystem->checkUserPermission($data->object->from_id, 'customize_chat')){ // Проверка разрешения
 					$messagesModule = new Bot\Messages($db);
 					$messagesModule->sendMessage($data->object->peer_id, "[Слова] Вы не имеете права останавливать игру, запущенную другим пользователем.");
 					return;
@@ -204,8 +204,8 @@ function wordgame_gameplay_cb($finput){
 			switch ($act) {
 				case 1:
 				if($session["word_game"]["started_by"] != $data->object->user_id){
-					$ranksys = new RankSystem($db);
-					if(!$ranksys->checkRank($data->object->user_id, 2)){ // Проверка ранга (Президент)
+					$permissionSystem = new PermissionSystem($db);
+					if(!$permissionSystem->checkUserPermission($data->object->user_id, 'customize_chat')){ // Проверка разрешения
 						bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Вы не имеете права останавливать игру, запущенную другим пользователем.');
 						return;
 					}

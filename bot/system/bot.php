@@ -594,7 +594,6 @@ namespace{
 		$event->addTextMessageCommand("!убрать", 'bot_remove_handler');
 		$event->addTextMessageCommand("!id", 'bot_getid');
 		$event->addTextMessageCommand("!base64", 'bot_base64');
-		$event->addTextMessageCommand("!зов", 'bot_call_all');
 		$event->addTextMessageCommand("!крестики-нолики", 'bot_tictactoe');
 
 		// Многословные команды
@@ -779,10 +778,8 @@ namespace{
 
 	function bot_getconfig($name){
 	    $env = json_decode(file_get_contents(BOT_CONFIG_FILE_PATH), true);
-	    if($env == false){
-	    	error_log("Unable to read config.json file. File not exists or invalid.");
-	        return null;
-	    }
+	    if($env === false)
+	    	die('Unable to read config.json file. File not exists or invalid.');
 
 	    return $env[$name];
 	}
@@ -1052,24 +1049,6 @@ namespace{
 		$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $msg, array('keyboard' => $keyboard));
 	}
 
-	function bot_call_all($finput){
-		// Инициализация базовых переменных
-		$data = $finput->data; 
-		$argv = $finput->argv;
-		$db = $finput->db;
-
-		$messagesModule = new Bot\Messages($db);
-		$messagesModule->setAppealID($data->object->from_id);
-		$ranksys = new RankSystem($db);
-
-		if(!$ranksys->checkRank($data->object->from_id, 2)){ // Проверка ранга (Президент)
-			$messagesModule->sendSilentMessage($data->object->peer_id, Bot\Messages::MESSAGE_NO_RIGHTS);
-			return;
-		}
-
-		vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var from_id={$data->object->from_id};var members=API.messages.getConversationMembers({'peer_id':peer_id});var msg=appeal+' созывает всех!';var i=0;while (i<members.profiles.length){if(members.profiles[i].id!=from_id){msg=msg + '@id'+members.profiles[i].id+'(&#12288;)';}i=i+1;};API.messages.send({'peer_id':peer_id,'message':msg});");
-	}
-
 	function bot_keyboard_rtcc_handler($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
@@ -1121,8 +1100,8 @@ namespace{
 			if($data->object->action->type == "chat_kick_user"){
 				if($data->object->action->member_id == $data->object->from_id){
 					$chat_id = $data->object->peer_id - 2000000000;
-					$ranksys = new RankSystem($db);
-					if(!$ranksys->checkRank($data->object->from_id, 2)){ // Проверка ранга (Президент)
+					$permissionSystem = new PermissionSystem($db);
+					if(!$permissionSystem->checkUserPermission($data->object->action->member_id, 'prohibit_autokick')){ // Проверка ранга (Президент)
 						vk_execute("var user=API.users.get({'user_ids':[{$data->object->from_id}]})[0];var msg='Пока, @id{$data->object->from_id} ('+user.first_name+' '+user.last_name+'). Больше ты сюда не вернешься!';API.messages.send({'peer_id':{$data->object->peer_id}, 'message':msg});API.messages.removeChatUser({'chat_id':{$chat_id},'user_id':{$data->object->action->member_id}});return 'ok';");
 					}
 				}
@@ -1140,8 +1119,8 @@ namespace{
 					for($i = 0; $i < sizeof($banned_users); $i++){
 						if($banned_users[$i]["user_id"] == $data->object->action->member_id){
 							$chat_id = $data->object->peer_id - 2000000000;
-							$ranksys = new RankSystem($db);
-							if($ranksys->checkRank($data->object->from_id, 2)){ // Проверка ранга (Президент)
+							$permissionSystem = new PermissionSystem($db);
+							if($permissionSystem->checkUserPermission($data->object->action->member_id, 'manage_punishments')){ // Проверка ранга (Президент)
 								vk_execute("API.messages.send({'peer_id':{$data->object->peer_id},'message':'@id{$data->object->action->member_id} (Пользователь) был приглашен @id{$data->object->from_id} (администратором) беседы и автоматически разбанен.'});");
 								BanSystem::unbanUser($db, $data->object->action->member_id);
 							}
@@ -1456,8 +1435,8 @@ namespace{
 		// Функция тестирования пользователя
 		$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
 		if($testing_user_id !== $data->object->user_id){
-			$ranksys = new RankSystem($db);
-			if(!$ranksys->checkRank($data->object->user_id, 1)){
+			$permissionSystem = new PermissionSystem($db);
+			if(!$permissionSystem->checkUserPermission($data->object->user_id, 'customize_chat')){ // Проверка разрешения
 				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
 				return;
 			}
@@ -1493,8 +1472,8 @@ namespace{
 				$elements[] = vk_callback_button("Магазин", array('economy_shop', $testing_user_id), 'primary');
 			}
 
-			$ranksys = new RankSystem($db);
-			if($ranksys->checkRank($data->object->user_id, 1)){ // Проверка ранга (Администратор)
+			$permissionSystem = new PermissionSystem($db);
+			if($permissionSystem->checkUserPermission($data->object->user_id, 'customize_chat')){ // Проверка разрешения
 				$elements[] = vk_callback_button("Режимы", array('manager_mode', $testing_user_id), 'primary');
 			}
 

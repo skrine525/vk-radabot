@@ -147,9 +147,8 @@ function stats_cmd_handler($finput){
 		$messagesModule->sendSilentMessage($data->object->peer_id, $msg);
 	}
 	elseif($command == "обнулить"){
-		$ranksys = new RankSystem($db);
-
-		if($ranksys->checkRank($data->object->from_id, 0)){ // Проверка ранга (Владелец)
+		$permissionSystem = new PermissionSystem($db);
+		if($permissionSystem->checkUserPermission($data->object->from_id, 'customize_chat')){ // Проверка разрешения
 			$db->unsetValue(array('chat_stats'));
 			$db->save();
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Статистика обнулена.");
