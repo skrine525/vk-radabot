@@ -10,9 +10,10 @@ namespace Bot{
 		private $callbackButtonCommands;		// Массив команд Callback-кнопок
 
 		// Константы
-		const COMMAND_RESULT_OK = 0;			// Константа результата выполнения команды без ошибок
-		const COMMAND_RESULT_NO_DB = 1;			// Константа результата выполнения команды с ошибкой, которая не способна работать без Базы данных
-		const COMMAND_RESULT_UNKNOWN = 2;		// Константа результата выполнения команды с другими ошибками
+		const COMMAND_RESULT_OK = 0;				// Константа результата выполнения команды без ошибок
+		const COMMAND_RESULT_NO_DB = 1;				// Константа результата выполнения команды с ошибкой, которая не способна работать без Базы данных
+		const COMMAND_RESULT_UNKNOWN = 2;			// Константа резулятата выполнения неизвестной команды
+		const COMMAND_RESULT_INVALID_DATA = 3;		// Константа результата выполнения команды с неправильно переданными данными
 
 		function __construct($data) {
 			$this->data = $data;
@@ -23,7 +24,7 @@ namespace Bot{
 			if($this->data->object->peer_id > 2000000000){
 				// Если идентификатор назначения группового чата, то подгружаем Базу данных группового чата
 				$chat_id = $this->data->object->peer_id - 2000000000;
-				$this->db = new \Database(BOT_DBDIR."/chat{$chat_id}.json");
+				$this->db = new \Database(BOTPATH_DB."/chat{$chat_id}.json");
 			}
 		}
 
@@ -105,7 +106,7 @@ namespace Bot{
 
 					// Проверка на существование беседы в Базе данных, если команда не способна игнорировать это
 					if(!$command_data->ignore_db && !$this->db->isExists())
-						return Event::COMMAND_RESULT_NO_DB;
+						return (object) ['code' => Event::COMMAND_RESULT_NO_DB];
 
 					$finput = (object) array(
 						'data' => $data,
@@ -113,66 +114,79 @@ namespace Bot{
 						'db' => $this->db,
 						'event' => $this
 					);
-					$callback = $command_data->callback; // Получение Callback'а
-					call_user_func_array($callback, array($finput)); // Выполнение Callback'а
-					return Event::COMMAND_RESULT_OK;
+					$callback = $command_data->callback; 						// Получение Callback'а
+					$execution_time = microtime(true);							// Начало подсчета времени исполнения Callback'а
+					call_user_func_array($callback, array($finput)); 			// Выполнение Callback'а
+					$execution_time = microtime(true) - $execution_time;		// Конец подсчета времени исполнения Callback'а
+					return (object) ['code' => Event::COMMAND_RESULT_OK, 'command' => $command, 'finput' => $finput, 'execution_time' => $execution_time];
 				}
+				return (object) ['code' => Event::COMMAND_RESULT_UNKNOWN, 'command' => $command];
 	  		}
-	  		return Event::COMMAND_RESULT_UNKNOWN;
+	  		return (object) ['code' => Event::COMMAND_RESULT_INVALID_DATA];
 	  	}
 
 	  	public function runTextButtonCommand($data){
 	  		if(gettype($data) == "object"){
 	  			if(property_exists($data->object, "payload")){
 					$payload = (object) json_decode($data->object->payload);
-					if(!is_null($payload) && property_exists($payload, "command") && $this->isTextButtonCommand($payload->command)){
-						$command_data = $this->textButtonCommands[$payload->command];
+					if(!is_null($payload) && property_exists($payload, "command")){
+						if($this->isTextButtonCommand($payload->command)){
+							$command_data = $this->textButtonCommands[$payload->command];
 
-						// Проверка на существование беседы в Базе данных, если команда не способна игнорировать это
-						if(!$command_data->ignore_db && !$this->db->isExists())
-							return Event::COMMAND_RESULT_NO_DB;
+							// Проверка на существование беседы в Базе данных, если команда не способна игнорировать это
+							if(!$command_data->ignore_db && !$this->db->isExists())
+								return (object) ['code' => Event::COMMAND_RESULT_NO_DB];
 
-						$finput = (object) array(
-							'data' => $data,
-							'payload' => $payload,
-							'db' => $this->db,
-							'event' => $this
-						);
+							$finput = (object) array(
+								'data' => $data,
+								'payload' => $payload,
+								'db' => $this->db,
+								'event' => $this
+							);
 
-						$callback = $command_data->callback; // Получение Callback'а
-						call_user_func_array($callback, array($finput)); // Выполнение Callback'а
-						return Event::COMMAND_RESULT_OK;
+							$callback = $command_data->callback; 						// Получение Callback'а
+							$execution_time = microtime(true);							// Начало подсчета времени исполнения Callback'а
+							call_user_func_array($callback, array($finput)); 			// Выполнение Callback'а
+							$execution_time = microtime(true) - $execution_time;		// Конец подсчета времени исполнения Callback'а
+							return (object) ['code' => Event::COMMAND_RESULT_OK, 'command' => $payload->command, 'finput' => $finput, 'execution_time' => $execution_time];
+						}
+						return (object) ['code' => Event::COMMAND_RESULT_UNKNOWN, 'command' => $payload->command];
 					}
 	  			}
 	  		}
-	  		return Event::COMMAND_RESULT_UNKNOWN;
+	  		return (object) ['code' => Event::COMMAND_RESULT_INVALID_DATA];
 	  	}
 
 	  	public function runCallbackButtonCommand($data){
 	  		if(gettype($data) == "object"){
 	  			if(property_exists($data->object, "payload") && gettype($data->object->payload) == 'array'){
 					$payload = $data->object->payload;
-					if(array_key_exists(0, $payload) && $this->isCallbackButtonCommand($payload[0])){
-						$command_data = $this->callbackButtonCommands[$payload[0]];
-						
-						// Проверка на существование беседы в Базе данных, если команда не способна игнорировать это
-						if(!$command_data->ignore_db && !$this->db->isExists())
-							return Event::COMMAND_RESULT_NO_DB;
+					if(array_key_exists(0, $payload)){
+						if($this->isCallbackButtonCommand($payload[0])){
+							$command_data = $this->callbackButtonCommands[$payload[0]];
+							
+							// Проверка на существование беседы в Базе данных, если команда не способна игнорировать это
+							if(!$command_data->ignore_db && !$this->db->isExists())
+								return (object) ['code' => Event::COMMAND_RESULT_NO_DB];
 
-						$finput = (object) array(
-							'data' => $data,
-							'payload' => $payload,
-							'db' => $this->db,
-							'event' => $this
-						);
+							$finput = (object) array(
+								'data' => $data,
+								'payload' => $payload,
+								'db' => $this->db,
+								'event' => $this
+							);
 
-						$callback = $command_data->callback; // Получение Callback'а
-						call_user_func_array($callback, array($finput)); // Выполнение Callback'а
-						return Event::COMMAND_RESULT_OK;
+							$callback = $command_data->callback; 						// Получение Callback'а
+							$execution_time = microtime(true);							// Начало подсчета времени исполнения Callback'а
+							call_user_func_array($callback, array($finput)); 			// Выполнение Callback'а
+							$execution_time = microtime(true) - $execution_time;		// Конец подсчета времени исполнения Callback'а
+							return (object) ['code' => Event::COMMAND_RESULT_OK, 'command' => $payload[0], 'finput' => $finput, 'execution_time' => $execution_time];
+						}
+						return (object) ['code' => Event::COMMAND_RESULT_UNKNOWN, 'command' => $payload[0]];
 					}
 	  			}
 	  		}
-	  		return Event::COMMAND_RESULT_UNKNOWN;
+	  		return (object) ['code' => Event::COMMAND_RESULT_INVALID_DATA];
 	  	}
 
 	  	public function handle($defaultFunc = null){
@@ -184,27 +198,26 @@ namespace Bot{
 
 				// Обработка клавиатурных команд
 				$result = $this->runTextButtonCommand($this->data);
-				if($result == Event::COMMAND_RESULT_OK)
+				if($result->code == Event::COMMAND_RESULT_OK)
 					return true;
-				elseif($result == Event::COMMAND_RESULT_NO_DB){
+				elseif($result->code == Event::COMMAND_RESULT_NO_DB){
 					bot_message_not_reg($this->data, $this->db);
 					return false;
 				}
 
 				// Обработка тектовых команд
 				$result = $this->runTextMessageCommand($this->data);
-				if($result == Event::COMMAND_RESULT_OK)
+				if($result->code == Event::COMMAND_RESULT_OK)
 					return true;
-				elseif($result == Event::COMMAND_RESULT_NO_DB){
+				elseif($result->code == Event::COMMAND_RESULT_NO_DB){
 					bot_message_not_reg($this->data, $this->db);
 					return false;
 				}
 
 				// Обработка не командный сообщений
 				if(!is_null($defaultFunc) && is_callable($defaultFunc)){
-					if(!$this->db->isExists()){ // Проверка на регистрацию в системе
+					if(!$this->db->isExists()) // Проверка на регистрацию в системе
 						return false;
-					}
 					$finput = (object) array(
 						'data' => $this->data,
 						'db' => $this->db,
@@ -222,9 +235,9 @@ namespace Bot{
 
 				// Обработка клавиатурных команд
 				$result = $this->runCallbackButtonCommand($this->data);
-				if($result == Event::COMMAND_RESULT_OK)
+				if($result->code == Event::COMMAND_RESULT_OK)
 					return true;
-				elseif($result == Event::COMMAND_RESULT_NO_DB){
+				elseif($result->code == Event::COMMAND_RESULT_NO_DB){
 					bot_message_not_reg($this->data, $this->db);
 					return false;
 				}
@@ -372,12 +385,14 @@ namespace{
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	// Базовые константы бота
-	define('BOT_DIR', dirname(__DIR__)); 								// Корневая директория бота
-	define('BOT_DATADIR', BOT_DIR."/data"); 							// Директория данных
-	define('BOT_DBDIR', BOT_DIR."/data/database"); 						// Директория базы данных
-	define('BOT_TMPDIR', dirname(BOT_DIR)."/tmp"); 						// Директория временных файлов
-	define('BOT_CONFIG_FILE_PATH', BOT_DATADIR."/config.json"); 		// Путь к главному файлу конфигураций бота
+	// Константы путей бота
+	define('BOTPATH_SYSTEM', __DIR__);									// Каталог PHP кода бота
+	define('BOTPATH_MAIN', dirname(__DIR__));							// Каталог бота
+	define('BOTPATH_DATA', BOTPATH_MAIN."/data");						// Каталог данных бота
+	define('BOTPATH_ROOT', dirname(BOTPATH_MAIN));						// Корневой каталог бота
+	define('BOTPATH_DB', BOTPATH_DATA."/database");						// Каталог базы данных бота
+	define('BOTPATH_TMP', BOTPATH_ROOT."/tmp");							// Каталог временных файлов бота
+	define('BOTPATH_CONFIGFILE', BOTPATH_DATA."/config.json");			// Файл настроек бота
 
 	mb_internal_encoding("UTF-8");										// UTF-8 как основная кодировка для mbstring
 
@@ -419,7 +434,7 @@ namespace{
 			$GLOBALS['cmd_initime_start'] = microtime(true);// Время инициализации команд: Начало
 
 			bot_initcmd($event);							// Инициализация команд модуля bot
-			government_initcmd($event);						// Инициализация команд Гос. устройства
+			//government_initcmd($event);						// Инициализация команд Гос. устройства
 			manager_initcmd($event);						// Инициализация команд модуля manager
 			stats_initcmd($event);							// Инициализация команд модуля stats
 			roleplay_initcmd($event);						// RP-команды
@@ -438,7 +453,7 @@ namespace{
 				$data = $finput->data; 
 				$db = $finput->db;
 
-				government_referendum_system($data, $db); 	// Обработчик выборов президента в беседе
+				//government_election_system($data, $db); 	// Обработчик выборов президента в беседе
 
 				bot_message_action_handler($finput); 		// Обработчик событий сообщений
 
@@ -522,7 +537,7 @@ namespace{
 	}
 
 	class GameController{
-		const GAME_SESSIONS_DIRECTORY = BOT_DATADIR."/game_sessions";
+		const GAME_SESSIONS_DIRECTORY = BOTPATH_DATA."/game_sessions";
 
 		private static function initGameSessionsDirectory(){
 			if(!file_exists(self::GAME_SESSIONS_DIRECTORY))
@@ -777,7 +792,7 @@ namespace{
 	}
 
 	function bot_getconfig($name){
-	    $env = json_decode(file_get_contents(BOT_CONFIG_FILE_PATH), true);
+	    $env = json_decode(file_get_contents(BOTPATH_CONFIGFILE), true);
 	    if($env === false)
 	    	die('Unable to read config.json file. File not exists or invalid.');
 

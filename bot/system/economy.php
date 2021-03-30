@@ -36,7 +36,7 @@ namespace Economy{
 		}
 
 		public static function getJobArray(){
-			return json_decode(file_get_contents(BOT_DATADIR."/economy/jobs.json"), true);
+			return json_decode(file_get_contents(BOTPATH_DATA."/economy/jobs.json"), true);
 		}
 	}
 
@@ -310,7 +310,7 @@ namespace Economy{
 
 		private static function readDataFiles(){
 			if(!self::$is_read){
-				self::$economy_data = json_decode(file_get_contents(BOT_DATADIR."/economy/economy.json"), true);
+				self::$economy_data = json_decode(file_get_contents(BOTPATH_DATA."/economy/economy.json"), true);
 				if(is_null(self::$economy_data)){
 					error_log("Invalid economy.json config file");
 					exit;

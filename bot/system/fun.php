@@ -65,7 +65,7 @@ function fun_kek($finput){
 			}
 		}
 		$photo_url = $photo_sizes[$photo_url_index]->url;
-		$path = BOT_TMPDIR."/photo".mt_rand(0, 65535).".jpg";
+		$path = BOTPATH_TMP."/photo".mt_rand(0, 65535).".jpg";
 		file_put_contents($path, file_get_contents($photo_url));		// Загрузка фото
 
 		// Обработка фотографии
@@ -175,7 +175,7 @@ function fun_memes_control_panel($finput){
 				}
 			}
 			$photo_url = $photo_sizes[$photo_url_index]->url;
-			$path = BOT_TMPDIR."/photo".mt_rand(0, 65535).".jpg";
+			$path = BOTPATH_TMP."/photo".mt_rand(0, 65535).".jpg";
 			file_put_contents($path, file_get_contents($photo_url));
 			$response =  json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."return API.photos.getMessagesUploadServer({'peer_id':{$data->object->peer_id}});"));
 			$res = json_decode(vk_uploadDocs(array('photo' => new CURLFile($path)), $response->response->upload_url));
@@ -752,7 +752,7 @@ function fun_tts($finput){
             'content' => http_build_query($query)
         )  
 	);
-	$path = BOT_TMPDIR."/audio".mt_rand(0, 65535).".ogg";
+	$path = BOTPATH_TMP."/audio".mt_rand(0, 65535).".ogg";
 	file_put_contents($path, file_get_contents('http://api.voicerss.org/?', false, stream_context_create($options)));
 	$server = json_decode(vk_execute("return API.docs.getMessagesUploadServer({'peer_id':{$data->object->peer_id},'type':'audio_message'});"))->response->upload_url;
 	$audio = json_decode(vk_uploadDocs(array('file' => new CURLFile($path)), $server));

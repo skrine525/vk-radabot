@@ -23,6 +23,7 @@ function debug_cmdinit($event){
 		$event->addTextMessageCommand('!debug-info', 'debug_info');
 		$event->addTextMessageCommand('!db-edit', 'debug_dbedit_tc');
 		$event->addTextMessageCommand('!special-permits', 'debug_specialpermissions_menu');
+		$event->addTextMessageCommand('!test-cmd', 'debug_testcmd');
 
 		$event->addCallbackButtonCommand('bot_runcb', 'debug_runcb_cb');
 		$event->addCallbackButtonCommand('debug_dbedit', 'debug_dbedit_cb');
@@ -62,7 +63,33 @@ function debug_docmd($finput){
 	$modified_data->object->from_id = $member_id;
 	$modified_data->object->text = $command;
 	$result = $finput->event->runTextMessageCommand($modified_data);
-	if($result == Bot\Event::COMMAND_RESULT_UNKNOWN)
+	if($result->code == Bot\Event::COMMAND_RESULT_UNKNOWN)
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Ошибка. Данной команды не существует."); // Вывод ошибки
+}
+
+function debug_testcmd($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$argv = $finput->argv;
+	$db = $finput->db;
+
+	$messagesModule  = new Bot\Messages($db);
+	$messagesModule->setAppealID($data->object->from_id);
+
+	$command = mb_substr($data->object->text, 10);
+
+	if($command == ""){
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте: !test-cmd <команда>");
+		return;
+	}
+	$modified_data = $data;
+	$modified_data->object->text = $command;
+	$result = $finput->event->runTextMessageCommand($modified_data);
+	if($result->code == Bot\Event::COMMAND_RESULT_OK){
+		$execution_time = round($result->execution_time, 2);
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, 📊Данные тестирования:\n📝Команда: {$result->command}\n🕒Время: {$execution_time} мс.");
+	}
+	if($result->code == Bot\Event::COMMAND_RESULT_UNKNOWN)
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Ошибка. Данной команды не существует."); // Вывод ошибки
 }
 
@@ -141,7 +168,7 @@ function debug_runcb_cb($finput){
 	$modified_data->object->payload = array($command);
 
 	$result = $event->runCallbackButtonCommand($modified_data);
-	if($result != Bot\Event::COMMAND_RESULT_OK){
+	if($result->code != Bot\Event::COMMAND_RESULT_OK){
 		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ [bot_runcb]: Команды [$command] не существует.");
 	}
 }

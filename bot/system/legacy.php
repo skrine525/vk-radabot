@@ -593,29 +593,29 @@ namespace Legacy{
 			return;
 
 		if(mb_substr_count($text, "я спать") > 0){
-		$arr = array(
-			array('m' => 'Спокойной ночи, %user_id% (брат)😎.', 'f' => '😋Спокойной ночи, %user_id% (дорогая)❤.'),
-			array('m' => 'Спокойной ночи, %user_id% (брат)😎.', 'f' => '😴Сладких снов, %user_id% (красотка)😍.'),
-			array('m' => 'Спокойной ночи, %user_id% (брат)😎.', 'f' => '☺Желаю тебе счастливых снов! Ты %user_id% (лучшая)😍, люблю💞.'),
-			array('m' => 'Спокойной ночи, %user_id% (брат)😎.', 'f' => '☺Спокойной ночи, %user_id% (моя любимая девочка)😘.')
-		);
-		$botModule = new \BotModule($db);
-		$curr = $arr[mt_rand(0, 65535) % count($arr)];
-		$curr_json = json_encode($curr, JSON_UNESCAPED_UNICODE);
-		$curr_json = vk_parse_vars($curr_json, array("appeal", "user_id"));
-		vk_execute("
-			var user = API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex'})[0];
-			var user_id = '@id'+user.id;
-			var curr = {$curr_json};
-			var msg = '';
-			if(user.sex == 1){
-				msg = curr.f;
-			}
-			else{
-				msg = curr.m;
-			}
-			API.messages.send({'peer_id':{$data->object->peer_id},'message':msg,'disable_mentions':true});
-			");
+			$arr = array(
+				array('m' => 'Спокойной ночи, %user_id% (брат)😎.', 'f' => '😋Спокойной ночи, %user_id% (дорогая)❤.'),
+				array('m' => 'Спокойной ночи, %user_id% (брат)😎.', 'f' => '😴Сладких снов, %user_id% (красотка)😍.'),
+				array('m' => 'Спокойной ночи, %user_id% (брат)😎.', 'f' => '☺Желаю тебе счастливых снов! Ты %user_id% (лучшая)😍, люблю💞.'),
+				array('m' => 'Спокойной ночи, %user_id% (брат)😎.', 'f' => '☺Спокойной ночи, %user_id% (моя любимая девочка)😘.')
+			);
+			$botModule = new \BotModule($db);
+			$curr = $arr[mt_rand(0, 65535) % count($arr)];
+			$curr_json = json_encode($curr, JSON_UNESCAPED_UNICODE);
+			$curr_json = vk_parse_vars($curr_json, array("appeal", "user_id"));
+			vk_execute("
+				var user = API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex'})[0];
+				var user_id = '@id'+user.id;
+				var curr = {$curr_json};
+				var msg = '';
+				if(user.sex == 1){
+					msg = curr.f;
+				}
+				else{
+					msg = curr.m;
+				}
+				API.messages.send({'peer_id':{$data->object->peer_id},'message':msg,'disable_mentions':true});
+				");
 		}
 	}
 }

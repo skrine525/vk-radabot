@@ -349,17 +349,17 @@ class AntiFlood{
 	function __construct($peer_id){
 		$this->chat_id = $peer_id - 2000000000;
 
-		if(!file_exists(BOT_DATADIR."/antiflood"))
-		mkdir(BOT_DATADIR."/antiflood");
+		if(!file_exists(BOTPATH_DATA."/antiflood"))
+		mkdir(BOTPATH_DATA."/antiflood");
 
-		if(file_exists(BOT_DATADIR."/antiflood/chat{$this->chat_id}.json"))
-			$this->antiflood_database = json_decode(file_get_contents(BOT_DATADIR."/antiflood/chat{$this->chat_id}.json"), true);
+		if(file_exists(BOTPATH_DATA."/antiflood/chat{$this->chat_id}.json"))
+			$this->antiflood_database = json_decode(file_get_contents(BOTPATH_DATA."/antiflood/chat{$this->chat_id}.json"), true);
 		else
 			$this->antiflood_database = array();
 	}
 
 	public function save(){
-		file_put_contents(BOT_DATADIR."/antiflood/chat{$this->chat_id}.json", json_encode($this->antiflood_database, JSON_UNESCAPED_UNICODE));
+		file_put_contents(BOTPATH_DATA."/antiflood/chat{$this->chat_id}.json", json_encode($this->antiflood_database, JSON_UNESCAPED_UNICODE));
 	}
 
 	public function checkMember($data){
@@ -392,8 +392,8 @@ class AntiFlood{
 	public static function handler($data, $db){
 		$chatModes = new ChatModes($db);
 		if(!$chatModes->getModeValue('antiflood_enabled')){
-			if(file_exists(BOT_DATADIR."/antiflood/chat{$data->object->peer_id}.json"))
-				unlink(BOT_DATADIR."/antiflood/chat{$data->object->peer_id}.json");
+			if(file_exists(BOTPATH_DATA."/antiflood/chat{$data->object->peer_id}.json"))
+				unlink(BOTPATH_DATA."/antiflood/chat{$data->object->peer_id}.json");
 			return false;
 		}
 
@@ -433,7 +433,7 @@ function manager_initcmd($event){
 	//$event->addTextMessageCommand("!ранги", 'manager_show_user_ranks');
 	$event->addTextMessageCommand("!приветствие", 'manager_greeting');
 	$event->addTextMessageCommand("!modes", "manager_mode_list");
-	$event->addTextMessageCommand("!панель", "manager_panel_control");
+	$event->addTextMessageCommand("!panel", "manager_panel_control");
 	$event->addTextMessageCommand("панель", "manager_panel_show");
 	$event->addTextMessageCommand("!права", 'manager_permissions_menu');
 
@@ -992,26 +992,7 @@ function manager_online_list($finput){
 	$botModule = new BotModule($db);
 
 	if(!array_key_exists(1, $argv)){
-		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'online'});
-			var msg = ', 🌐следующие пользователи в сети:\\n';
-			var msg_users = '';
-
-			var  i = 0; while(i < members.profiles.length){
-				if(members.profiles[i].online == 1){
-					msg_users = msg_users + '✅@id' + members.profiles[i].id + ' (' + members.profiles[i].first_name.substr(0, 2) + '. ' + members.profiles[i].last_name + ')\\n';
-				}
-				i = i + 1;
-			}
-
-			if(msg_users == ''){
-				msg = ', 🚫в данный момент нет пользователей в сети!';
-			} else {
-				msg = msg + msg_users;
-			}
-
-			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+msg,'disable_mentions':true});
-			");
+		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."var members=API.messages.getConversationMembers({'peer_id':{$data->object->peer_id},'fields':'online'});var msg=', 🌐следующие пользователи в сети:\\n';var msg_users='';var i=0;while(i<members.profiles.length){if(members.profiles[i].online==1){var emoji='';if(members.profiles[i].online_mobile==1){emoji='📱';}else{emoji='💻';}msg_users=msg_users+emoji+'@id'+members.profiles[i].id+' ('+members.profiles[i].first_name.substr(0, 2)+'. '+members.profiles[i].last_name+')\\n';}i=i+1;}if(msg_users==''){msg=', 🚫В данный момент нет пользователей в сети!';}else{msg=msg+msg_users;}return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+msg,'disable_mentions':true});");
 	}
 }
 
@@ -1030,10 +1011,16 @@ function manager_nick($finput){
 		if(!array_key_exists(0, $data->object->fwd_messages)){
 			if(mb_strlen($nick) <= 15){
 				$nicknames = $db->getValue(array("chat_settings", "user_nicknames"), array());
-				if(array_search($nick, $nicknames) !== false){
+
+				// Проверка ника на уникальность без учета регистра
+				foreach ($nicknames as $key => $value) {
+					$nicknames[$key] = mb_strtolower($value);
+				}
+				if(array_search(mb_strtolower($nick), $nicknames) !== false){
 					$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Указанный ник занят!");
 					return;
 				}
+
 				$db->setValue(array("chat_settings", "user_nicknames", "id{$data->object->from_id}"), $nick);
 				$db->save();
 				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Ник установлен.");
@@ -1822,9 +1809,9 @@ function manager_panel_keyboard_handler($finput){
 				)
 			);
 		$result = $finput->event->runTextMessageCommand($modified_data);
-		if($result == Bot\Event::COMMAND_RESULT_OK)
+		if($result->code == Bot\Event::COMMAND_RESULT_OK)
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "✅ Команда выполнена!");
-		elseif($result == Bot\Event::COMMAND_RESULT_UNKNOWN)
+		elseif($result->code == Bot\Event::COMMAND_RESULT_UNKNOWN)
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Ошибка. Данной команды не существует.");
 	}
 	else{

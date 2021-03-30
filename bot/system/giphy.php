@@ -38,7 +38,7 @@ function giphy_handler($finput){
 			API.messages.setActivity({'peer_id':{$data->object->peer_id},'type':'typing'});
 			return API.docs.getMessagesUploadServer({'peer_id':{$data->object->peer_id},'type':'doc'});"));
 
-		$path = BOT_TMPDIR."/gif".mt_rand(0, 65535).".gif";
+		$path = BOTPATH_TMP."/gif".mt_rand(0, 65535).".gif";
 
 		file_put_contents($path, file_get_contents($gif->data->images->fixed_width->url));
 		$res = json_decode(vk_uploadDocs(array('file' => new CURLFile($path)), $response->response->upload_url));
