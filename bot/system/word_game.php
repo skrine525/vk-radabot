@@ -382,7 +382,11 @@ function wordgame_gameplay_cb($finput){
 
 }
 
-function wordgame_gameplay($data, $db){
+function wordgame_gameplay($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$db = $finput->db;
+
 	$chatModes = new ChatModes($db);
 	if(!$chatModes->getModeValue("games_enabled")) // Отключаем, если в беседе запрещены игры
 		return;
@@ -402,6 +406,7 @@ function wordgame_gameplay($data, $db){
 			vk_execute("
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}','keyboard':'{$empty_keyboard}'});
 				");
+			return true;
 		}
 		elseif ($message_text == "продолжить" && $session["word_game"]["current_word"]["can_reset"]){
 			wordgame_reset_word($session, $date, $session["word_game"]["started_by"]);
@@ -425,6 +430,7 @@ function wordgame_gameplay($data, $db){
 			vk_execute("
 				return API.messages.send({$json_request});
 			");
+			return true;
 		}
 		elseif ($message_text == "слово" && !$session["word_game"]["current_word"]["can_reset"]){
 			$word = wordgame_get_encoded_word($session);
@@ -434,6 +440,7 @@ function wordgame_gameplay($data, $db){
 			vk_execute("
 				return API.messages.send({$json_request});
 				");
+			return true;
 		}
 		elseif ($message_text == 'подсказка' && !$session["word_game"]["current_word"]["can_reset"]) {
 			$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
@@ -493,6 +500,7 @@ function wordgame_gameplay($data, $db){
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});
 					");
 			}
+			return true;
 		}
 		elseif($message_text == 'сдаться' && !$session["word_game"]["current_word"]["can_reset"]){
 			$wordlen = mb_strlen($session["word_game"]["current_word"]["word"]);
@@ -527,6 +535,7 @@ function wordgame_gameplay($data, $db){
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});
 					");
 			}
+			return true;
 		}
 		elseif (strcasecmp($message_text, $session["word_game"]["current_word"]["word"]) == 0 && !$session["word_game"]["current_word"]["can_reset"]){
 			$word = $session["word_game"]["current_word"]["word"];
@@ -555,8 +564,10 @@ function wordgame_gameplay($data, $db){
 				}
 				return API.messages.send({$json_request});
 				");
+			return true;
 		}
 	}
+	return false;
 }
 
 ?>

@@ -545,13 +545,14 @@ namespace{
 		$botModule = new BotModule($db);
 		$economy = new Economy\Main($db);
 
-		if(array_key_exists(0, $data->object->fwd_messages)){
+		$member = bot_get_array_value($argv, 1, "");
+		if(array_key_exists(0, $data->object->fwd_messages))
 			$member_id = $data->object->fwd_messages[0]->from_id;
-		} elseif(array_key_exists(1, $argv) && bot_is_mention($argv[1])){
-			$member_id = bot_get_id_from_mention($argv[1]);
-		} elseif(array_key_exists(1, $argv) && is_numeric($argv[1])) {
-			$member_id = intval($argv[1]);
-		} else $member_id = $data->object->from_id;
+		elseif(bot_get_userid_by_mention($member, $member_id)){}
+		elseif(bot_get_userid_by_nick($db, $member, $member_id)){}
+		elseif(is_numeric($member))
+			$member_id = intval($member);
+		else $member_id = $data->object->from_id;
 
 		if($data->object->from_id == $member_id)
 			$other_user = false;
@@ -1693,13 +1694,13 @@ namespace{
 				return;
 			}
 
-			if(array_key_exists(0, $data->object->fwd_messages)){
+			if(array_key_exists(0, $data->object->fwd_messages))
 				$member_id = $data->object->fwd_messages[0]->from_id;
-			} elseif(!is_null($argvt3) && bot_is_mention($argvt3)){
-				$member_id = bot_get_id_from_mention($argvt3);
-			} elseif(!is_null($argvt3) && is_numeric($argvt3)) {
+			elseif(bot_get_userid_by_mention($argvt3, $member_id)){}
+			elseif(bot_get_userid_by_nick($db, $argvt3, $member_id)){}
+			elseif(is_numeric($argvt3))
 				$member_id = intval($argvt3);
-			} else {
+			else{
 				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите пользователя.", $data->object->from_id);
 				return;
 			}
@@ -3126,7 +3127,7 @@ namespace{
 
 			$rating_json = json_encode($rating_for_print, JSON_UNESCAPED_UNICODE);
 
-			vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
+			vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 				var rating = {$rating_json};
 				var user_ids = rating@.user_id;
 				var users = API.users.get({'user_ids':user_ids});
@@ -3155,13 +3156,13 @@ namespace{
 		$argvt1 = intval(bot_get_array_value($argv, 1, 0));
 		$argvt2 = intval(bot_get_array_value($argv, 2, 0));
 		$argvt3 = bot_get_array_value($argv, 3, "");
-		if(array_key_exists(0, $data->object->fwd_messages)){
+		if(array_key_exists(0, $data->object->fwd_messages))
 			$member_id = $data->object->fwd_messages[0]->from_id;
-		} elseif(bot_is_mention($argvt3)){
-			$member_id = bot_get_id_from_mention($argvt3);
-		} elseif(is_numeric($argvt3)) {
+		elseif(bot_get_userid_by_mention($argvt3, $member_id)){}
+		elseif(bot_get_userid_by_nick($db, $argvt3, $member_id)){}
+		elseif(is_numeric($argvt3))
 			$member_id = intval($argvt3);
-		} else{
+		else{
 			$keyboard = vk_keyboard_inline(array(
 				array(
 					vk_text_button("Имущество", array("command" => "bot_runtc", "text_command" => "!имущество"), "primary")

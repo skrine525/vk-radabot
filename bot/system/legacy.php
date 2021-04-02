@@ -51,6 +51,7 @@ namespace Legacy{
 				$pet["cheerfulness"] += 8 * $passed_times;
 			else
 				$pet["cheerfulness"] -= 4 * $passed_times;
+			$pet['last_update_time'] = $time;
 		}
 		fun_pet_dbcheck($pet);
 
@@ -192,7 +193,7 @@ namespace Legacy{
 	}
 
 	class SysMemes{
-		const MEMES = array('мемы', 'f', 'topa', 'андрей', 'олег', 'ябловод', 'люба', 'керил', 'юля', 'олды тут?', 'кб', 'некита', 'егор', 'ксюша', 'дрочить', 'саня', 'аля', 'дрочить на чулки', 'дрочить на карину', 'дрочить на амину', 'оффники', 'пашел нахуй', 'лохи беседы', 'дата регистрации', 'попить чай');
+		const MEMES = array('мемы', 'f', 'topa', 'андрей', 'олег', 'ябловод', 'люба', 'керил', 'юля', 'олды тут?', 'кб', 'некита', 'егор', 'ксюша', 'дрочить', 'саня', 'аля', 'дрочить на чулки', 'дрочить на карину', 'дрочить на амину', 'оффники', 'пашел нахуй', 'лохи беседы', 'дата регистрации', 'попить чай', 'чай');
 
 		public static function isExists($meme_name){
 			$exists = false;
@@ -209,7 +210,7 @@ namespace Legacy{
 		public static function handler($data, $meme_name, &$db){
 			$chatModes = new \ChatModes($db);
 			if(!$chatModes->getModeValue("allow_memes") || !$chatModes->getModeValue("legacy_enabled"))
-				return;
+				return false;
 
 			if(!self::isExists($meme_name))
 				return false;
@@ -265,7 +266,7 @@ namespace Legacy{
 				$keyboard = vk_keyboard(true, array($s1, $s2));
 				$msg = "Обана, кнопочки!";
 				$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'keyboard' => $keyboard), JSON_UNESCAPED_UNICODE);
-				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
+				vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 					return API.messages.send({$json_request});
 					");
 				//vk_call('messages.send', array('peer_id' => $data->object->peer_id, 'message' => '@id317258850 (<3)', 'attachment' => 'photo-161901831_456239030'));
@@ -302,7 +303,7 @@ namespace Legacy{
 
 				case 'олды тут?':
 				$msg = ", ТУТ!";
-				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
+				vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 					");
 				return 'ok';
@@ -310,21 +311,21 @@ namespace Legacy{
 
 				case 'кб':
 				$msg = "СОСАТЬ!";
-				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
+				vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});");
 				return 'ok';
 				break;
 
 				case 'некита':
 				$msg = "@id438333657 (Корееееееееееееееец)";
-				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
+				vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}'});");
 				return 'ok';
 				break;
 
 				case 'егор':
 				$msg = " - задрот.";
-				vk_execute($botModule->makeExeAppealByID(458598210)."
+				vk_execute($botModule->buildVKSciptAppealByID(458598210)."
 					return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});");
 				return 'ok';
 				break;
@@ -412,7 +413,7 @@ namespace Legacy{
 				break;
 
 				case 'лохи беседы':
-				vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
+				vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 					var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id}}).profiles;
 					var msg = appeal+', список лохов беседы:';
 
@@ -443,10 +444,18 @@ namespace Legacy{
 				case 'попить чай':
 				$permissionSystem = new \PermissionSystem($db);
 				if($permissionSystem->checkUserPermission($data->object->from_id, 'drink_tea')){
+					$tea_count = $db->getValue(['fun', 'tea_count', "id{$data->object->from_id}"], 0);
+					$tea_count++;
+					$db->setValue(['fun', 'tea_count', "id{$data->object->from_id}"], $tea_count);
 					vk_execute("var user=API.users.get({'user_id':{$data->object->from_id},'fields':'screen_name'})[0];var msg='@'+user.screen_name+' ('+user.first_name+' '+user.last_name+') попил чай.☕';return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});");
 				}
 				else
 					$botModule->sendSilentMessage($data->object->peer_id, ", У вас нет права пить чай!", $data->object->from_id);
+				break;
+
+				case 'чай':
+				$tea_count = $db->getValue(['fun', 'tea_count', "id{$data->object->from_id}"], 0);
+				$botModule->sendSilentMessage($data->object->peer_id, ", ☕Вы попили чай {$tea_count} раз(а).", $data->object->from_id);
 				break;
 			}
 
@@ -463,17 +472,19 @@ namespace Legacy{
 						$keyboard = vk_keyboard(false, array());
 						$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => 'Клавиатура убрана.', 'keyboard' => $keyboard), JSON_UNESCAPED_UNICODE);
 						vk_execute("return API.messages.send({$json_request});");
+						return true;
 						break;
 
 						case 1:
 						$msg = ", Ты только что нажал'+a_char+' самую @id317258850 (охуенную) кнопку в мире.❤🖤💙💚💛💖";
-						vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
+						vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 							var user = API.users.get({'user_ids':[{$data->object->from_id}],'fields':'sex'})[0];
 							var a_char = '';
 							if(user.sex == 1){
 								a_char = 'а';
 							}
 							return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','attachment':'photo-161901831_456239030'});");
+						return true;
 						break;
 
 						case 2:
@@ -513,13 +524,14 @@ namespace Legacy{
 							$keyboard = vk_keyboard(true, array(array(vk_text_button("Дрочить", array('command'=>'fun','meme_id'=>2,'act'=>1,'napkin'=>1), "primary"))));
 							$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => '%appeal%, на, держи салфеточку!', 'keyboard' => $keyboard), JSON_UNESCAPED_UNICODE);
 							$json_request = vk_parse_var($json_request, "appeal");
-							vk_execute($botModule->makeExeAppealByID($data->object->from_id)."API.messages.send({$json_request});");
+							vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."API.messages.send({$json_request});");
 						}
+						return true;
 						break;
 
 						case 3:
 						if($payload->selected == 1){
-							vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
+							vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 							var peer_id = {$data->object->peer_id};
 							var from_id = {$data->object->from_id};
 							var msg = ', Кирилл? Ну и хорошо!';
@@ -527,7 +539,7 @@ namespace Legacy{
 							return 0;
 							");
 						} else {
-							vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
+							vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 							var peer_id = {$data->object->peer_id};
 							var from_id = {$data->object->from_id};
 							var msg = ', Что? Керил? Бан, нахой!';
@@ -536,6 +548,7 @@ namespace Legacy{
 							return 0;
 							");
 						}
+						return true;
 						break;
 
 						case 4:
@@ -554,21 +567,25 @@ namespace Legacy{
 
 						$msg = $base[$payload->act-1];
 
-						vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
+						vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 							return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 							");
+						return true;
 						break;
 
 						case 6:
 						fun_stockings($data, $db);
+						return true;
 						break;
 
 						case 7:
 						fun_karina($data, $db);
+						return true;
 						break;
 
 						case 8:
 						fun_amina($data, $db);
+						return true;
 						break;
 
 						case 9:
@@ -576,14 +593,17 @@ namespace Legacy{
 						$i = mt_rand(0, 65535) % count($photos);
 						$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'attachment' => $photos[$i]), JSON_UNESCAPED_UNICODE);
 						vk_execute("API.messages.send({$json_request});");
+						return true;
 						break;
 
 						case 10:
 						$botModule->sendSilentMessage($data->object->peer_id, "@id477530202 (Самая офигенная!)", null, array('attachment' => 'photo477530202_457244949,photo219011658_457244383'));
+						return true;
 						break;
 					}
 				}
 			}
+			return false;
 		}
 	}
 
@@ -616,7 +636,9 @@ namespace Legacy{
 				}
 				API.messages.send({'peer_id':{$data->object->peer_id},'message':msg,'disable_mentions':true});
 				");
+			return true;
 		}
+		return false;
 	}
 }
 

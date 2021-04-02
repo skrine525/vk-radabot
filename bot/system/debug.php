@@ -24,6 +24,7 @@ function debug_cmdinit($event){
 		$event->addTextMessageCommand('!db-edit', 'debug_dbedit_tc');
 		$event->addTextMessageCommand('!special-permits', 'debug_specialpermissions_menu');
 		$event->addTextMessageCommand('!test-cmd', 'debug_testcmd');
+		$event->addTextMessageCommand('!cmd-search', 'debug_cmdsearch');
 
 		$event->addCallbackButtonCommand('bot_runcb', 'debug_runcb_cb');
 		$event->addCallbackButtonCommand('debug_dbedit', 'debug_dbedit_cb');
@@ -45,9 +46,8 @@ function debug_docmd($finput){
 	if(is_numeric($member)){
 		$member_id = intval($member);
 	}
-	elseif(bot_is_mention($member)){
-		$member_id = bot_get_id_from_mention($member);
-	}
+	elseif(bot_get_userid_by_mention($member, $member_id)){}
+	elseif(bot_get_userid_by_nick($db, $member, $member_id)){}
 	else{
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте: !docmd <пользователь> <команда>");
 		return;
@@ -181,7 +181,7 @@ function debug_kickall($finput){
 
 	$messagesModule  = new BotModule($db);
 
-	vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."
+	vk_execute($messagesModule->buildVKSciptAppealByID($data->object->from_id)."
 		var peer_id = {$data->object->peer_id};
 		var chat_id = peer_id - 2000000000;
 		var members = API.messages.getConversationMembers({'peer_id':peer_id});
@@ -500,12 +500,13 @@ function debug_specialpermissions_menu($finput){
 
 	$permissionSystem = new PermissionSystem($db);
 
+	$member = bot_get_array_value($argv, 1, "");
 	if(array_key_exists(0, $data->object->fwd_messages))
 		$member_id = $data->object->fwd_messages[0]->from_id;
-	elseif(array_key_exists(1, $argv) && bot_is_mention($argv[1]))
-		$member_id = bot_get_id_from_mention($argv[1]);
-	elseif(array_key_exists(1, $argv) && is_numeric($argv[1]))
-		$member_id = intval($argv[1]);
+	elseif(bot_get_userid_by_mention($member, $member_id)){}
+	elseif(bot_get_userid_by_nick($db, $member, $member_id)){}
+	elseif(is_numeric($member))
+		$member_id = intval($member);
 	else $member_id = 0;
 
 	if($member_id == 0){
@@ -564,7 +565,7 @@ function debug_specialpermissions_menu($finput){
 
 	$keyboard = vk_keyboard_inline($keyboard_buttons);
 	$exe_json = json_encode(['keyboard' => $keyboard], JSON_UNESCAPED_UNICODE);
-	vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."
+	vk_execute($messagesModule->buildVKSciptAppealByID($data->object->from_id)."
 		var member=API.users.get({'user_id':{$member_id},'fields':'first_name_dat,last_name_dat'})[0];
 		var json={$exe_json};
 		return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', Настройка специальных прав @id{$member_id} ('+member.first_name_dat+' '+member.last_name_dat+').','disable_mentions':true,'keyboard':json.keyboard});");
@@ -670,11 +671,41 @@ function debug_specialpermissions_menu_cb($finput){
 	$keyboard = vk_keyboard_inline($keyboard_buttons);
 	$exe_json = json_encode(['keyboard' => $keyboard], JSON_UNESCAPED_UNICODE);
 	$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $message, ['keyboard' => $keyboard]);
-	vk_execute($messagesModule->makeExeAppealByID($data->object->user_id)."
+	vk_execute($messagesModule->buildVKSciptAppealByID($data->object->user_id)."
 		var member=API.users.get({'user_id':{$member_id},'fields':'first_name_dat,last_name_dat'})[0];
 		var json={$exe_json};
 		return API.messages.edit({'peer_id':{$data->object->peer_id},'conversation_message_id':{$data->object->conversation_message_id},'message':appeal+', Настройка специальных прав @id{$member_id} ('+member.first_name_dat+' '+member.last_name_dat+').','disable_mentions':true,'keyboard':json.keyboard});
 		");
+}
+
+function debug_cmdsearch($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$argv = $finput->argv;
+	$db = $finput->db;
+	$event = $finput->event;
+
+	$messagesModule = new Bot\Messages($db);
+	$messagesModule->setAppealID($data->object->from_id);
+
+	$command = mb_substr($data->object->text, 12);
+
+	if($command == ""){
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте: !test-cmd <команда>");
+		return;
+	}
+
+	$commands = $event->getTextMessageCommandList();
+	$commands_data = [];
+	foreach ($commands as $key => $value) {
+		$c = mb_substr_count($value, $command);
+		if($c > 0){
+			$commands_data[$value] = $c;
+		}
+	}
+	arsort($commands_data);
+
+	$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, "%appeal%, Возможно вы имели ввиду:", array_keys($commands_data));
 }
 
 ?>

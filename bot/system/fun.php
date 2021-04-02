@@ -95,10 +95,10 @@ function fun_kek($finput){
 		imagedestroy($im);
 		imagedestroy($im2);
 
-		$res1 =  json_decode(vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."return API.photos.getMessagesUploadServer({'peer_id':{$data->object->peer_id}});"));
+		$res1 =  json_decode(vk_execute($messagesModule->buildVKSciptAppealByID($data->object->from_id)."return API.photos.getMessagesUploadServer({'peer_id':{$data->object->peer_id}});"));
 		$res2 = json_decode(vk_uploadDocs(array('photo' => new CURLFile($path)), $res1->response->upload_url));
 		$file_json = json_encode(array('photo' => $res2->photo, 'server' => $res2->server, 'hash' => $res2->hash));
-		vk_execute($messagesModule->makeExeAppealByID($data->object->from_id)."var doc=API.photos.saveMessagesPhoto({$file_json});API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', Кек:','attachment':'photo'+doc[0].owner_id+'_'+doc[0].id,'disable_mentions':true});");
+		vk_execute($messagesModule->buildVKSciptAppealByID($data->object->from_id)."var doc=API.photos.saveMessagesPhoto({$file_json});API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', Кек:','attachment':'photo'+doc[0].owner_id+'_'+doc[0].id,'disable_mentions':true});");
 
 		unlink($path);
 	} else {
@@ -177,7 +177,7 @@ function fun_memes_control_panel($finput){
 			$photo_url = $photo_sizes[$photo_url_index]->url;
 			$path = BOTPATH_TMP."/photo".mt_rand(0, 65535).".jpg";
 			file_put_contents($path, file_get_contents($photo_url));
-			$response =  json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."return API.photos.getMessagesUploadServer({'peer_id':{$data->object->peer_id}});"));
+			$response =  json_decode(vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."return API.photos.getMessagesUploadServer({'peer_id':{$data->object->peer_id}});"));
 			$res = json_decode(vk_uploadDocs(array('photo' => new CURLFile($path)), $response->response->upload_url));
 			unlink($path);
 			$res_json = json_encode(array('photo' => $res->photo, 'server' => $res->server, 'hash' => $res->hash));
@@ -230,7 +230,7 @@ function fun_memes_control_panel($finput){
 				return;
 			}
 
-			json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Все мемы в беседе были удалены!','disable_mentions':true});"))->response;
+			json_decode(vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Все мемы в беседе были удалены!','disable_mentions':true});"))->response;
 			$db->unsetValue(array("fun", "memes"));
 			$db->save();
 		} else {
@@ -245,7 +245,7 @@ function fun_memes_control_panel($finput){
 					return;
 				}
 
-				json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Мем \"{$meme_name}\" удален!','disable_mentions':true});"))->response;
+				json_decode(vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Мем \"{$meme_name}\" удален!','disable_mentions':true});"))->response;
 				$db->unsetValue(array("fun", "memes", $meme_name));
 				$db->save();
 			}
@@ -276,8 +276,8 @@ function fun_memes_control_panel($finput){
 
 		$memes = $db->getValue(array("fun", "memes"), array());
 
-		if(!is_null($memes[$meme_name])){
-			$added_time = gmdate("d.m.Y H:i:s", $memes[$meme_name]["date"]+10800)." по МСК";
+		if(array_key_exists($meme_name, $memes)){
+			$added_time = gmdate("d.m.Y", $memes[$meme_name]["date"]+10800);
 			$msg = "%__APPEAL__%, информация о меме:\n✏Имя: {$meme_name}\n🤵Владелец: %__OWNERNAME__%\n📅Добавлен: {$added_time}\n📂Содержимое: ⬇️⬇️⬇️";
 			$request_array = array('peer_id' => $data->object->peer_id, 'message' => $msg, 'attachment' => $memes[$meme_name]["content"], 'disable_mentions' => true);
 
@@ -304,7 +304,7 @@ function fun_memes_control_panel($finput){
 
 			$request = json_encode($request_array, JSON_UNESCAPED_UNICODE);
 			$request = vk_parse_vars($request, array("__OWNERNAME__", "__APPEAL__"));
-			vk_execute($botModule->makeExeAppealByID($data->object->from_id, '__APPEAL__')."var owner = API.users.get({'user_ids':[{$memes[$meme_name]["owner_id"]}]})[0];var __OWNERNAME__ = '@id{$memes[$meme_name]["owner_id"]} ('+owner.first_name+' '+owner.last_name+')';return API.messages.send({$request});");
+			vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id, '__APPEAL__')."var owner = API.users.get({'user_ids':[{$memes[$meme_name]["owner_id"]}]})[0];var __OWNERNAME__ = '@id{$memes[$meme_name]["owner_id"]} ('+owner.first_name+' '+owner.last_name+')';return API.messages.send({$request});");
 		} else {
 			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔мема с именем \"{$meme_name}\" не существует.", $data->object->from_id);
 		}
@@ -352,7 +352,7 @@ function fun_memes_control_panel_cb($finput){
 	$meme_values = array_values($memes);
 
 	if(!is_null($meme_values[$meme_index])){
-		$added_time = gmdate("d.m.Y H:i:s", $meme_values[$meme_index]["date"]+10800)." по МСК";
+		$added_time = gmdate("d.m.Y", $meme_values[$meme_index]["date"]+10800);
 		$msg = "%__APPEAL__%, информация о меме:\n✏Имя: {$meme_names[$meme_index]}\n🤵Владелец: %__OWNERNAME__%\n📅Добавлен: {$added_time}\n📂Содержимое: ⬇️⬇️⬇️";
 		$request_array = array('peer_id' => $data->object->peer_id, 'message' => $msg, 'attachment' => $meme_values[$meme_index]["content"], 'disable_mentions' => true, 'conversation_message_id' => $data->object->conversation_message_id);
 
@@ -377,7 +377,7 @@ function fun_memes_control_panel_cb($finput){
 
 		$request = json_encode($request_array, JSON_UNESCAPED_UNICODE);
 		$request = vk_parse_vars($request, array("__OWNERNAME__", "__APPEAL__"));
-		vk_execute($messagesModule->makeExeAppealByID($data->object->user_id, '__APPEAL__')."var owner = API.users.get({'user_ids':[{$meme_values[$meme_index]["owner_id"]}]})[0];var __OWNERNAME__ = '@id{$meme_values[$meme_index]["owner_id"]} ('+owner.first_name+' '+owner.last_name+')';return API.messages.edit({$request});");
+		vk_execute($messagesModule->buildVKSciptAppealByID($data->object->user_id, '__APPEAL__')."var owner = API.users.get({'user_ids':[{$meme_values[$meme_index]["owner_id"]}]})[0];var __OWNERNAME__ = '@id{$meme_values[$meme_index]["owner_id"]} ('+owner.first_name+' '+owner.last_name+')';return API.messages.edit({$request});");
 	} else {
 		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Внутренняя ошибка: Мем не найден.');
 	}
@@ -392,7 +392,7 @@ function fun_memes_control_panel_cb($finput){
 function fun_memes_handler($data, $db){
 	$chatModes = new ChatModes($db);
 	if(!$chatModes->getModeValue("allow_memes"))
-		return;
+		return false;
 
 	$meme_name = mb_strtolower($data->object->text);
 	$meme = $db->getValue(array("fun", "memes", $meme_name), false);
@@ -400,19 +400,28 @@ function fun_memes_handler($data, $db){
 		$botModule = new BotModule($db);
 		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%,", 'attachment' => $meme["content"], 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 		$request = vk_parse_var($request, "appeal");
-		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."return API.messages.send({$request});");
+		vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."return API.messages.send({$request});");
+		return true;
 	}
+	return false;
 }
 
-function fun_handler($data, &$db){
+function fun_handler($finput){
+	// Инициализация базовых переменных
+	$data = $finput->data; 
+	$db = $finput->db;
+
 	$text = mb_strtolower($data->object->text);
 
-	if(!Legacy\SysMemes::handler($data, $text, $db))
-		fun_memes_handler($data, $db);
-
-	Legacy\SysMemes::payloadHandler($data, $db);
-
-	Legacy\imgoingsleeping($data, $db, $text);
+	if(Legacy\SysMemes::handler($data, $text, $db))
+		return true;
+	elseif(fun_memes_handler($data, $db))
+		return true;
+	elseif(Legacy\SysMemes::payloadHandler($data, $db))
+		return true;
+	elseif(Legacy\imgoingsleeping($data, $db, $text))
+		return true;
+	return false;
 }
 
 function fun_stockings_cmd($finput){
@@ -424,20 +433,11 @@ function fun_stockings($data, $db){ // Чулки
 	$messages_array = array("дрочи😈", "держи😛", "ух какая сосочка🔥", "что, уже кончил?💦🤣", "какие ножки👌🏻👈🏻");
 
 	$random_number = mt_rand(0, 65535);
+	$owner_id = -102853758;
+	$album_id = "wall";
 	$msg = $messages_array[$random_number % sizeof($messages_array)];
-	$photo = json_decode(vk_userexecute("
-		var random_number = {$random_number};
-		var owner_id = -102853758; var album_id = 'wall';
-
-		var a = API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':0});
-		var photos_count = a.count;
-		var photos_offset = (random_number % photos_count);
-		var photo = API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':1,'offset':photos_offset });
-		return photo;
-		"));
-	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-		return API.messages.send({'peer_id':{$data->object->peer_id},'attachment':'photo{$photo->response->items[0]->owner_id}_{$photo->response->items[0]->id}','message':appeal+', {$msg}','disable_mentions':true});
-		");
+	$photo = json_decode(vk_userexecute("var random_number={$random_number};var owner_id={$owner_id};var album_id=\"{$album_id}\";var a=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':0});var photos_count=a.count;var photos_offset=(random_number%photos_count);var photo=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':1,'offset':photos_offset});return photo;"));
+	vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."return API.messages.send({'peer_id':{$data->object->peer_id},'attachment':'photo{$photo->response->items[0]->owner_id}_{$photo->response->items[0]->id}','message':appeal+', {$msg}','disable_mentions':true});");
 }
 
 function fun_buzova($finput){
@@ -449,19 +449,10 @@ function fun_buzova($finput){
 	$botModule = new BotModule($db);
 
 	$random_number = mt_rand(0, 65535);
-	$photo = json_decode(vk_userexecute("
-		var random_number = {$random_number};
-		var owner_id = 32707600; var album_id = 'wall';
-
-		var a = API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':0});
-		var photos_count = a.count;
-		var photos_offset = (random_number % photos_count);
-		var photo = API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':1,'offset':photos_offset });
-		return photo;
-		"));
-	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-		return API.messages.send({'peer_id':{$data->object->peer_id},'attachment':'photo{$photo->response->items[0]->owner_id}_{$photo->response->items[0]->id}'});
-		");
+	$owner_id = 32707600;
+	$album_id = "wall";
+	$photo = json_decode(vk_userexecute("var random_number={$random_number};var owner_id={$owner_id};var album_id=\"{$album_id}\";var a=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':0});var photos_count=a.count;var photos_offset=(random_number%photos_count);var photo=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':1,'offset':photos_offset});return photo;"));
+	vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."return API.messages.send({'peer_id':{$data->object->peer_id},'attachment':'photo{$photo->response->items[0]->owner_id}_{$photo->response->items[0]->id}'});");
 }
 
 function fun_karina_cmd($finput){
@@ -472,19 +463,10 @@ function fun_karina($data, $db){
 	$botModule = new BotModule($db);
 
 	$random_number = mt_rand(0, 65535);
-	$photo = json_decode(vk_userexecute("
-		var random_number = {$random_number};
-		var owner_id = 153162173; var album_id = 'wall';
-
-		var a = API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':0});
-		var photos_count = a.count;
-		var photos_offset = (random_number % photos_count);
-		var photo = API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':1,'offset':photos_offset });
-		return photo;
-		"));
-	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-		return API.messages.send({'peer_id':{$data->object->peer_id},'attachment':'photo{$photo->response->items[0]->owner_id}_{$photo->response->items[0]->id}'});
-		");
+	$owner_id = 153162173;
+	$album_id = "wall";
+	$photo = json_decode(vk_userexecute("var random_number={$random_number};var owner_id={$owner_id};var album_id=\"{$album_id}\";var a=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':0});var photos_count=a.count;var photos_offset=(random_number%photos_count);var photo=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':1,'offset':photos_offset});return photo;"));
+	vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."return API.messages.send({'peer_id':{$data->object->peer_id},'attachment':'photo{$photo->response->items[0]->owner_id}_{$photo->response->items[0]->id}'});");
 }
 
 function fun_amina_cmd($finput){
@@ -494,19 +476,10 @@ function fun_amina_cmd($finput){
 function fun_amina($data, $db){
 	$botModule = new BotModule($db);
 	$random_number = mt_rand(0, 65535);
-	$photo = json_decode(vk_userexecute("
-		var random_number = {$random_number};
-		var owner_id = 363887574; var album_id = 'wall';
-
-		var a = API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':0});
-		var photos_count = a.count;
-		var photos_offset = (random_number % photos_count);
-		var photo = API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':1,'offset':photos_offset });
-		return photo;
-		"));
-	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
-		return API.messages.send({'peer_id':{$data->object->peer_id},'attachment':'photo{$photo->response->items[0]->owner_id}_{$photo->response->items[0]->id}'});
-		");
+	$owner_id = 363887574;
+	$album_id = "wall";
+	$photo = json_decode(vk_userexecute("var random_number={$random_number};var owner_id={$owner_id};var album_id=\"{$album_id}\";var a=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':0});var photos_count=a.count;var photos_offset=(random_number%photos_count);var photo=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':1,'offset':photos_offset});return photo;"));
+	vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."return API.messages.send({'peer_id':{$data->object->peer_id},'attachment':'photo{$photo->response->items[0]->owner_id}_{$photo->response->items[0]->id}'});");
 }
 
 function fun_like_avatar($data, $db){
@@ -570,14 +543,14 @@ function fun_choose($finput){
 
 	if(sizeof($options) < 2){
 		$msg = ", что-то мало вариантов.🤔 Я так не могу.😡";
-		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
+		vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
 		return;
 	}
 
 	$random_number = mt_rand(0, 65535) % sizeof($options);
 	$print_text = $options[$random_number];
 	$msg = ", 🤔я выбираю: " . $print_text;
-	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
+	vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});");
 }
 
 function fun_howmuch($finput){
@@ -677,7 +650,7 @@ function fun_whois_nom($finput){
 
 	$random_number = mt_rand(0, 65535);
 
-	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var from_id={$data->object->from_id};var random_number={$random_number};var members=API.messages.getConversationMembers({'peer_id':peer_id});var member=members.profiles[random_number % members.profiles.length];var msg=appeal+', 🤔Я думаю это @id'+ member.id + ' ('+member.first_name+' '+member.last_name+') - {$text}.';API.messages.send({'peer_id':peer_id,'message':msg});");
+	vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var from_id={$data->object->from_id};var random_number={$random_number};var members=API.messages.getConversationMembers({'peer_id':peer_id});var member=members.profiles[random_number % members.profiles.length];var msg=appeal+', 🤔Я думаю это @id'+ member.id + ' ('+member.first_name+' '+member.last_name+') - {$text}.';API.messages.send({'peer_id':peer_id,'message':msg});");
 }
 
 function fun_whois_acc($finput){
@@ -699,7 +672,7 @@ function fun_whois_acc($finput){
 
 	$random_number = mt_rand(0, 65535);
 
-	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var from_id={$data->object->from_id};var random_number={$random_number};var members=API.messages.getConversationMembers({'peer_id':peer_id,'fields':'first_name_acc,last_name_acc'});var member=members.profiles[random_number % members.profiles.length];var msg=appeal+', 🤔Я думаю это @id'+ member.id + ' ('+member.first_name_acc+' '+member.last_name_acc+') - {$text}.';API.messages.send({'peer_id':peer_id,'message':msg});");
+	vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var from_id={$data->object->from_id};var random_number={$random_number};var members=API.messages.getConversationMembers({'peer_id':peer_id,'fields':'first_name_acc,last_name_acc'});var member=members.profiles[random_number % members.profiles.length];var msg=appeal+', 🤔Я думаю это @id'+ member.id + ' ('+member.first_name_acc+' '+member.last_name_acc+') - {$text}.';API.messages.send({'peer_id':peer_id,'message':msg});");
 }
 
 function fun_whois_dat($finput){
@@ -721,7 +694,7 @@ function fun_whois_dat($finput){
 
 	$random_number = mt_rand(0, 65535);
 
-	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var from_id={$data->object->from_id};var random_number={$random_number};var members=API.messages.getConversationMembers({'peer_id':peer_id,'fields':'first_name_dat,last_name_dat'});var member=members.profiles[random_number % members.profiles.length];var msg=appeal+', 🤔Я думаю это @id'+ member.id + ' ('+member.first_name_dat+' '+member.last_name_dat+') - {$text}.';API.messages.send({'peer_id':peer_id,'message':msg});");
+	vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var from_id={$data->object->from_id};var random_number={$random_number};var members=API.messages.getConversationMembers({'peer_id':peer_id,'fields':'first_name_dat,last_name_dat'});var member=members.profiles[random_number % members.profiles.length];var msg=appeal+', 🤔Я думаю это @id'+ member.id + ' ('+member.first_name_dat+' '+member.last_name_dat+') - {$text}.';API.messages.send({'peer_id':peer_id,'message':msg});");
 }
 
 function fun_tts($finput){
@@ -758,7 +731,7 @@ function fun_tts($finput){
 	$audio = json_decode(vk_uploadDocs(array('file' => new CURLFile($path)), $server));
 	unlink($path);
 	
-	vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
+	vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 		var audio = API.docs.save({'file':'{$audio->file}'})[0];
 		API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+',','attachment':'doc'+audio.owner_id+'_'+audio.id,'disable_mentions':true});
 		");
@@ -854,13 +827,14 @@ function fun_marriage($finput){
 
 	$member_id = 0;
 
-	if(array_key_exists(0, $data->object->fwd_messages)){
+	$member = bot_get_array_value($argv, 1, "");
+	if(array_key_exists(0, $data->object->fwd_messages))
 		$member_id = $data->object->fwd_messages[0]->from_id;
-	} elseif(array_key_exists(1, $argv) && bot_is_mention($argv[1])){
-		$member_id = bot_get_id_from_mention($argv[1]);
-	} elseif(array_key_exists(1, $argv) && is_numeric($argv[1])) {
-		$member_id = intval($argv[1]);
-	} else {
+	elseif(bot_get_userid_by_mention($member, $member_id)){}
+	elseif(bot_get_userid_by_nick($db, $member, $member_id)){}
+	elseif(is_numeric($member))
+		$member_id = intval($member);
+	else {
 		if(array_key_exists(1, $argv))
 			$word1 = mb_strtolower($argv[1]);
 		else
@@ -981,7 +955,7 @@ function fun_marriage($finput){
 			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы уже состоите в браке или получили приглашение.", $data->object->from_id);
 			return;
 		}
-		$res = json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
+		$res = json_decode(vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 			var member = API.users.get({'user_ids':[{$member_id}],'fields':'first_name_dat,last_name_dat'})[0];
 			var members = API.messages.getConversationMembers({'peer_id':{$data->object->peer_id}});
 			var member_id = {$member_id};
@@ -1107,7 +1081,7 @@ function fun_show_marriage_list($finput){
 
 		$marriages_json = json_encode($list_out, JSON_UNESCAPED_UNICODE);
 
-		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."var marriages={$marriages_json};var current_date={$date};var partner_1_info=API.users.get({'user_ids':marriages@.partner_1});var partner_2_info=API.users.get({'user_ids':marriages@.partner_2});var msg=appeal+', история браков беседы [$list_number/{$list_max_number}]:';var i=0;while(i<marriages.length){var partner_1; var partner_2;var j=0;while(j<partner_1_info.length){if(partner_1_info[j].id==marriages[i].partner_1){partner_1=partner_1_info[j];j=partner_1_info.length;}j=j+1;}var j=0;while(j<partner_2_info.length){if(partner_2_info[j].id==marriages[i].partner_2){partner_2=partner_2_info[j];j=partner_2_info.length;}j=j+1;}msg = msg+'\\n✅@id'+marriages[i].partner_1+' ('+partner_1.first_name+') и @id'+marriages[i].partner_2+' ('+partner_2.first_name+') ('+marriages[i].str_info+')';i=i+1;}API.messages.send({'peer_id':{$data->object->peer_id},'message':msg,'disable_mentions':true});");
+		vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."var marriages={$marriages_json};var current_date={$date};var partner_1_info=API.users.get({'user_ids':marriages@.partner_1});var partner_2_info=API.users.get({'user_ids':marriages@.partner_2});var msg=appeal+', история браков беседы [$list_number/{$list_max_number}]:';var i=0;while(i<marriages.length){var partner_1; var partner_2;var j=0;while(j<partner_1_info.length){if(partner_1_info[j].id==marriages[i].partner_1){partner_1=partner_1_info[j];j=partner_1_info.length;}j=j+1;}var j=0;while(j<partner_2_info.length){if(partner_2_info[j].id==marriages[i].partner_2){partner_2=partner_2_info[j];j=partner_2_info.length;}j=j+1;}msg = msg+'\\n✅@id'+marriages[i].partner_1+' ('+partner_1.first_name+') и @id'+marriages[i].partner_2+' ('+partner_2.first_name+') ('+marriages[i].str_info+')';i=i+1;}API.messages.send({'peer_id':{$data->object->peer_id},'message':msg,'disable_mentions':true});");
 	}
 	elseif($word == ""){
 		$list = array();
@@ -1160,7 +1134,7 @@ function fun_show_marriage_list($finput){
 
 		$marriages_json = json_encode($list_out, JSON_UNESCAPED_UNICODE);
 
-		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."var marriages={$marriages_json};var current_date={$date};var partner_1_info=API.users.get({'user_ids':marriages@.partner_1});var partner_2_info=API.users.get({'user_ids':marriages@.partner_2});var msg=appeal+', 🤵👰браки в беседе [$list_number/{$list_max_number}]:';var i=0;while(i<marriages.length){var days=((current_date-marriages[i].start_time)-(current_date-marriages[i].start_time)%86400)/86400;msg=msg+'\\n❤@id'+marriages[i].partner_1+' ('+partner_1_info[i].first_name+') и @id'+marriages[i].partner_2+' ('+partner_2_info[i].first_name+')❤ ('+days+' д.)';i=i+1;}API.messages.send({'peer_id':{$data->object->peer_id},'message':msg,'disable_mentions':true});");
+		vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."var marriages={$marriages_json};var current_date={$date};var partner_1_info=API.users.get({'user_ids':marriages@.partner_1});var partner_2_info=API.users.get({'user_ids':marriages@.partner_2});var msg=appeal+', 🤵👰браки в беседе [$list_number/{$list_max_number}]:';var i=0;while(i<marriages.length){var days=((current_date-marriages[i].start_time)-(current_date-marriages[i].start_time)%86400)/86400;msg=msg+'\\n❤@id'+marriages[i].partner_1+' ('+partner_1_info[i].first_name+') и @id'+marriages[i].partner_2+' ('+partner_2_info[i].first_name+')❤ ('+days+' д.)';i=i+1;}API.messages.send({'peer_id':{$data->object->peer_id},'message':msg,'disable_mentions':true});");
 	}
 	else{
 		$botModule->sendCommandListFromArray($data, ", используйте:", array(

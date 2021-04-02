@@ -33,7 +33,7 @@ function giphy_handler($finput){
 	$gif = json_decode(giphy_translate(array('s' => $name)));
 	$botModule = new BotModule($db);
 	if (sizeof($gif->data) > 0){
-		$response =  json_decode(vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
+		$response =  json_decode(vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 			API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', загружаем гифку...','disable_mentions':true});
 			API.messages.setActivity({'peer_id':{$data->object->peer_id},'type':'typing'});
 			return API.docs.getMessagesUploadServer({'peer_id':{$data->object->peer_id},'type':'doc'});"));
@@ -48,7 +48,7 @@ function giphy_handler($finput){
 			API.messages.send({'peer_id':{$data->object->peer_id},'message':'Powered by GIPHY.@id{$data->object->from_id} (&#12288;)','attachment':'doc'+doc[0].owner_id+'_'+doc[0].id,'disable_mentions':true});
 			");
 	} else {
-		vk_execute($botModule->makeExeAppealByID($data->object->from_id)."
+		vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 			API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ничего не найдено!😢','disable_mentions':true});
 			");
 	}
