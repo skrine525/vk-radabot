@@ -142,7 +142,7 @@ function fun_memes_control_panel($finput){
 			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Имя не может быть больше 8 знаков!", $data->object->from_id);
 			return;
 		}
-		if($db->getValue(array("fun", "memes", $meme_name), false) !== false){
+		if($db->getValueLegacy(array("fun", "memes", $meme_name), false) !== false){
 			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Мем с таким именем уже существует!", $data->object->from_id);
 			return;
 		}
@@ -207,13 +207,12 @@ function fun_memes_control_panel($finput){
 			'content' => $content_attach,
 			'date' => time()
 		);
-		$db->setValue(array("fun", "memes", $meme_name), $meme);
-		$db->save();
+		$db->setValueLegacy(array("fun", "memes", $meme_name), $meme);
 		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Мем сохранен!", $data->object->from_id);
 	}
 	elseif($command == "del"){
 		$meme_name = mb_strtolower(mb_substr($data->object->text, 11));
-		$memes = $db->getValue(array("fun", "memes"), array());
+		$memes = $db->getValueLegacy(array("fun", "memes"), array());
 		if($meme_name == ""){
 			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Не найдено название!", $data->object->from_id);
 			return;
@@ -231,13 +230,11 @@ function fun_memes_control_panel($finput){
 			}
 
 			json_decode(vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Все мемы в беседе были удалены!','disable_mentions':true});"))->response;
-			$db->unsetValue(array("fun", "memes"));
-			$db->save();
+			$db->unsetValueLegacy(array("fun", "memes"));
 		} else {
 			if($memes[$meme_name]["owner_id"] == $data->object->from_id){
 				$botModule->sendSilentMessage($data->object->peer_id, ", ✅Мем \"{$meme_name}\" удален!", $data->object->from_id);
-				$db->unsetValue(array("fun", "memes", $meme_name));
-				$db->save();
+				$db->unsetValueLegacy(array("fun", "memes", $meme_name));
 			} else {
 				$permissionSystem = new PermissionSystem($db);
 				if(!$permissionSystem->checkUserPermission($data->object->from_id, 'customize_chat')){ // Проверка разрешения
@@ -246,13 +243,12 @@ function fun_memes_control_panel($finput){
 				}
 
 				json_decode(vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Мем \"{$meme_name}\" удален!','disable_mentions':true});"))->response;
-				$db->unsetValue(array("fun", "memes", $meme_name));
-				$db->save();
+				$db->unsetValueLegacy(array("fun", "memes", $meme_name));
 			}
 		}
 	}
 	elseif($command == "list"){
-		$meme_names = array_keys($db->getValue(array("fun", "memes")));
+		$meme_names = array_keys($db->getValueLegacy(array("fun", "memes")));
 		if(count($meme_names) == 0){
 			$botModule->sendSilentMessage($data->object->peer_id, ", в беседе нет мемов.", $data->object->from_id);
 			return;
@@ -274,7 +270,7 @@ function fun_memes_control_panel($finput){
 			return;
 		}
 
-		$memes = $db->getValue(array("fun", "memes"), array());
+		$memes = $db->getValueLegacy(array("fun", "memes"), array());
 
 		if(array_key_exists($meme_name, $memes)){
 			$added_time = gmdate("d.m.Y", $memes[$meme_name]["date"]+10800);
@@ -347,7 +343,7 @@ function fun_memes_control_panel_cb($finput){
 		return;
 	}
 
-	$memes = $db->getValue(array("fun", "memes"), array());
+	$memes = $db->getValueLegacy(array("fun", "memes"), array());
 	$meme_names = array_keys($memes);
 	$meme_values = array_values($memes);
 
@@ -395,10 +391,13 @@ function fun_memes_handler($data, $db){
 		return false;
 
 	$meme_name = mb_strtolower($data->object->text);
-	$meme = $db->getValue(array("fun", "memes", $meme_name), false);
+	$query = new MongoDB\Driver\Query(['_id' => $db->getID()], ['projection' => ["fun.memes.{$meme_name}.content" => 1]]);
+	$cursor = $db->getMongoDB()->executeQuery("{$db->getDatabaseName()}.chats", $query);
+	$exstractor = new Database\CursorValueExtractor($cursor);
+	$meme = $exstractor->getValue([0, "fun", "memes", $meme_name, "content"], false);
 	if($meme !== false){
 		$botModule = new BotModule($db);
-		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%,", 'attachment' => $meme["content"], 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
+		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%,", 'attachment' => $meme, 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 		$request = vk_parse_var($request, "appeal");
 		vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."return API.messages.send({$request});");
 		return true;
@@ -820,7 +819,7 @@ function fun_marriage($finput){
 
 	$botModule = new BotModule($db);
 
-	$marriages_db = $db->getValue(array("fun", "marriages"), array(
+	$marriages_db = $db->getValueLegacy(array("fun", "marriages"), array(
 		'user_info' => array(),
 		'list' => array()
 	));
@@ -944,8 +943,7 @@ function fun_marriage($finput){
 				}
 				break;
 		}
-		$db->setValue(array("fun", "marriages"), $marriages_db);
-		$db->save();
+		$db->setValueLegacy(array("fun", "marriages"), $marriages_db);
 		return;
 	}
 
@@ -986,8 +984,7 @@ function fun_marriage($finput){
 				'type' => 0,
 				'partner_id' => $data->object->from_id
 			);
-			$db->setValue(array("fun", "marriages"), $marriages_db);
-			$db->save();
+			$db->setValueLegacy(array("fun", "marriages"), $marriages_db);
 		}
 	}
 	else{
@@ -1001,7 +998,7 @@ function fun_show_marriage_list($finput){
 	$argv = $finput->argv;
 	$db = $finput->db;
 
-	$marriages_db = $db->getValue(array("fun", "marriages"), array(
+	$marriages_db = $db->getValueLegacy(array("fun", "marriages"), array(
 		'user_info' => array(),
 		'list' => array()
 	));

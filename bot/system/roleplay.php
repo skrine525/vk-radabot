@@ -475,10 +475,10 @@ namespace{
 
 		$member_id = $handler->handle();
 		if($member_id !== false && $data->object->from_id != $member_id){
-			$member_stats = stats_api_getuser($db, $member_id);
-			$member_stats['bump_count']++;
-			stats_api_setuser($db, $member_id, $member_stats);
-			$db->save();
+			$stats["chat_stats.users.id{$member_id}.bump_count"] = 1;
+			$bulk = new MongoDB\Driver\BulkWrite;
+			$bulk->update(['_id' => $db->getID()], ['$inc' => $stats]);
+			$db->getMongoDB()->executeBulkWrite("{$db->getDatabaseName()}.chats", $bulk);
 		}
 	}
 

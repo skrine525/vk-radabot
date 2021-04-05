@@ -11,9 +11,9 @@ $ adduser --disabled-login radabot
 $ cd ~radabot
 ```
 3. Скопируйте код бота в текущий каталог и настройте bot/data/config.json файл.
-4. Установите пакеты "php7.0", php7.0-mbstring", "php7.0-curl", "php7.0-gd" и "php7.0-simplexml":
+4. Установите пакеты "php7.0", php7.0-mbstring", "php7.0-curl", "php7.0-gd", "php7.0-simplexml" и "php7.0-mongodb":
 ```shell
-$ apt install php7.0 php7.0-mbstring php7.0-curl php7.0-gd php7.0-simplexml
+$ apt install php7.0 php7.0-mbstring php7.0-curl php7.0-gd php7.0-simplexml php7.0-mongodb
 ```
 5. Установите пакет "python" и "python-pip":
 ```shell
@@ -31,7 +31,6 @@ $ cp cli/service/radabot.service /etc/systemd/system
 ```shell
 $ systemctl daemon-reload
 $ systemctl enable radabot
-$ systemctl restart radabot
 ```
 9. Запустите службу:
 ```shell

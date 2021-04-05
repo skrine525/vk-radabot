@@ -18,24 +18,6 @@ define('DB_STATS_DEFAULT',array(
 	'button_pressed_count' => 0
 ));
 
-// Получение статистики пользователя
-function stats_api_getuser($db, $user_id){
-	$db_stats = $db->getValue(array("chat_stats", "users", "id{$user_id}"), array());
-	$stats = array();
-	foreach (DB_STATS_DEFAULT as $key => $value) {
-		if(array_key_exists($key, $db_stats))
-			$stats[$key] = $db_stats[$key];
-		else
-			$stats[$key] = $value;
-	}
-	return $stats;
-}
-
-// Сохранение статистики пользователя
-function stats_api_setuser($db, $user_id, $value){
-	return $db->setValue(array("chat_stats", "users", "id{$user_id}"), $value);
-}
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Инициализация команд
@@ -46,9 +28,10 @@ function stats_initcmd($event){
 
 function stats_update_messageevent($event, $data, $db){
 	if(property_exists($data->object, "payload") && gettype($data->object->payload) == 'array' && array_key_exists(0, $data->object->payload) && $event->isCallbackButtonCommand($data->object->payload[0])){
-		$stats = stats_api_getuser($db, $data->object->user_id);
-		$stats["button_pressed_count"]++;
-		stats_api_setuser($db, $data->object->user_id, $stats);
+		$stats["chat_stats.users.id{$data->object->user_id}.button_pressed_count"] = 1;
+		$bulk = new MongoDB\Driver\BulkWrite;
+		$bulk->update(['_id' => $db->getID()], ['$inc' => $stats]);
+		$db->getMongoDB()->executeBulkWrite("{$db->getDatabaseName()}.chats", $bulk);
 	}
 }
 
@@ -57,37 +40,45 @@ function stats_update_messagenew($event, $data, $db){
 	if($data->object->from_id < 0)
 		return;
 
-	$stats = stats_api_getuser($db, $data->object->from_id);
-	$last_message_user_id = $db->getValue(array("chat_stats", "last_message_user_id"), 0);
+	$query = new MongoDB\Driver\Query(['_id' => $db->getID()], ['projection' => ["_id" => 0, 'chat_stats.last_message_user_id' => 1]]);
+ 	$cursor = $db->getMongoDB()->executeQuery("{$db->getDatabaseName()}.chats", $query);
+  	$extractor = new Database\CursorValueExtractor($cursor);
+  	$last_message_user_id = Database\CursorValueExtractor::objectToArray($extractor->getValue("0.chat_stats.last_message_user_id", 0));
+	$stats = [];
 
+	foreach (DB_STATS_DEFAULT as $key => $value) {
+		$stats["chat_stats.users.id{$data->object->from_id}.{$key}"] = 0;
+	}
+
+	$update_last_message_user_id = false;
 	if($last_message_user_id == $data->object->from_id)
-		$stats["msg_count_in_succession"]++;
+		$stats["chat_stats.users.id{$data->object->from_id}.msg_count_in_succession"] = 1;
 	else
-		$db->setValue(array("chat_stats", "last_message_user_id"), $data->object->from_id);
+		$update_last_message_user_id = true;
 
-	$stats["msg_count"]++; // Увеличиваем количество сообщений
-	$stats["simbol_count"] += mb_strlen($data->object->text);
+	$stats["chat_stats.users.id{$data->object->from_id}.msg_count"] = 1; // Увеличиваем количество сообщений
+	$stats["chat_stats.users.id{$data->object->from_id}.simbol_count"] = mb_strlen($data->object->text);
 
 	foreach ($data->object->attachments as $attachment) {
 		switch ($attachment->type) {
 			case 'sticker':
-				$stats["sticker_count"]++;
+				$stats["chat_stats.users.id{$data->object->from_id}.sticker_count"] = 1;
 				break;
 
 			case 'photo':
-				$stats["photo_count"]++;
+				$stats["chat_stats.users.id{$data->object->from_id}.photo_count"] = 1;
 				break;
 
 			case 'video':
-				$stats["video_count"]++;
+				$stats["chat_stats.users.id{$data->object->from_id}.video_count"] = 1;
 				break;
 
 			case 'audio_message':
-				$stats["audio_msg_count"]++;
+				$stats["chat_stats.users.id{$data->object->from_id}.audio_msg_count"] = 1;
 				break;
 
 			case 'audio':
-				$stats["audio_count"]++;
+				$stats["chat_stats.users.id{$data->object->from_id}.audio_count"] = 1;
 				break;
 		}
 	}
@@ -95,16 +86,22 @@ function stats_update_messagenew($event, $data, $db){
 	if(property_exists($data->object, "payload") && !is_null($data->object->payload)){
 		$payload = (object) json_decode($data->object->payload);
 		if(property_exists($payload, "command") && $event->isTextButtonCommand($payload->command))
-			$stats['button_pressed_count']++;
+			$stats['chat_stats.users.id{$data->object->from_id}.button_pressed_count'] = 1;
 	}
 	else{
 		$argv = bot_parse_argv($data->object->text); // Извлекаем аргументы из сообщения
 		if(array_key_exists(0, $argv) && $event->isTextMessageCommand($argv[0])){
-			$stats["command_used_count"]++;
+			$stats["chat_stats.users.id{$data->object->from_id}.command_used_count"] = 1;
 		}
 	}
 
-	stats_api_setuser($db, $data->object->from_id, $stats);
+	$new_obj['$inc'] = $stats;
+	if($update_last_message_user_id)
+		$new_obj['$set'] = ['chat_stats.last_message_user_id' => $data->object->from_id];
+
+	$bulk = new MongoDB\Driver\BulkWrite;
+	$bulk->update(['_id' => $db->getID()], $new_obj);
+	$db->getMongoDB()->executeBulkWrite("{$db->getDatabaseName()}.chats", $bulk);
 }
 
 function stats_cmd_handler($finput){
@@ -121,8 +118,7 @@ function stats_cmd_handler($finput){
 	if($command == "обнулить"){
 		$permissionSystem = new PermissionSystem($db);
 		if($permissionSystem->checkUserPermission($data->object->from_id, 'customize_chat')){ // Проверка разрешения
-			$db->unsetValue(array('chat_stats'));
-			$db->save();
+			$db->unsetValueLegacy(array('chat_stats'));
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Статистика обнулена.");
 		}
 		else
@@ -149,12 +145,16 @@ function stats_cmd_handler($finput){
 			return;
 		}
 
-		$stats = stats_api_getuser($db, $member_id);
-		$all_stats = $db->getValue(array("chat_stats", "users"), array());
+		$query = new MongoDB\Driver\Query(['_id' => $db->getID()], ['projection' => ["_id" => 0, 'chat_stats.users' => 1]]);
+	 	$cursor = $db->getMongoDB()->executeQuery("{$db->getDatabaseName()}.chats", $query);
+	  	$extractor = new Database\CursorValueExtractor($cursor);
+	  	$all_stats = Database\CursorValueExtractor::objectToArray($extractor->getValue("0.chat_stats.users", []));
+	  	$stats = Database\CursorValueExtractor::objectToArray($extractor->getValue("0.chat_stats.users.id{$member_id}", DB_STATS_DEFAULT));
 
 		$rating = array();
-		foreach ($all_stats as $key => $value) {
-			$rating[$key] = $value["msg_count"] - $value["msg_count_in_succession"];
+		foreach ($all_stats as $key => $value){
+			$user = array_merge(DB_STATS_DEFAULT, $value);
+			$rating[$key] = $user["msg_count"] - $user["msg_count_in_succession"];
 		}
 		arsort($rating);
 		$position = array_search("id{$member_id}", array_keys($rating));
@@ -185,7 +185,10 @@ function stats_rating_cmd_handler($finput){
 
 	$list_number = bot_get_array_value($argv, 1, 1);
 
-	$all_stats = $db->getValue(array("chat_stats", "users"), []);
+	$query = new MongoDB\Driver\Query(['_id' => $db->getID()], ['projection' => ["_id" => 0, 'chat_stats.users' => 1]]);
+ 	$cursor = $db->getMongoDB()->executeQuery("{$db->getDatabaseName()}.chats", $query);
+  	$extractor = new Database\CursorValueExtractor($cursor);
+  	$all_stats = Database\CursorValueExtractor::objectToArray($extractor->getValue("0.chat_stats.users", []));
 
 	if(count($all_stats) == 0){
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Статистика пуста.");
@@ -206,11 +209,12 @@ function stats_rating_cmd_handler($finput){
 		];
 	}
 
-	$listBuilder = new Bot\ListBuilder($rating_list, 20);
+	$list_size = 20;
+	$listBuilder = new Bot\ListBuilder($rating_list, $list_size);
 	$builded_list = $listBuilder->build($list_number);
 	$vkjson = json_encode($builded_list->list->out, JSON_UNESCAPED_UNICODE);
 	if($builded_list->result){
-		vk_execute($messagesModule->buildVKSciptAppealByID($data->object->from_id)."var rating={$vkjson};var users=API.users.get({user_ids:rating@.u});var msg=appeal+', Рейтинг [{$builded_list->list->number}/{$builded_list->list->max_number}]:';var i=0;while(i<rating.length){var n=i+1;var sign='👤';if(n<=3){sign='👑';}msg=msg+'\\n'+n+'. '+sign+'@id'+users[i].id+' ('+users[i].first_name.substr(0, 2)+'. '+users[i].last_name+')';i=i+1;}API.messages.send({peer_id:{$data->object->peer_id},message:msg,disable_mentions:true});");
+		vk_execute($messagesModule->buildVKSciptAppealByID($data->object->from_id)."var rating={$vkjson};var users=API.users.get({user_ids:rating@.u});var msg=appeal+', Рейтинг [{$builded_list->list->number}/{$builded_list->list->max_number}]:';var i=0;while(i<rating.length){var n=i+1+({$builded_list->list->number}-1)*{$list_size};var sign='👤';if(n<=3){sign='👑';}msg=msg+'\\n'+n+'. '+sign+'@id'+users[i].id+' ('+users[i].first_name.substr(0, 2)+'. '+users[i].last_name+')';i=i+1;}API.messages.send({peer_id:{$data->object->peer_id},message:msg,disable_mentions:true});");
 	}
 	else
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Не удалось создать список.");

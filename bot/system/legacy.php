@@ -17,7 +17,7 @@ namespace Legacy{
 	}
 
 	function fun_pet_dbget($db){
-		$pet_database = $db->getValue(['fun', 'pet'], []);
+		$pet_database = $db->getValueLegacy(['fun', 'pet'], []);
 		$pet = array();
 
 		$time = time(); // Переменная времени
@@ -59,7 +59,7 @@ namespace Legacy{
 	}
 
 	function fun_pet_dbset($db, $pet){
-		$db->setValue(['fun', 'pet'], $pet);
+		$db->setValueLegacy(['fun', 'pet'], $pet);
 	}
 
 	function fun_pet_menu($data, $pet, $msg, $messagesModule, $testing_user_id){
@@ -444,9 +444,9 @@ namespace Legacy{
 				case 'попить чай':
 				$permissionSystem = new \PermissionSystem($db);
 				if($permissionSystem->checkUserPermission($data->object->from_id, 'drink_tea')){
-					$tea_count = $db->getValue(['fun', 'tea_count', "id{$data->object->from_id}"], 0);
+					$tea_count = $db->getValueLegacy(['fun', 'tea_count', "id{$data->object->from_id}"], 0);
 					$tea_count++;
-					$db->setValue(['fun', 'tea_count', "id{$data->object->from_id}"], $tea_count);
+					$db->setValueLegacy(['fun', 'tea_count', "id{$data->object->from_id}"], $tea_count);
 					vk_execute("var user=API.users.get({'user_id':{$data->object->from_id},'fields':'screen_name'})[0];var msg='@'+user.screen_name+' ('+user.first_name+' '+user.last_name+') попил чай.☕';return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});");
 				}
 				else
@@ -454,7 +454,7 @@ namespace Legacy{
 				break;
 
 				case 'чай':
-				$tea_count = $db->getValue(['fun', 'tea_count', "id{$data->object->from_id}"], 0);
+				$tea_count = $db->getValueLegacy(['fun', 'tea_count', "id{$data->object->from_id}"], 0);
 				$botModule->sendSilentMessage($data->object->peer_id, ", ☕Вы попили чай {$tea_count} раз(а).", $data->object->from_id);
 				break;
 			}

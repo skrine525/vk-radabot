@@ -284,7 +284,7 @@ function debug_dbedit_tc($finput){
 			return;
 		}
 
-		$db_data = $db->getValue($path, null);
+		$db_data = $db->getValueLegacy($path, null);
 		if(is_null($db_data)){
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Заданного ключа не существует.");
 			return;
@@ -330,7 +330,9 @@ function debug_dbedit_cb($finput){
 		$list_number = bot_get_array_value($payload, 2, 1);
 		$path = bot_get_array_value($payload, 3, []);
 
-		$db_data = $db->getValue($path, null);
+		$db_data = $db->getValueLegacy($path, null);
+		if(array_key_exists("_id", $db_data))
+			unset($db_data["_id"]);
 		if(is_null($db_data)){
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Внутренняя ошибка: Неверный путь БД.");
 			return;
@@ -395,7 +397,7 @@ function debug_dbedit_cb($finput){
 			return;
 		}
 
-		$db_data = $db->getValue($path, null);
+		$db_data = $db->getValueLegacy($path, null);
 
 		$data_type = gettype($db_data);
 		if($data_type == "array"){
@@ -466,12 +468,11 @@ function debug_dbedit_cb($finput){
 			return;
 		}
 
-		$db_data = $db->getValue($path, null);
+		$db_data = $db->getValueLegacy($path, null);
 		if(is_null($db_data))
 			$message = "%appeal%, ⛔Заданного ключа не существует.";
 		else{
-			$db->setValue($path, $value);
-			$db->save();
+			$db->setValueLegacy($path, $value);
 			$message = "%appeal%, ✅Значение установлено.";
 		}
 

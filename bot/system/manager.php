@@ -3,124 +3,6 @@
 /////////////////////////////////////////////
 /// API
 
-// Rank API
-class RankSystem{ // Класс управления рангами
-	const RANKS_ARRAY = array("Владелец", "Администратор", "Президент");
-	const DEFAULTRANK_NAME = "Участник";
-
-	private $db;
-
-	function __construct($database){
-		$this->db = $database;
-	}
-
-	public function getRanksList(){
-		$list = array();
-		$db_ranknames = $this->db->getValue(['chat_settings', 'rank_names'], []);
-		foreach (self::RANKS_ARRAY as $key => $value) {
-			$list[] = (object) [
-				'id' => $key,
-				'name' => bot_get_array_value($db_ranknames, "{$key}", $value)
-			];
-		}
-		$list[] = (object) [
-			'id' => self::getDefaultRankValue(),
-			'name' => bot_get_array_value($db_ranknames, "d", self::DEFAULTRANK_NAME)
-		];
-		return $list;
-	}
-
-	public function getRankName($rank, $with_code = false){
-		if(array_key_exists($rank, self::RANKS_ARRAY)){
-			$name = $this->db->getValue(['chat_settings', 'rank_names', "{$rank}"], false);
-			if($name === false)
-				$name = self::RANKS_ARRAY[$rank];
-			if($with_code){
-				return "{$name} [rank_{$rank}]";
-			}
-			else
-				return self::RANKS_ARRAY[$rank];
-		}
-		elseif($rank == self::getDefaultRankValue()){
-			$name = $this->db->getValue(['chat_settings', 'rank_names', "d"], false);
-			if($name === false)
-				$name = self::DEFAULTRANK_NAME;
-			if($with_code){
-				return "{$name} [rank_{$rank}]";
-			}
-			else
-				return $name;
-		}
-		else
-			return "rank_{$rank}";
-	}
-
-	public static function getDefaultRankValue(){
-		return count(self::RANKS_ARRAY);
-	}
-
-	public function getUserRank($user_id){
-		$owner_id = $this->db->getValue(array("owner_id"), 0);
-		if($user_id == $owner_id)
-			return 0;
-		else
-			return $this->db->getValue(array("chat_settings", "user_ranks", "id{$user_id}"), self::getDefaultRankValue());
-	}
-
-	public function setUserRank($user_id, $rank){
-		if($this->checkRank($user_id, 0)) //Запрет на изменение ранга пользователям с самым максимальным рангом
-			return false;
-
-		if($rank == 0){
-			$this->db->unsetValue(array("chat_settings", "user_ranks", "id{$user_id}"));
-			return true;
-		}
-		elseif($rank+1 <= self::getDefaultRankValue()){
-			$this->db->setValue(array("chat_settings", "user_ranks", "id{$user_id}"), $rank);
-			return true;
-		}
-		else{
-			return false;
-		}
-	}
-
-	public static function cmpRanks($rank1, $rank2){
-		if($rank1 == $rank2)
-			return 0;
-		elseif($rank1 < $rank2)
-			return -1;
-		elseif($rank1 > $rank2)
-			return 1;
-	}
-
-	public function checkRank($user_id, $minRank){
-		$user_rank = $this->getUserRank($user_id);
-
-		if(!is_null($user_rank) && $user_rank <= $minRank)
-			return true;
-		else
-			return false;
-	}
-
-	public function getUsersRank(){
-		$owner_id = $this->db->getValue(array('owner_id'));
-		$db_ranks = $this->db->getValue(array("chat_settings", "user_ranks"), array());
-		$db_ranks["id{$owner_id}"] = 0; // Добавление в массив Владельца
-		asort($db_ranks);
-		$ranks = array();
-		foreach ($db_ranks as $key => $val) {
-			$user_id = intval(substr($key, 2));
-			$rank = $val;
-			$ranks[] = (object) array(
-				'user_id' => $user_id,
-				'rank' => $rank,
-				'name' => $this->getRankName($rank, true)
-			);
-		}
-		return $ranks;
-	}
-}
-
 // Permission API
 class PermissionSystem{
 	// Список всех режимов.
@@ -140,7 +22,7 @@ class PermissionSystem{
 
 	function __construct($db){
 		$this->db = $db;
-		$this->owner_id = $this->db->getValue(["owner_id"]);
+		$this->owner_id = $this->db->getValueLegacy(["owner_id"]);
 	}
 
 	public function getChatOwnerID(){
@@ -154,7 +36,7 @@ class PermissionSystem{
 	public function getUserPermissions($user_id){
 		$permissions = [];
 		if($user_id == $this->owner_id){
-			$db_permissions = $this->db->getValue(['chat_settings', 'user_permissions', "id{$user_id}"], []);
+			$db_permissions = $this->db->getValueLegacy(['chat_settings', 'user_permissions', "id{$user_id}"], []);
 			foreach (self::PERMISSION_LIST as $key => $value) {
 				if($value['type'] == 0 || $value['type'] == 1)
 					$permissions[] = $key;
@@ -165,7 +47,7 @@ class PermissionSystem{
 			}
 		}
 		else{
-			$db_permissions = $this->db->getValue(['chat_settings', 'user_permissions', "id{$user_id}"], []);
+			$db_permissions = $this->db->getValueLegacy(['chat_settings', 'user_permissions', "id{$user_id}"], []);
 			foreach (self::PERMISSION_LIST as $key => $value) {
 				if(array_key_exists($key, $db_permissions) && $db_permissions[$key])
 					$permissions[] = $key;
@@ -193,7 +75,7 @@ class PermissionSystem{
 				$default_state = true;
 		}
 
-		return $this->db->getValue(['chat_settings', 'user_permissions', "id{$user_id}", $permission_id], $default_state);
+		return $this->db->getValueLegacy(['chat_settings', 'user_permissions', "id{$user_id}", $permission_id], $default_state);
 	}
 
 	public function addUserPermission($user_id, $permission_id){
@@ -203,9 +85,9 @@ class PermissionSystem{
 
 		if(!$this->checkUserPermission($user_id, $permission_id)){
 			if(self::PERMISSION_LIST[$permission_id]['type'] == 0 || self::PERMISSION_LIST[$permission_id]['type'] == 2)
-				$this->db->setValue(['chat_settings', 'user_permissions', "id{$user_id}", $permission_id], true);
+				$this->db->setValueLegacy(['chat_settings', 'user_permissions', "id{$user_id}", $permission_id], true);
 			elseif(self::PERMISSION_LIST[$permission_id]['type'] == 1 || self::PERMISSION_LIST[$permission_id]['type'] == 3)
-				$this->db->unsetValue(['chat_settings', 'user_permissions', "id{$user_id}", $permission_id]);
+				$this->db->unsetValueLegacy(['chat_settings', 'user_permissions', "id{$user_id}", $permission_id]);
 
 			return true;
 		}
@@ -220,9 +102,9 @@ class PermissionSystem{
 
 		if($this->checkUserPermission($user_id, $permission_id)){
 			if(self::PERMISSION_LIST[$permission_id]['type'] == 0 || self::PERMISSION_LIST[$permission_id]['type'] == 2)
-				$this->db->unsetValue(['chat_settings', 'user_permissions', "id{$user_id}", $permission_id]);
+				$this->db->unsetValueLegacy(['chat_settings', 'user_permissions', "id{$user_id}", $permission_id]);
 			elseif(self::PERMISSION_LIST[$permission_id]['type'] == 1 || self::PERMISSION_LIST[$permission_id]['type'] == 3)
-				$this->db->setValue(['chat_settings', 'user_permissions', "id{$user_id}", $permission_id], false);
+				$this->db->setValueLegacy(['chat_settings', 'user_permissions', "id{$user_id}", $permission_id], false);
 			
 			return true;
 		}
@@ -252,7 +134,7 @@ class ChatModes{
 		else{
 			$this->db = $db;
 			$this->modes = array();
-			$db_modes = $this->db->getValue(array("chat_settings", "chat_modes"), array());
+			$db_modes = $this->db->getValueLegacy(array("chat_settings", "chat_modes"), array());
 			foreach(self::MODE_LIST as $key => $value) {
 				if(array_key_exists($key, $db_modes))
 					$this->modes[$key] = $db_modes[$key];
@@ -286,7 +168,7 @@ class ChatModes{
 		else
 			$this->modes[$name] = $value;
 
-		$this->db->setValue(array("chat_settings", "chat_modes"), $this->modes);
+		$this->db->setValueLegacy(array("chat_settings", "chat_modes"), $this->modes);
 		return true;
 	}
 
@@ -305,11 +187,11 @@ class ChatModes{
 
 class BanSystem{
 	public static function getBanList($db){
-		return array_values($db->getValue(array("chat_settings", "banned_users"), array()));
+		return array_values($db->getValueLegacy(array("chat_settings", "banned_users"), array()));
 	}
 
 	public static function getUserBanInfo($db, $user_id){
-		return $db->getValue(array("chat_settings", "banned_users", "id{$user_id}"), false);
+		return $db->getValueLegacy(array("chat_settings", "banned_users", "id{$user_id}"), false);
 	}
 
 	public static function banUser(&$db, $user_id, $reason, $banned_by, $time){
@@ -322,7 +204,7 @@ class BanSystem{
 				'banned_by' => $banned_by,
 				'time' => $time
 			);
-			$db->setValue(array("chat_settings", "banned_users", "id{$user_id}"), $data);
+			$db->setValueLegacy(array("chat_settings", "banned_users", "id{$user_id}"), $data);
 
 			return true;
 		}
@@ -330,7 +212,7 @@ class BanSystem{
 
 	public static function unbanUser(&$db, $user_id){
 		if(BanSystem::getUserBanInfo($db, $user_id) !== false){
-			$db->unsetValue(array("chat_settings", "banned_users", "id{$user_id}"));
+			$db->unsetValueLegacy(array("chat_settings", "banned_users", "id{$user_id}"));
 			return true;
 		}
 		else
@@ -539,7 +421,6 @@ function manager_mode_cpanel_cb($finput){
 			return;
 		}
 		$chatModes->setModeValue($mode_name, !$chatModes->getModeValue($mode_name));
-		$db->save();
 	}
 
 	$mode_list = $chatModes->getModeList();
@@ -642,7 +523,6 @@ function manager_ban_user($finput){
 	$res = json_decode(vk_execute($messagesModule->buildVKSciptAppealByID($data->object->from_id)."var peer_id={$data->object->peer_id};var ban_info={$ban_info};var users=API.users.get({'user_ids':[{$member_id}]});var members=API.messages.getConversationMembers({'peer_id':peer_id});var user=0;if(users.length > 0){user=users[0];}else{var msg=', указанного пользователя не существует.';API.messages.send({'peer_id':peer_id,'message':appeal+msg,'disable_mentions':true});return 'nioh';}var user_id=ban_info.user_id;var user_id_index=-1;var i=0;while(i<members.items.length){if(members.items[i].member_id == user_id){if(members.items[i].is_admin){var msg=', @id{$member_id} (Пользователя) нельзя забанить. Причина: Пользователь является администратором беседы.';API.messages.send({'peer_id':peer_id,'message':appeal+msg,'disable_mentions':true});return 'nioh';}};i=i+1;};var msg=appeal+', пользователь @id{$member_id} ('+user.first_name.substr(0, 2)+'. '+user.last_name+') был забанен.\\nПричина: '+ban_info.reason+'.';API.messages.send({'peer_id':peer_id,'message':msg});API.messages.removeChatUser({'chat_id':peer_id-2000000000,'member_id':user_id});return 'ok';"), false);
 	if($res->response == 'ok'){
 		BanSystem::banUser($db, $member_id, $reason, $data->object->from_id, time());
-		$db->save();
 	}
 }
 
@@ -771,7 +651,6 @@ function manager_unban_user($finput){
 				}
 			}
 		}
-		$db->save();
 	}
 }
 
@@ -1033,7 +912,7 @@ function manager_nick($finput){
 		$nick = str_ireplace("\n", "", $nick);
 		if(!array_key_exists(0, $data->object->fwd_messages)){
 			if(mb_strlen($nick) <= 15){
-				$nicknames = $db->getValue(array("chat_settings", "user_nicknames"), array());
+				$nicknames = $db->getValueLegacy(array("chat_settings", "user_nicknames"), array());
 
 				// Проверка ника на уникальность без учета регистра
 				foreach ($nicknames as $key => $value) {
@@ -1044,8 +923,7 @@ function manager_nick($finput){
 					return;
 				}
 
-				$db->setValue(array("chat_settings", "user_nicknames", "id{$data->object->from_id}"), $nick);
-				$db->save();
+				$db->setValueLegacy(array("chat_settings", "user_nicknames", "id{$data->object->from_id}"), $nick);
 				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Ник установлен.");
 			}
 			else
@@ -1063,14 +941,13 @@ function manager_nick($finput){
 					$messagesModule->sendSilentMessage($data->object->peer_id, Bot\Messages::MESSAGE_NO_RIGHTS);
 					return;
 				}
-				$nicknames = $db->getValue(array("chat_settings", "user_nicknames"), array());
+				$nicknames = $db->getValueLegacy(array("chat_settings", "user_nicknames"), array());
 				if(array_search($nick, $nicknames) !== false){
 					$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Указанный ник занят!");
 					return;
 				}
 
-				$db->setValue(array("chat_settings", "user_nicknames", "id{$data->object->fwd_messages[0]->from_id}"), $nick);
-				$db->save();
+				$db->setValueLegacy(array("chat_settings", "user_nicknames", "id{$data->object->fwd_messages[0]->from_id}"), $nick);
 				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Ник @id{$data->object->fwd_messages[0]->from_id} (пользователя) изменён!");
 			}
 			else
@@ -1085,8 +962,7 @@ function manager_remove_nick($data, &$db){
 	$botModule = new BotModule($db);
 
 	if(!array_key_exists(0, $data->object->fwd_messages)){
-		$db->unsetValue(array("chat_settings", "user_nicknames", "id{$data->object->from_id}"));
-		$db->save();
+		$db->unsetValueLegacy(array("chat_settings", "user_nicknames", "id{$data->object->from_id}"));
 		$msg = ", ✅ник убран.";
 		vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
@@ -1101,8 +977,7 @@ function manager_remove_nick($data, &$db){
 
 		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%, ✅ник @id{$data->object->fwd_messages[0]->from_id} (пользователя) убран!", 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 		$request = vk_parse_var($request, "appeal");
-		$db->unsetValue(array("chat_settings", "user_nicknames", "id{$data->object->fwd_messages[0]->from_id}"));
-		$db->save();
+		$db->unsetValueLegacy(array("chat_settings", "user_nicknames", "id{$data->object->fwd_messages[0]->from_id}"));
 		json_decode(vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 			API.messages.send({$request});
 			"));
@@ -1122,7 +997,7 @@ function manager_show_nicknames($finput){
 	else
 		$list_number_from_word = 1;
 
-	$user_nicknames = $db->getValue(array("chat_settings", "user_nicknames"));
+	$user_nicknames = $db->getValueLegacy(array("chat_settings", "user_nicknames"));
 	$nicknames = array();
 	foreach ($user_nicknames as $key => $val) {
 		$nicknames[] = array(
@@ -1200,14 +1075,13 @@ function manager_greeting($finput){
 		$command = "";
 	if($command == 'установить'){
 		$invited_greeting = mb_substr($data->object->text, 24, mb_strlen($data->object->text));
-		$db->setValue(array("chat_settings", "invited_greeting"), $invited_greeting);
-		$db->save();
+		$db->setValueLegacy(array("chat_settings", "invited_greeting"), $invited_greeting);
 		$msg = ", ✅приветствие установлено.";
 		json_decode(vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 			API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 			"));
 	} elseif($command == 'показать'){
-		$invited_greeting = $db->getValue(array("chat_settings", "invited_greeting"), false);
+		$invited_greeting = $db->getValueLegacy(array("chat_settings", "invited_greeting"), false);
 		if($invited_greeting !== false){
 			$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%, приветствие в беседе:\n{$invited_greeting}", 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 			$json_request = vk_parse_var($json_request, "appeal");
@@ -1223,10 +1097,9 @@ function manager_greeting($finput){
 				");
 		}
 	} elseif($command == 'убрать'){
-		$invited_greeting = $db->getValue(array("chat_settings", "invited_greeting"), false);
+		$invited_greeting = $db->getValueLegacy(array("chat_settings", "invited_greeting"), false);
 		if($invited_greeting !== false){
-			$db->unsetValue(array("chat_settings", "invited_greeting"));
-			$db->save();
+			$db->unsetValueLegacy(array("chat_settings", "invited_greeting"));
 			$msg = ", ✅приветствие убрано.";
 			json_decode(vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 				API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
@@ -1249,7 +1122,7 @@ function manager_greeting($finput){
 }
 
 function manager_show_invited_greetings($data, $db){
-	$greetings_text = $db->getValue(array("chat_settings", "invited_greeting"), false);
+	$greetings_text = $db->getValueLegacy(array("chat_settings", "invited_greeting"), false);
 	if($greetings_text !== false && $data->object->action->member_id > 0){
 		$parsing_vars = array('USERID', 'USERNAME', 'USERNAME_GEN', 'USERNAME_DAT', 'USERNAME_ACC', 'USERNAME_INS', 'USERNAME_ABL');
 
@@ -1368,7 +1241,7 @@ function manager_panel_show($finput){
 
 	$botModule = new BotModule($db);
 
-	$user_panel = $db->getValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
+	$user_panel = $db->getValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
 
 	if(array_key_exists('elements', $user_panel))
 		$element_count = count($user_panel["elements"]);
@@ -1436,7 +1309,7 @@ function manager_panel_control($finput){
 			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Команда не может быть больше 64 символов.", $data->object->from_id);
 			return;
 		}
-		$user_panel = $db->getValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
+		$user_panel = $db->getValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
 		if(array_key_exists('elements', $user_panel))
 			$element_count = count($user_panel["elements"]);
 		else
@@ -1454,12 +1327,11 @@ function manager_panel_control($finput){
 			'command' => $text_command,
 			'color' => 1
 		);
-		$db->setValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), $user_panel);
-		$db->save();
+		$db->setValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), $user_panel);
 		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Панель с командой [{$text_command}] успешно создана. Её номер: {$panel_id}.", $data->object->from_id);
 	}
 	elseif($command == "список"){
-		$user_panel = $db->getValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
+		$user_panel = $db->getValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
 		if(count($user_panel["elements"]) > 0){
 			$msg = ', список ваших элементов:';
 			$id = 1; foreach ($user_panel["elements"] as $element) {
@@ -1471,7 +1343,7 @@ function manager_panel_control($finput){
 			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Ваша панель пуста.", $data->object->from_id);
 	}
 	elseif($command == "название"){
-		$user_panel = $db->getValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
+		$user_panel = $db->getValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
 		$argvt = bot_get_array_value($argv, 2, 0);
 		$name = mb_substr($data->object->text, 18+mb_strlen($argvt));
 		if($argvt == "" || !is_numeric($argvt) || $name == ""){
@@ -1489,12 +1361,11 @@ function manager_panel_control($finput){
 		}
 		$user_panel["elements"][$id]["name"] = $name;
 		$user_panel["last_change_time"] = time();
-		$db->setValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), $user_panel);
-		$db->save();
+		$db->setValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), $user_panel);
 		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Название элемента №{$argvt} успешно изменено.", $data->object->from_id);
 	}
 	elseif($command == "команда"){
-		$user_panel = $db->getValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
+		$user_panel = $db->getValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
 		$argvt = bot_get_array_value($argv, 2, 0);
 		$text_command = mb_substr($data->object->text, 17+mb_strlen($argvt));
 		if($argvt == "" || !is_numeric($argvt) || $text_command == ""){
@@ -1512,12 +1383,11 @@ function manager_panel_control($finput){
 		}
 		$user_panel["elements"][$id]["command"] = $text_command;
 		$user_panel["last_change_time"] = time();
-		$db->setValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), $user_panel);
-		$db->save();
+		$db->setValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), $user_panel);
 		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Команда элемента №{$argvt} успешно изменено.", $data->object->from_id);
 	}
 	elseif($command == "цвет"){
-		$user_panel = $db->getValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
+		$user_panel = $db->getValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
 		$argvt1 = intval(bot_get_array_value($argv, 2, 0));
 		$argvt2 = intval(bot_get_array_value($argv, 3, 0));
 		if($argvt1 == 0 || $argvt2 == 0){
@@ -1535,8 +1405,7 @@ function manager_panel_control($finput){
 		}
 		$user_panel["elements"][$id]["color"] = $argvt2;
 		$user_panel["last_change_time"] = time();
-		$db->setValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), $user_panel);
-		$db->save();
+		$db->setValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), $user_panel);
 		switch ($argvt2) {
 			case 1:
 				$color_name = "Белый";
@@ -1557,7 +1426,7 @@ function manager_panel_control($finput){
 		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Название элемента номер {$argvt1} успешно изменено. Установлен цвет: {$color_name}.", $data->object->from_id);
 	}
 	elseif($command == "удалить"){
-		$user_panel = $db->getValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
+		$user_panel = $db->getValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
 		$argvt = intval(bot_get_array_value($argv, 2, 0));
 		if($argvt == 0){
 			$botModule->sendSilentMessage($data->object->peer_id, ", Используйте [!панель удалить <номер>], чтобы удалить элемент.", $data->object->from_id);
@@ -1571,8 +1440,7 @@ function manager_panel_control($finput){
 		unset($user_panel["elements"][$id]);
 		$user_panel["elements"] = array_values($user_panel["elements"]);
 		$user_panel["last_change_time"] = time();
-		$db->setValue(array("chat_settings", "user_panels", "id{$data->object->from_id}"), $user_panel);
-		$db->save();
+		$db->setValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), $user_panel);
 		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Элемент под номером {$argvt} успешно удален.", $data->object->from_id);
 	}
 	else{
@@ -1603,7 +1471,7 @@ function manager_panel_keyboard_handler($finput){
 	if(is_null($user_id) || is_null($last_change_time) || is_null($last_change_time))
 		return;
 
-	$user_panel = $db->getValue(array("chat_settings", "user_panels", "id{$user_id}"), false);
+	$user_panel = $db->getValueLegacy(array("chat_settings", "user_panels", "id{$user_id}"), false);
 	if($user_panel === false)
 		return;
 

@@ -73,7 +73,7 @@ function wordgame_cmd($finput){
 			$messagesModule->sendMessage($data->object->peer_id, "[Слова] Игра не запущена.");
 		}
 	} elseif (mb_strtolower($argv[1]) == 'рейтинг') {
-		$array = $db->getValue(array("games", "word_game_rating"), array());
+		$array = $db->getValueLegacy(array("games", "word_game_rating"), array());
 
 		if(count($array) > 0){
 			$stats = array();
@@ -541,8 +541,8 @@ function wordgame_gameplay($finput){
 			$word = $session["word_game"]["current_word"]["word"];
 			$session["word_game"]["current_word"]["can_reset"] = true;
 			$score = mb_strlen($word) - $session["word_game"]["current_word"]["used_hints"] - 2;
-			$user_score = $db->getValue(array("games", "word_game_rating", "id{$data->object->from_id}"), 0);
-			$db->setValue(array("games", "word_game_rating", "id{$data->object->from_id}"), $user_score+$score);
+			$user_score = $db->getValueLegacy(array("games", "word_game_rating", "id{$data->object->from_id}"), 0);
+			$db->setValueLegacy(array("games", "word_game_rating", "id{$data->object->from_id}"), $user_score+$score);
 			wordgame_set_session($data->object->peer_id, $session);
 			$keyboard = vk_keyboard(false, array(
 				array(

@@ -26,8 +26,9 @@ namespace Bot{
 
 			if($this->data->object->peer_id > 2000000000){
 				// Если идентификатор назначения группового чата, то подгружаем Базу данных группового чата
-				$chat_id = $this->data->object->peer_id - 2000000000;
-				$this->db = new \Database(BOTPATH_DB."/chat{$chat_id}.json");
+				$database_info = bot_getconfig("DATABASE");
+				$this->db = new \Database\Manager("mongodb://{$database_info['HOST']}:{$database_info['PORT']}", $database_info['NAME'], $this->data->object->peer_id);
+
 			}
 		}
 
@@ -113,9 +114,6 @@ namespace Bot{
 	  	}
 
 	  	public function exit(){
-	  		if($this->db->getSavesCount() == 0){
-				$this->db->save();
-			}
 	  		unset($this);
 	  	}
 
@@ -305,7 +303,7 @@ namespace Bot{
 		// Константы шаблонных сообщений
 		const MESSAGE_NO_RIGHTS = "%appeal%, ⛔У вас нет прав для использования этой команды.";
 
-		public function __construct($db = null){
+		public function __construct($db = false){
 			$this->db = $db;
 			$this->appeal_id = null;
 		}
@@ -320,42 +318,59 @@ namespace Bot{
 		}
 
 		public function buildVKSciptAppealByID($user_id, $varname = "appeal"){ // Создание переменной appeal с обращением к пользователю, посредством VKScript и vk_execute()
-			if(!is_null($this->db))
-				$user_nick = $this->db->getValue(array("chat_settings", "user_nicknames", "id{$user_id}"), false);
+			if($this->db !== false)
+				$user_nick = $this->db->getValueLegacy(array("chat_settings", "user_nicknames", "id{$user_id}"), false);
 			else
 				$user_nick = false;
 
 			if($user_nick !== false){
-				return "var user=API.users.get({'user_id':{$user_id},'fields':'screen_name'})[0]; var {$varname}='@'+user.screen_name+' ({$user_nick})'; user=null;";
+				return "var user=API.users.get({'user_id':{$user_id},'fields':'screen_name'})[0];var {$varname}='@'+user.screen_name+' ({$user_nick})';user=null;";
 			}
 			else{
-				return "var user=API.users.get({'user_id':{$user_id},'fields':'screen_name'})[0]; var {$varname}='@'+user.screen_name+' ('+user.first_name.substr(0, 2)+'. '+user.last_name+')'; user =null;";
+				return "var user=API.users.get({'user_id':{$user_id},'fields':'screen_name'})[0];var {$varname}='@'+user.screen_name+' ('+user.first_name.substr(0, 2)+'. '+user.last_name+')';user=null;";
 			}
 		}
 
 		function sendMessage($peer_id, $message, $params = array()){ // Отправка сообщений
-			$appeal_code = "";
-			if(gettype($this->appeal_id) == "integer")
-				$appeal_code = $this->buildVKSciptAppealByID($this->appeal_id, $this->appeal_varname);
-			$request_array = array('peer_id' => $peer_id, 'message' => $message);
+			// Создание параметров запроса
+			$request_array = [];
 			foreach ($params as $key => $value) {
 				$request_array[$key] = $value;
 			}
+			$request_array['peer_id'] = $peer_id;
+			$request_array['message'] = $message;
 			$json_request = json_encode($request_array, JSON_UNESCAPED_UNICODE);
-			$json_request = vk_parse_var($json_request, $this->appeal_varname);
+
+			// Парсинг обращения в сообщении
+			$appeal_code = "";
+			if(gettype($this->appeal_id) == "integer"){
+				$appeal_code = $this->buildVKSciptAppealByID($this->appeal_id, $this->appeal_varname);
+				$json_request = vk_parse_var($json_request, $this->appeal_varname);
+			}
+
+			// Запрос
 			return vk_execute("{$appeal_code}return API.messages.send({$json_request});");
 		}
 
 		function editMessage($peer_id, $conversation_message_id, $message, $params = array()){
-			$appeal_code = "";
-			if(gettype($this->appeal_id) == "integer")
-				$appeal_code = $this->buildVKSciptAppealByID($this->appeal_id, $this->appeal_varname);
-			$request_array = array('peer_id' => $peer_id, 'conversation_message_id' => $conversation_message_id, 'message' => $message);
+			// Создание параметров запроса
+			$request_array = [];
 			foreach ($params as $key => $value) {
 				$request_array[$key] = $value;
 			}
+			$request_array['peer_id'] = $peer_id;
+			$request_array['conversation_message_id'] = $conversation_message_id;
+			$request_array['message'] = $message;
 			$json_request = json_encode($request_array, JSON_UNESCAPED_UNICODE);
-			$json_request = vk_parse_var($json_request, $this->appeal_varname);
+
+			// Парсинг обращения в сообщении
+			$appeal_code = "";
+			if(gettype($this->appeal_id) == "integer"){
+				$appeal_code = $this->buildVKSciptAppealByID($this->appeal_id, $this->appeal_varname);
+				$json_request = vk_parse_var($json_request, $this->appeal_varname);
+			}
+
+			// Запрос
 			return vk_execute("{$appeal_code}return API.messages.edit({$json_request});");
 		}
 
@@ -421,6 +436,25 @@ namespace Bot{
 			);
 		}
 	}
+
+	class Config{
+		private static $data;
+		private static $loaded;
+
+		public static function get($name){
+			if(self::$loaded !== true){
+				$data = json_decode(file_get_contents(BOTPATH_CONFIGFILE), true);
+			    if($data === false)
+			    	die('Unable to read config.json file. File not exists or invalid.');
+			    self::$data = $data;
+			}
+
+			if(array_key_exists($name, self::$data))
+				return self::$data[$name];
+			else
+				return null;
+		}
+	}
 }
 
 namespace{
@@ -432,7 +466,6 @@ namespace{
 	define('BOTPATH_MAIN', dirname(__DIR__));							// Каталог бота
 	define('BOTPATH_DATA', BOTPATH_MAIN."/data");						// Каталог данных бота
 	define('BOTPATH_ROOT', dirname(BOTPATH_MAIN));						// Корневой каталог бота
-	define('BOTPATH_DB', BOTPATH_DATA."/database");						// Каталог базы данных бота
 	define('BOTPATH_TMP', BOTPATH_ROOT."/tmp");							// Каталог временных файлов бота
 	define('BOTPATH_CONFIGFILE', BOTPATH_DATA."/config.json");			// Файл настроек бота
 
@@ -527,8 +560,12 @@ namespace{
 		}
 
 		function sendSilentMessage($peer_id, $message, $from_id = null, $params = array()){ // Отправка сообщений без упоминаний
+			if(is_null($from_id))
+				$appeal = "";
+			else
+				$appeal = "%appeal%";
 			$this->messagesModule->setAppealID($from_id);
-			return $this->messagesModule->sendSilentMessage($peer_id, "%appeal%{$message}", $params);
+			return $this->messagesModule->sendSilentMessage($peer_id, "{$appeal}{$message}", $params);
 		}
 
 		function sendSystemMsg_NoRights($data){
@@ -670,9 +707,9 @@ namespace{
 				if(chat.peer.type!='chat'){API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', эта беседа не является групповым чатом.','disable_mentions':true});return{'result':0};}API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Беседа успешно зарегистрирована.','disable_mentions':true});return 1;"))->response;
 			if($response == 1){
 				$chat_id = $data->object->peer_id - 2000000000;
-				$db->setValue(array("chat_id"), $chat_id);
-				$db->setValue(array("owner_id"), $data->object->from_id);
-				$db->save(true);
+				$chat_data = ['chat_id' => $chat_id, 'owner_id' => $data->object->from_id];
+				$db->setWritingForce(true);
+				$db->setValueLegacy([], $chat_data);
 			}	
 		}
 		else{
@@ -695,9 +732,9 @@ namespace{
 				if(chat.peer.type!='chat'){API.messages.sendMessageEventAnswer({$snackbar2_json});return 0;}API.messages.edit({'peer_id':{$data->object->peer_id},'conversation_message_id':{$data->object->conversation_message_id},'message':appeal+', ✅Беседа успешно зарегистрирована.','disable_mentions':true});return 1;"))->response;
 			if($response == 1){
 				$chat_id = $data->object->peer_id - 2000000000;
-				$db->setValue(array("chat_id"), $chat_id);
-				$db->setValue(array("owner_id"), $data->object->user_id);
-				$db->save(true);
+				$chat_data = ['chat_id' => $chat_id, 'owner_id' => $data->object->user_id];
+				$db->setWritingForce(true);
+				$db->setValueLegacy([], $chat_data);
 			}	
 		}
 		else
@@ -745,7 +782,7 @@ namespace{
 	}
 
 	function bot_get_userid_by_nick($db, $nick, &$id){
-		$nicknames = $db->getValue(array("chat_settings", "user_nicknames"), []);
+		$nicknames = $db->getValueLegacy(array("chat_settings", "user_nicknames"), []);
 		foreach ($nicknames as $key => $value) {
 			$nicknames[$key] = mb_strtolower($value);
 		}
@@ -822,11 +859,7 @@ namespace{
 	}
 
 	function bot_getconfig($name){
-	    $env = json_decode(file_get_contents(BOTPATH_CONFIGFILE), true);
-	    if($env === false)
-	    	die('Unable to read config.json file. File not exists or invalid.');
-
-	    return $env[$name];
+		return Bot\Config::get($name);
 	}
 
 	function bot_keyboard_remove($data){

@@ -146,7 +146,7 @@ namespace Economy{
 					}
 				}
 				if($count > 0 && $count <= $item_info->max_count){
-					$user_items = $this->db->getValue(array("economy", "users", "id{$this->user_id}", "items"), array());
+					$user_items = $this->db->getValueLegacy(array("economy", "users", "id{$this->user_id}", "items"), array());
 					$user_items[] = "{$type}:{$id}:{$count}";
 					$this->setData("items", $user_items);
 					return true;
@@ -183,7 +183,7 @@ namespace Economy{
 			else
 				$keys[] = $name;
 			
-			return $this->db->setValue($keys, $value);
+			return $this->db->setValueLegacy($keys, $value);
 		}
 
 		public function getData($name, $default = false){
@@ -195,7 +195,7 @@ namespace Economy{
 			else
 				$keys[] = $name;
 			
-			return $this->db->getValue($keys, $default);
+			return $this->db->getValueLegacy($keys, $default);
 		}
 
 		public function deleteData($name){
@@ -207,7 +207,7 @@ namespace Economy{
 			else
 				$keys[] = $name;
 			
-			return $this->db->unsetValue($keys);
+			return $this->db->unsetValueLegacy($keys);
 		}
 
 		// Работа
@@ -375,7 +375,7 @@ namespace Economy{
 		public function createEnterprise($type, $owner_id){
 			$id = '';
 			$attempts = 0;
-			$enterprise_ids = array_keys($this->db->getValue(array("economy", "enterprises"), array()));
+			$enterprise_ids = array_keys($this->db->getValueLegacy(array("economy", "enterprises"), array()));
 			while(true){
 				$id = self::generateRandomString(5+intdiv($attempts, 10));
 				if(array_search($id, $enterprise_ids) === false)
@@ -411,12 +411,12 @@ namespace Economy{
 				'contracts' => array()
 			);
 
-			$this->db->setValue(array("economy", "enterprises", $id), $enterprise);
+			$this->db->setValueLegacy(array("economy", "enterprises", $id), $enterprise);
 			return $id;
 		}
 
 		public function getEnterprise($id){
-			$enterprise = $this->db->getValue(array("economy", "enterprises", $id), false);
+			$enterprise = $this->db->getValueLegacy(array("economy", "enterprises", $id), false);
 			if($enterprise !== false){
 				$time = time();
 				$contract_count = count($enterprise["contracts"]);
@@ -456,7 +456,7 @@ namespace Economy{
 
 		public function saveEnterprise($id, $data){
 			if(gettype($id) == "string" && $id != "")
-				return $this->db->setValue(array("economy", "enterprises", $id), $data);
+				return $this->db->setValueLegacy(array("economy", "enterprises", $id), $data);
 			else
 				return false;
 		}
@@ -479,7 +479,7 @@ namespace Economy{
 		}
 
 		function getUserArray(){
-			return $this->db->getValue(array("economy", "users"), array());
+			return $this->db->getValueLegacy(array("economy", "users"), array());
 		}
 
 		function getUser($user_id){
@@ -491,7 +491,7 @@ namespace Economy{
 		}
 
 		function checkUser($user_id){
-			$user_info = $this->db->getValue(array("economy", "users", "id{$user_id}"), false);
+			$user_info = $this->db->getValueLegacy(array("economy", "users", "id{$user_id}"), false);
 			return boolval($user_info);
 		}
 
@@ -561,8 +561,7 @@ namespace{
 
 		if(!$economy->checkUser($member_id)){
 			if(!$other_user){
-				$db->setValue(array("economy", "users", "id{$member_id}"), array());
-				$db->save();
+				$db->setValueLegacy(array("economy", "users", "id{$member_id}"), array());
 			}
 			else{
 				$botModule->sendSilentMessage($data->object->peer_id, ", пользователь еще не зарегистрирован.", $data->object->from_id);
@@ -769,7 +768,6 @@ namespace{
 						$work_message = "✅ Вы заработали \${$salary_text}.";
 					}
 					$user_economy->changeMoney($salary);
-					$db->save();
 					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, $work_message);
 				}
 				else{
@@ -786,7 +784,7 @@ namespace{
 			else{
 				$messagesModule = new Bot\Messages($db);
 				$messagesModule->setAppealID($data->object->user_id);
-				$keyboard = vk_keyboard_inline(array(array(vk_callback_button("Устроиться", array('economy_jobcontrol', $data->object->user_id)))));
+				$keyboard = vk_keyboard_inline(array(array(vk_callback_button("Устроиться", array('economy_jobcontrol', $data->object->user_id), 'primary'))));
 				$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, "⛔ Вы нигде не работаете. Устройтесь на работу.", array('keyboard' => $keyboard));
 			}
 			break;
@@ -1048,7 +1046,6 @@ namespace{
 					)
 				);
 				$message = "%appeal%, Вы устроились на работу {$job_name}.";
-				$db->save();
 			}
 			else{
 				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Internal error!');
@@ -1231,7 +1228,6 @@ namespace{
 							if($user_economy->canChangeMoney(-$item_info->price)){
 								if($user_economy->changeItem($items_for_buy[$product_code]["type"], $items_for_buy[$product_code]["id"], 1)){
 									$user_economy->changeMoney(-$item_info->price);
-									$db->save();
 									$formated_money = Economy\Main::getFormatedMoney($user_economy->getMoney());
 									$message = "%appeal%, ✅Вы успешко приобрели:\n{$item_info->name}.\n\n💳Ваш счёт: \${$formated_money}";
 									$keyboard_buttons = array(
@@ -1361,7 +1357,6 @@ namespace{
 
 						if($transaction_result){
 							$user_economy->changeItem($item_for_buy["type"], $item_for_buy["id"], 1);
-							$db->save();
 							$botModule->sendSilentMessage($data->object->peer_id, ", ✅Вы приобрели {$all_items[$item_for_buy["type"]][$item_for_buy["id"]]["name"]}.", $data->object->from_id);
 						}
 						else{
@@ -1371,7 +1366,7 @@ namespace{
 					else{
 						$msg = ", используйте \"!купить ".mb_strtolower($sections[$i]["name"])." <номер>\".\n📄Доступно для покупки:";
 						$items_for_buy_count = count($items_for_buy);
-						$user_items = $db->getValue(array("economy", "users", "id{$data->object->from_id}", "items"), array());
+						$user_items = $db->getValueLegacy(array("economy", "users", "id{$data->object->from_id}", "items"), array());
 						for($i = 0; $i < $items_for_buy_count; $i++){
 							$price = $all_items[$items_for_buy[$i]["type"]][$items_for_buy[$i]["id"]]["price"];
 							
@@ -1425,7 +1420,6 @@ namespace{
 							}
 							$user_economy->addEnterprise($enterprise_id);
 							$user_economy->changeMoney(-$enterprise_price);
-							$db->save();
 							$botModule->sendSilentMessage($data->object->peer_id, ", ✅Бизнес успешно куплен. Его ID: {$enterprise_id}.", $data->object->from_id);
 						}
 						else{
@@ -1499,7 +1493,6 @@ namespace{
 			if($user_economy->changeItem($items[$index]->type, $items[$index]->id, -$argvt2)){
 				$value = $selling_item_info->price * 0.7 * $argvt2;
 				$user_economy->changeMoney($value); // Добавляем к счету пользователя 70% от начальной стоимости товара
-				$db->save();
 				$value = Economy\Main::getFormatedMoney($value);
 				$botModule->sendSilentMessage($data->object->peer_id, ", ✅Собственность \"{$selling_item_info->name}\" продана в количестве {$argvt2} за \${$value}.", $data->object->from_id);
 			}
@@ -1715,7 +1708,6 @@ namespace{
 
 				if($user_economy->changeMoney(-$argvt2)){
 					$member_economy->changeMoney($argvt2);
-					$db->save();
 					$money = Economy\Main::getFormatedMoney($argvt2);
 					$botModule->sendSilentMessage($data->object->peer_id, ", ✅\${$money} успешно переведены на счет @id{$member_id} (пользователя).", $data->object->from_id);
 				}
@@ -1773,7 +1765,6 @@ namespace{
 			$price = $edu_data[$edu_index]["price"];
 			if($user_economy->changeMoney(-$price)){
 				$user_economy->changeItem("edu", $edu_ids[$edu_index], 1);
-				$db->save();
 				$botModule->sendSilentMessage($data->object->peer_id, ", ✅Вы успешно получили образование уровня \"{$edu_data[$edu_index]["name"]}\".", $data->object->from_id);
 			}
 			else
@@ -1860,7 +1851,6 @@ namespace{
 				$price = $edu[$edu_id]["price"];
 				if($user_economy->changeMoney(-$price)){
 					$user_economy->changeItem("edu", $edu_id, 1);
-					$db->save();
 					$keyboard_buttons = array(
 						array(
 							vk_callback_button("Вернуться", array('economy_education', $testing_user_id), "positive")
@@ -1910,7 +1900,6 @@ namespace{
 			$argvt = bot_get_array_value($argv, 2, "");
 			if($argvt == "0"){
 				$user_economy->deleteData("selected_enterprise_index");
-				$db->save();
 				$botModule->sendSilentMessage($data->object->peer_id, ", ✅Информация о выбранном бизнесе очищена.", $data->object->from_id);
 			}
 			elseif($argvt == ""){
@@ -1918,7 +1907,7 @@ namespace{
 				$user_enterprises = $user_economy->getEnterprises();
 				$enterprises = array();
 				foreach ($user_enterprises as $id) {
-					$enterprises[] = $db->getValue(array("economy", "enterprises", $id));
+					$enterprises[] = $db->getValueLegacy(array("economy", "enterprises", $id));
 				}
 				if(count($enterprises) == 0){
 					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас нет ни одного бизнеса.", $data->object->from_id);
@@ -1944,7 +1933,6 @@ namespace{
 					$enterpriseSystem = $economy->initEnterpriseSystem();
 					$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$index-1]);
 					$user_economy->setData("selected_enterprise_index", $index);
-					$db->save();
 					$botModule->sendSilentMessage($data->object->peer_id, ", ✅Выбран бизнес под названием \"{$enterprise["name"]}\".", $data->object->from_id);
 				}
 				else{
@@ -1994,7 +1982,6 @@ namespace{
 					if($user_economy->changeMoney(-$value)){
 						$enterpriseSystem->changeEnterpriseCapital($enterprise, $value);
 						$enterpriseSystem->saveEnterprise($enterprise["id"], $enterprise);
-						$db->save();
 						$value = Economy\Main::getFormatedMoney($value);
 						$botModule->sendSilentMessage($data->object->peer_id, ", ✅\${$value} успешно переведены на счет бизнеса.", $data->object->from_id);
 					}
@@ -2011,7 +1998,6 @@ namespace{
 					if($enterpriseSystem->changeEnterpriseCapital($enterprise, -$value)){
 						$user_economy->changeMoney($value);
 						$enterpriseSystem->saveEnterprise($enterprise["id"], $enterprise);
-						$db->save();
 						$value = Economy\Main::getFormatedMoney($value);
 						$botModule->sendSilentMessage($data->object->peer_id, ", ✅\${$value} успешно переведены на ваш счет.", $data->object->from_id);
 					}
@@ -2052,7 +2038,6 @@ namespace{
 				}
 				$enterprise["name"] = $name;
 				$enterpriseSystem->saveEnterprise($enterprise["id"], $enterprise);
-				$db->save();
 				$botModule->sendSilentMessage($data->object->peer_id, ", ✅Название \"{$name}\" установлено.", $data->object->from_id);
 			}
 			else{
@@ -2232,7 +2217,6 @@ namespace{
 					"contract_info" => $contract
 				);
 				$enterpriseSystem->saveEnterprise($enterprise["id"], $enterprise);
-				$db->save();
 				$botModule->sendSilentMessage($data->object->peer_id, ", ✅Контракт \"{$contract["name"]}\" успешно подписан.", $data->object->from_id);
 			}
 			else{
@@ -2370,7 +2354,6 @@ namespace{
 					"contract_info" => $contract
 				);
 				$enterpriseSystem->saveEnterprise($enterprise["id"], $enterprise);
-				$db->save();
 				$botModule->sendSilentMessage($data->object->peer_id, ", ✅Контракт \"{$contract["name"]}\" успешно подписан.", $data->object->from_id);
 			}
 			else{
@@ -2460,11 +2443,9 @@ namespace{
 				$selected_enterprise_index = $user_economy->getData("selected_enterprise_index", 0);
 				if($index == $selected_enterprise_index){
 					$user_economy->deleteData("selected_enterprise_index");
-					$db->save();
 				}
 				else if(count($user_enterprises) >= $index){
 					$user_economy->setData("selected_enterprise_index", $index);
-					$db->save();
 				}
 				else{
 					$index = intval($argvt);
@@ -2476,7 +2457,7 @@ namespace{
 
 			$enterprises = array();
 			foreach ($user_enterprises as $id) {
-				$enterprises[] = $db->getValue(array("economy", "enterprises", $id));
+				$enterprises[] = $db->getValueLegacy(array("economy", "enterprises", $id));
 			}
 			if(count($enterprises) == 0){
 				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет ни единого бизнеса! Купите его.');
@@ -2681,7 +2662,6 @@ namespace{
 						$controlButtons
 					);
 					$enterpriseSystem->saveEnterprise($enterprise["id"], $enterprise);
-					$db->save();
 				}
 				else{
 					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Internal error!');
@@ -2778,7 +2758,6 @@ namespace{
 							if($user_economy->changeMoney(-$transaction)){
 								$enterpriseSystem->changeEnterpriseCapital($enterprise, $transaction);
 								$enterpriseSystem->saveEnterprise($enterprise["id"], $enterprise);
-								$db->save();
 							}
 							else{
 								bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ На вашем счету недостаточно средств.');
@@ -2794,7 +2773,6 @@ namespace{
 							if($enterpriseSystem->changeEnterpriseCapital($enterprise, -$transaction)){
 								$user_economy->changeMoney($transaction);
 								$enterpriseSystem->saveEnterprise($enterprise["id"], $enterprise);
-								$db->save();
 							}
 							else{
 								bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ На счету бизнеса недостаточно средств.');
@@ -3041,7 +3019,6 @@ namespace{
 						"contract_info" => $contract
 					);
 					$enterpriseSystem->saveEnterprise($enterprise["id"], $enterprise);
-					$db->save();
 					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "✅ Контракт \"{$contract["name"]}\" успешно подписан.");
 					return;
 				}
@@ -3211,7 +3188,6 @@ namespace{
 
 			if($user_economy->changeItem($items[$index]->type, $items[$index]->id, -$argvt2)){
 				$member_economy->changeItem($items[$index]->type, $items[$index]->id, $argvt2);
-				$db->save();
 				vk_execute("var users=API.users.get({'user_ids':[{$member_id},{$data->object->from_id}],'fields':'first_name_dat,last_name_dat,sex'});var member=users[0];var from=users[1];var msg='';if(from.sex==1){msg='@id{$data->object->from_id} ('+from.first_name+' '+from.last_name+') подарила {$giving_item_info->name} x{$argvt2} @id{$member_id} ('+member.first_name_dat+' '+member.last_name_dat+').';}else{msg='@id{$data->object->from_id} ('+from.first_name+' '+from.last_name+') подарил {$giving_item_info->name} x{$argvt2} @id{$member_id} ('+member.first_name_dat+' '+member.last_name_dat+').';}API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});");
 			}
 			else{
@@ -3334,7 +3310,6 @@ namespace{
 						'value' => $argvt2
 					);
 					if(GameController::setSession($chat_id, "casino_roulette", $session_data)){
-						$db->save();
 						$botModule->sendSilentMessage($data->object->peer_id, ", ✅Ставка успешно сделана. Используйте кнопку ниже, чтобы крутануть рулетку.", $data->object->from_id);
 					}
 					else{
@@ -3444,7 +3419,6 @@ namespace{
 						$keyboard = vk_keyboard(true, array());
 						$botModule->sendSilentMessage($data->object->peer_id, "[Рулетка] ⛔Произошла ошибка. Не удалось связаться с сервером RANDOM.ORG. Сессия остановлена.", null, array('keyboard' => $keyboard));
 						self::doMoneyBack($economy, $session);
-						$db->save();
 						GameController::deleteSession($chat_id, "casino_roulette");
 						return;
 					}
@@ -3461,7 +3435,6 @@ namespace{
 							);
 						}
 					}
-					$db->save(); //  Сохраняем базу данных
 
 					$attach = self::TABLE_ATTACH;
 
