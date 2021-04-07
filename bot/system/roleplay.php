@@ -477,8 +477,8 @@ namespace{
 		if($member_id !== false && $data->object->from_id != $member_id){
 			$stats["chat_stats.users.id{$member_id}.bump_count"] = 1;
 			$bulk = new MongoDB\Driver\BulkWrite;
-			$bulk->update(['_id' => $db->getID()], ['$inc' => $stats]);
-			$db->getMongoDB()->executeBulkWrite("{$db->getDatabaseName()}.chats", $bulk);
+			$bulk->update(['_id' => $db->getDocumentID()], ['$inc' => $stats]);
+			$db->executeBulkWrite($bulk);
 		}
 	}
 

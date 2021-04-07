@@ -222,7 +222,7 @@ namespace Bot{
 				if($result->code == Event::COMMAND_RESULT_OK)
 					return true;
 				elseif($result->code == Event::COMMAND_RESULT_NO_DB){
-					bot_message_not_reg($this->data, $this->db);
+					bot_message_not_reg($this->data);
 					return false;
 				}
 
@@ -231,10 +231,10 @@ namespace Bot{
 				if($result->code == Event::COMMAND_RESULT_OK)
 					return true;
 				elseif($result->code == Event::COMMAND_RESULT_NO_DB){
-					bot_message_not_reg($this->data, $this->db);
+					bot_message_not_reg($this->data);
 					return false;
 				}
-				elseif(gettype($this->hint_char) == "string" && $result->code == Event::COMMAND_RESULT_UNKNOWN && mb_strlen($result->command) >= 1 && mb_substr($result->command, 0, 1) == $this->hint_char){
+				elseif($this->db->isExists() && gettype($this->hint_char) == "string" && $result->code == Event::COMMAND_RESULT_UNKNOWN && mb_strlen($result->command) >= 1 && mb_substr($result->command, 0, 1) == $this->hint_char){
 					// Подсказки, если пользователь неправильно ввел команду
 					$commands = $this->getTextMessageCommandList();
 					$commands_data = [];
@@ -282,7 +282,7 @@ namespace Bot{
 				if($result->code == Event::COMMAND_RESULT_OK)
 					return true;
 				elseif($result->code == Event::COMMAND_RESULT_NO_DB){
-					bot_message_not_reg($this->data, $this->db);
+					bot_message_not_reg($this->data);
 					return false;
 				}
 				else{
@@ -521,14 +521,13 @@ namespace{
 
 			$GLOBALS['cmd_initime_end'] = microtime(true);								// Время инициализации команд: Конец
 
-			bot_pre_handle($event);														// Функция предварительной обработки
-
 			// Обработчики текстовых сообщений без команд
 			$event->addNonCommandTextMessageHandler('bot_message_action_handler');		// Обработчик событий в сообщениях
 			$event->addNonCommandTextMessageHandler('government_election_system');		// Обработчик выборов
 			$event->addNonCommandTextMessageHandler('fun_handler');						// Обработчик фанового модуля
 			$event->addNonCommandTextMessageHandler('wordgame_gameplay');				// Обработчик игры Слова
 
+			bot_pre_handle($event);														// Функция предварительной обработки
 			$event->handle(); 															// Обработка события бота
 			$event->exit(); 															// Очищение памяти
 		}
@@ -670,6 +669,7 @@ namespace{
 		$event->addTextMessageCommand("!cmdlist", 'bot_cmdlist');
 		$event->addTextMessageCommand("!reg", 'bot_register', true);
 		$event->addTextMessageCommand("!помощь", 'bot_help');
+		$event->addTextMessageCommand("!чат", 'bot_chatinfo');
 
 		// Система управления беседой
 		$event->addTextMessageCommand("!меню", 'bot_menu_tc');
@@ -680,6 +680,7 @@ namespace{
 		$event->addTextMessageCommand("!id", 'bot_getid');
 		$event->addTextMessageCommand("!base64", 'bot_base64');
 		$event->addTextMessageCommand("!крестики-нолики", 'bot_tictactoe');
+		$event->addTextMessageCommand("!сообщение", 'bot_chatmessage');
 
 		// Многословные команды
 		$event->addTextMessageCommand("пожать", "bot_shakecmd");
@@ -707,9 +708,9 @@ namespace{
 				if(chat.peer.type!='chat'){API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', эта беседа не является групповым чатом.','disable_mentions':true});return{'result':0};}API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Беседа успешно зарегистрирована.','disable_mentions':true});return 1;"))->response;
 			if($response == 1){
 				$chat_id = $data->object->peer_id - 2000000000;
-				$chat_data = ['chat_id' => $chat_id, 'owner_id' => $data->object->from_id];
-				$db->setWritingForce(true);
-				$db->setValueLegacy([], $chat_data);
+				$bulk = new MongoDB\Driver\BulkWrite;
+				$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ['chat_id' => $chat_id, 'owner_id' => $data->object->from_id]], ['upsert' => true]);
+				$db->executeBulkWrite($bulk);
 			}	
 		}
 		else{
@@ -732,9 +733,9 @@ namespace{
 				if(chat.peer.type!='chat'){API.messages.sendMessageEventAnswer({$snackbar2_json});return 0;}API.messages.edit({'peer_id':{$data->object->peer_id},'conversation_message_id':{$data->object->conversation_message_id},'message':appeal+', ✅Беседа успешно зарегистрирована.','disable_mentions':true});return 1;"))->response;
 			if($response == 1){
 				$chat_id = $data->object->peer_id - 2000000000;
-				$chat_data = ['chat_id' => $chat_id, 'owner_id' => $data->object->user_id];
-				$db->setWritingForce(true);
-				$db->setValueLegacy([], $chat_data);
+				$bulk = new MongoDB\Driver\BulkWrite;
+				$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ['chat_id' => $chat_id, 'owner_id' => $data->object->user_id]], ['upsert' => true]);
+				$db->executeBulkWrite($bulk);
 			}	
 		}
 		else
@@ -756,23 +757,27 @@ namespace{
 		$data = $event->getData();
 		
 
-		if($data->object->peer_id > 2000000000 && $db->isExists()){
-			switch ($data->type) {
-				case 'message_new':
-				// Антифлуд
-				if(AntiFlood::handler($data, $db)){
-					$event->exit();
-					exit;
+		if($data->object->peer_id > 2000000000){
+			if($db->isExists()){
+				switch ($data->type){
+					case 'message_new':
+					// Антифлуд
+					if(AntiFlood::handler($data, $db)){
+						$event->exit();
+						exit;
+					}
+
+					// Статистика
+					stats_update_messagenew($event, $data, $db); 	// Ведение статистики в беседе
+					break;
+
+					case 'message_event':
+					stats_update_messageevent($event, $data, $db); 	// Ведение статистики в беседе
+					break;
 				}
-
-				// Статистика
-				stats_update_messagenew($event, $data, $db); 	// Ведение статистики в беседе
-				break;
-
-				case 'message_event':
-				stats_update_messageevent($event, $data, $db); 	// Ведение статистики в беседе
-				break;
 			}
+			else
+				bot_send_first_invite_message($event);				// Вывод первого сообщение, когда добавляют незарегистрированного бота
 		}
 	}
 
@@ -847,12 +852,11 @@ namespace{
 
 	}
 
-	function bot_message_not_reg($data, $db){ // Legacy
-		$messagesModule = new Bot\Messages($db);
+	function bot_message_not_reg($data){
+		$messagesModule = new Bot\Messages();
 		$keyboard = vk_keyboard_inline([[vk_callback_button("Зарегистировать", ['bot_reg'], 'positive')]]);
 		if($data->type == 'message_new'){
-			$messagesModule->setAppealID($data->object->from_id);
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔беседа не зарегистрирована. Используйте кнопку ниже.", ['keyboard' => $keyboard]);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "✅Для работы бота нажмите \"Зарегистировать\".\n❗Для нормального функционирование необходимо выдать боту статус администратора в беседе.", ['keyboard' => $keyboard]);
 		}
 		else if($data->type == 'message_event')
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Беседа не зарегистрирована.");
@@ -860,6 +864,74 @@ namespace{
 
 	function bot_getconfig($name){
 		return Bot\Config::get($name);
+	}
+
+	function bot_chatinfo($finput){
+		// Инициализация базовых переменных
+		$data = $finput->data; 
+		$argv = $finput->argv;
+		$db = $finput->db;
+
+		$messagesModule = new Bot\Messages($db);
+
+		$query = new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => [
+			'_id' => 0,
+			'chat_id' => 1,
+			'owner_id' => 1,
+			'chat_settings.chat_modes' => 1
+		]]);
+		$cursor = $db->executeQuery($query);
+		$extractor = new Database\CursorValueExtractor($cursor);
+
+		// Необходимые переменные
+		$chat_id = $extractor->getValue([0, "chat_id"]);
+		$owner_id = $extractor->getValue([0, "owner_id"]);
+		$chat_modes = $extractor->getValue([0, "chat_settings", "chat_modes"], []);
+
+		$main_info = "🆔ID чата: {$chat_id}\n👤Владелец: %OWNER%";
+
+		$chat_modes_info = "⚙Режимы:";
+		foreach (ChatModes::MODE_LIST as $key => $value) {
+			if(array_key_exists($key, $chat_modes)){
+				if($chat_modes->$key)
+					$chat_modes_info .= "\n&#12288;✅{$value["label"]}";
+				else
+					$chat_modes_info .= "\n&#12288;⛔{$value["label"]}";
+			}
+			else{
+				if($value['default_state'])
+					$chat_modes_info .= "\n&#12288;✅{$value["label"]}";
+				else
+					$chat_modes_info .= "\n&#12288;⛔{$value["label"]}";
+			}
+		}
+
+		$json_insert = json_encode(['m' => ", Информация:\n{$main_info}\n{$chat_modes_info}"], JSON_UNESCAPED_UNICODE);
+		$json_insert = vk_parse_var($json_insert, 'OWNER');
+
+		vk_execute($messagesModule->buildVKSciptAppealByID($data->object->from_id)."var user=API.users.get({user_ids:[{$owner_id}]})[0];var OWNER=\"@id{$owner_id} (\"+user.first_name.substr(0, 2)+\". \"+user.last_name+\")\";var in={$json_insert};API.messages.send({peer_id:{$data->object->peer_id},message:appeal+in.m,disable_mentions:true});");
+	}
+
+	function bot_chatmessage($finput){
+		// Инициализация базовых переменных
+		$data = $finput->data; 
+		$argv = $finput->argv;
+		$db = $finput->db;
+
+		$messagesModule = new Bot\Messages($db);
+		$messagesModule->setAppealID($data->object->from_id);
+
+		$chatModes = new ChatModes($db);
+		if(!$chatModes->getModeValue('chat_messanger')){
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Чат-мессенджер отключен администратором беседы.");
+			return;
+		}
+
+		$permissionSystem = new PermissionSystem($db);
+		if(!$permissionSystem->checkUserPermission($data->object->from_id, 'use_chat_messanger')){
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Вы не имеете права использовать Чат-мессенджер.");
+			return;
+		}
 	}
 
 	function bot_keyboard_remove($data){
@@ -1168,6 +1240,17 @@ namespace{
 			unset($modified_data->object->payload);
 			$finput->event->runTextMessageCommand($modified_data);
 		}
+	}
+
+	function bot_send_first_invite_message($event){
+		// Инициализация базовых переменных
+		$data = $event->getData(); 
+
+		if(property_exists($data->object, 'action') && $data->object->action->type == 'chat_invite_user' && $data->object->action->member_id == -bot_getconfig('VK_GROUP_ID')){
+			bot_message_not_reg($data);
+			return true;
+		}
+		return false;
 	}
 
 	function bot_message_action_handler($finput){

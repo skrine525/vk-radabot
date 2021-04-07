@@ -30,8 +30,8 @@ function stats_update_messageevent($event, $data, $db){
 	if(property_exists($data->object, "payload") && gettype($data->object->payload) == 'array' && array_key_exists(0, $data->object->payload) && $event->isCallbackButtonCommand($data->object->payload[0])){
 		$stats["chat_stats.users.id{$data->object->user_id}.button_pressed_count"] = 1;
 		$bulk = new MongoDB\Driver\BulkWrite;
-		$bulk->update(['_id' => $db->getID()], ['$inc' => $stats]);
-		$db->getMongoDB()->executeBulkWrite("{$db->getDatabaseName()}.chats", $bulk);
+		$bulk->update(['_id' => $db->getDocumentID()], ['$inc' => $stats]);
+		$db->executeBulkWrite($bulk);
 	}
 }
 
@@ -40,8 +40,8 @@ function stats_update_messagenew($event, $data, $db){
 	if($data->object->from_id < 0)
 		return;
 
-	$query = new MongoDB\Driver\Query(['_id' => $db->getID()], ['projection' => ["_id" => 0, 'chat_stats.last_message_user_id' => 1]]);
- 	$cursor = $db->getMongoDB()->executeQuery("{$db->getDatabaseName()}.chats", $query);
+	$query = new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["_id" => 0, 'chat_stats.last_message_user_id' => 1]]);
+ 	$cursor = $db->executeQuery($query);
   	$extractor = new Database\CursorValueExtractor($cursor);
   	$last_message_user_id = Database\CursorValueExtractor::objectToArray($extractor->getValue("0.chat_stats.last_message_user_id", 0));
 	$stats = [];
@@ -100,8 +100,8 @@ function stats_update_messagenew($event, $data, $db){
 		$new_obj['$set'] = ['chat_stats.last_message_user_id' => $data->object->from_id];
 
 	$bulk = new MongoDB\Driver\BulkWrite;
-	$bulk->update(['_id' => $db->getID()], $new_obj);
-	$db->getMongoDB()->executeBulkWrite("{$db->getDatabaseName()}.chats", $bulk);
+	$bulk->update(['_id' => $db->getDocumentID()], $new_obj);
+	$db->executeBulkWrite($bulk);
 }
 
 function stats_cmd_handler($finput){
@@ -145,8 +145,8 @@ function stats_cmd_handler($finput){
 			return;
 		}
 
-		$query = new MongoDB\Driver\Query(['_id' => $db->getID()], ['projection' => ["_id" => 0, 'chat_stats.users' => 1]]);
-	 	$cursor = $db->getMongoDB()->executeQuery("{$db->getDatabaseName()}.chats", $query);
+		$query = new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["_id" => 0, 'chat_stats.users' => 1]]);
+	 	$cursor = $db->executeQuery($query);
 	  	$extractor = new Database\CursorValueExtractor($cursor);
 	  	$all_stats = Database\CursorValueExtractor::objectToArray($extractor->getValue("0.chat_stats.users", []));
 	  	$stats = Database\CursorValueExtractor::objectToArray($extractor->getValue("0.chat_stats.users.id{$member_id}", DB_STATS_DEFAULT));
@@ -185,8 +185,8 @@ function stats_rating_cmd_handler($finput){
 
 	$list_number = bot_get_array_value($argv, 1, 1);
 
-	$query = new MongoDB\Driver\Query(['_id' => $db->getID()], ['projection' => ["_id" => 0, 'chat_stats.users' => 1]]);
- 	$cursor = $db->getMongoDB()->executeQuery("{$db->getDatabaseName()}.chats", $query);
+	$query = new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["_id" => 0, 'chat_stats.users' => 1]]);
+ 	$cursor = $db->executeQuery($query);
   	$extractor = new Database\CursorValueExtractor($cursor);
   	$all_stats = Database\CursorValueExtractor::objectToArray($extractor->getValue("0.chat_stats.users", []));
 

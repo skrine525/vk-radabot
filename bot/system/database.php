@@ -17,14 +17,19 @@ namespace Database{
 			// Создание идентификатора
 			if($peer_id > 2000000000){
 				$id = $peer_id - 2000000000;
-				$this->id = "chat{$id}";
+				$this->document_id = "chat{$id}";
 			}
 			else
-				$this->id = "user{$peer_id}";
+				$this->document_id = "user{$peer_id}";
 
 			// Проверка на существование
-			$query = new \MongoDB\Driver\Query(['_id' => $this->id], ['projection' => ['_id' => 1]]);
-			$cursor = $this->mongo->executeQuery("{$this->db_name}.chats", $query);
+			$query = new \MongoDB\Driver\Query(['_id' => $this->document_id], ['projection' => ['_id' => 1]]);
+			try{
+				$cursor = $this->mongo->executeQuery("{$this->db_name}.chats", $query);
+			}
+			catch(Exception $e){
+				die("Database Error: {$e->getMessage()}");
+			}
 
 			$documents = $cursor->toArray();
 			if(count($documents) > 0)
@@ -33,12 +38,12 @@ namespace Database{
 				$this->exists = false;
 		}
 
-		public function getID(){
-			return $this->id;
+		public function getDocumentID(){
+			return $this->document_id;
 		}
 
-		public function getDatabaseName(){
-			return $this->db_name;
+		public function isExists(){
+			return $this->exists;
 		}
 
 		public function getMongoDB(){
@@ -49,15 +54,35 @@ namespace Database{
 			$this->writing_force = $value;
 		}
 
+		public function executeQuery(\MongoDB\Driver\Query $query, $collection = 'chats'){
+			try{
+				$cursor = $this->mongo->executeQuery("{$this->db_name}.{$collection}", $query);
+				return $cursor;
+			}
+			catch(Exception $e){
+				die("Database Error: {$e->getMessage()}");
+			}
+		}
+
+		public function executeBulkWrite(\MongoDB\Driver\BulkWrite $bulk, $collection = 'chats'){
+			try{
+				$result = $this->mongo->executeBulkWrite("{$this->db_name}.{$collection}", $bulk);
+				return $result;
+			}
+			catch(Exception $e){
+				die("Database Error: {$e->getMessage()}");
+			}
+		}
+
 		public function getValueLegacy($keys, $default = null){
-			if(is_null($keys) || !$this->exists || !$this->id)
+			if(is_null($keys) || !$this->exists || !$this->document_id)
 				return $default;
 
 			if(count($keys) > 0)
-				$query = new \MongoDB\Driver\Query(['_id' => $this->id], ['projection' => ["_id" => 0, implode(".", $keys) => 1]]);
+				$query = new \MongoDB\Driver\Query(['_id' => $this->document_id], ['projection' => ["_id" => 0, implode(".", $keys) => 1]]);
 			else
-				$query = new \MongoDB\Driver\Query(['_id' => $this->id]);
-			$cursor = $this->mongo->executeQuery("{$this->db_name}.chats", $query);
+				$query = new \MongoDB\Driver\Query(['_id' => $this->document_id]);
+			$cursor = $this->executeQuery($query);
 
 			$extractor = new CursorValueExtractor($cursor);
 			$path = [0];
@@ -67,7 +92,7 @@ namespace Database{
 		}
 
 		public function setValueLegacy($keys, $value = null){
-			if(is_null($keys) || (!$this->exists && !$this->writing_force) || !$this->id)
+			if(is_null($keys) || (!$this->exists && !$this->writing_force) || !$this->document_id)
 				return false;
 			$keys_count = count($keys);
 			if($keys_count > 0)
@@ -79,13 +104,13 @@ namespace Database{
 					return false;
 			}
 			$bulk = new \MongoDB\Driver\BulkWrite;
-			$bulk->update(['_id' => $this->id], ['$set' => $arr], ['upsert' => true]);
-			$result = $this->mongo->executeBulkWrite("{$this->db_name}.chats", $bulk);
-			return $result->isAcknowledged();
+			$bulk->update(['_id' => $this->document_id], ['$set' => $arr], ['upsert' => true]);
+			$result = $this->executeBulkWrite($bulk);
+			return $result;
 		}
 
 		public function unsetValueLegacy($keys){
-			if(is_null($keys) || !$this->exists || !$this->id)
+			if(is_null($keys) || !$this->exists || !$this->document_id)
 				return false;
 			$keys_count = count($keys);
 			if($keys_count > 0)
@@ -93,13 +118,9 @@ namespace Database{
 			else
 				return false;
 			$bulk = new \MongoDB\Driver\BulkWrite;
-			$bulk->update(['_id' => $this->id], ['$unset' => $arr], ['upsert' => true]);
-			$result = $this->mongo->executeBulkWrite("{$this->db_name}.chats", $bulk);
+			$bulk->update(['_id' => $this->document_id], ['$unset' => $arr], ['upsert' => true]);
+			$result = $this->executeBulkWrite($bulk);
 			return $result->isAcknowledged();
-		}
-
-		public function isExists(){
-			return $this->exists;
 		}
 	}
 

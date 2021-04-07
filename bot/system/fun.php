@@ -207,7 +207,9 @@ function fun_memes_control_panel($finput){
 			'content' => $content_attach,
 			'date' => time()
 		);
-		$db->setValueLegacy(array("fun", "memes", $meme_name), $meme);
+		$bulk = new MongoDB\Driver\BulkWrite;
+		$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["fun.memes.{$meme_name}" => $meme]]);
+		$db->executeBulkWrite($bulk);
 		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Мем сохранен!", $data->object->from_id);
 	}
 	elseif($command == "del"){
@@ -391,8 +393,8 @@ function fun_memes_handler($data, $db){
 		return false;
 
 	$meme_name = mb_strtolower($data->object->text);
-	$query = new MongoDB\Driver\Query(['_id' => $db->getID()], ['projection' => ["fun.memes.{$meme_name}.content" => 1]]);
-	$cursor = $db->getMongoDB()->executeQuery("{$db->getDatabaseName()}.chats", $query);
+	$query = new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["fun.memes.{$meme_name}.content" => 1]]);
+	$cursor = $db->executeQuery($query);
 	$exstractor = new Database\CursorValueExtractor($cursor);
 	$meme = $exstractor->getValue([0, "fun", "memes", $meme_name, "content"], false);
 	if($meme !== false){

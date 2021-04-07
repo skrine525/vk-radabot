@@ -44,7 +44,7 @@ namespace Economy{
 		private $db;
 		private $user_id;
 
-		function __construct(&$db, $user_id){
+		function __construct($db, $user_id){
 			if($user_id <= 0)
 				return false;
 			$this->db = $db;
@@ -177,25 +177,30 @@ namespace Economy{
 		public function setData($name, $value){
 			$keys = array("economy", "users", "id{$this->user_id}");
 			if(gettype($name) == "array"){
-				foreach ($name as $key => $value)
+				foreach ($name as $value)
 					$keys[] = $value;
 			}
 			else
 				$keys[] = $name;
-			
-			return $this->db->setValueLegacy($keys, $value);
+
+			$bulk = new \MongoDB\Driver\BulkWrite;
+			$bulk->update(['_id' => $this->db->getDocumentID()], ['$set' => [implode('.', $keys) => $value]]);
+			$this->db->executeBulkWrite($bulk);
 		}
 
 		public function getData($name, $default = false){
 			$keys = array("economy", "users", "id{$this->user_id}");
 			if(gettype($name) == "array"){
-				foreach ($name as $key => $value)
+				foreach ($name as $value)
 					$keys[] = $value;
 			}
 			else
 				$keys[] = $name;
 			
-			return $this->db->getValueLegacy($keys, $default);
+			$query = new \MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, implode('.', $keys) => 1]]);
+			$cursor = $this->db->executeQuery($query);
+			$extractor = new \Database\CursorValueExtractor($cursor);
+			return \Database\CursorValueExtractor::objectToArray($extractor->getValue(array_merge([0], $keys), $default));
 		}
 
 		public function deleteData($name){
@@ -207,7 +212,9 @@ namespace Economy{
 			else
 				$keys[] = $name;
 			
-			return $this->db->unsetValueLegacy($keys);
+			$bulk = new \Driver\BulkWrite;
+			$bulk->update(['_id' => $this->db->getDocumentID()], ['$unset' => [implode('.', $keys) => 0]]);
+			$this->db->executeBulkWrite($bulk);
 		}
 
 		// Работа
@@ -359,8 +366,8 @@ namespace Economy{
 			}
 		}
 
-		function __construct(&$db){
-			$this->db = &$db;
+		function __construct($db){
+			$this->db = $db;
 		}
 
 		public static function getTypeName($type){
@@ -410,9 +417,10 @@ namespace Economy{
 				),
 				'contracts' => array()
 			);
-
-			$this->db->setValueLegacy(array("economy", "enterprises", $id), $enterprise);
+			$bulk = new MongoDB\Driver\BulkWrite;
 			return $id;
+			$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["economy.enterprises.{$id}" => $enterprise]]);
+			$db->executeBulkWrite($bulk);
 		}
 
 		public function getEnterprise($id){
@@ -455,8 +463,11 @@ namespace Economy{
 		}
 
 		public function saveEnterprise($id, $data){
-			if(gettype($id) == "string" && $id != "")
-				return $this->db->setValueLegacy(array("economy", "enterprises", $id), $data);
+			if(gettype($id) == "string" && $id != ""){
+				$bulk = new MongoDB\Driver\BulkWrite;
+				$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["economy.enterprises.{$id}" => $data]]);
+				return $db->executeBulkWrite($bulk);
+			}
 			else
 				return false;
 		}
@@ -561,7 +572,9 @@ namespace{
 
 		if(!$economy->checkUser($member_id)){
 			if(!$other_user){
-				$db->setValueLegacy(array("economy", "users", "id{$member_id}"), array());
+				$bulk = new MongoDB\Driver\BulkWrite;
+				$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["economy.users.id{$user_id}" => []]]);
+				$db->executeBulkWrite($bulk);
 			}
 			else{
 				$botModule->sendSilentMessage($data->object->peer_id, ", пользователь еще не зарегистрирован.", $data->object->from_id);

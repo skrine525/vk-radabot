@@ -59,7 +59,9 @@ namespace Legacy{
 	}
 
 	function fun_pet_dbset($db, $pet){
-		$db->setValueLegacy(['fun', 'pet'], $pet);
+		$bulk = new MongoDB\Driver\BulkWrite;
+		$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["fun.pet" => $pet]]);
+		$db->executeBulkWrite($bulk);
 	}
 
 	function fun_pet_menu($data, $pet, $msg, $messagesModule, $testing_user_id){
@@ -444,10 +446,10 @@ namespace Legacy{
 				case 'попить чай':
 				$permissionSystem = new \PermissionSystem($db);
 				if($permissionSystem->checkUserPermission($data->object->from_id, 'drink_tea')){
-					$tea_count = $db->getValueLegacy(['fun', 'tea_count', "id{$data->object->from_id}"], 0);
-					$tea_count++;
-					$db->setValueLegacy(['fun', 'tea_count', "id{$data->object->from_id}"], $tea_count);
-					vk_execute("var user=API.users.get({'user_id':{$data->object->from_id},'fields':'screen_name'})[0];var msg='@'+user.screen_name+' ('+user.first_name+' '+user.last_name+') попил чай.☕';return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg});");
+					$bulk = new \MongoDB\Driver\BulkWrite;
+					$bulk->update(['_id' => $db->getDocumentID()], ['$inc' => ["fun.tea_count.id{$data->object->from_id}" => 1]]);
+					$db->executeBulkWrite($bulk);
+					vk_execute("var user=API.users.get({'user_id':{$data->object->from_id},'fields':'screen_name'})[0];var msg='@'+user.screen_name+' ('+user.first_name+' '+user.last_name+') попил чай.☕';return API.messages.send({'peer_id':{$data->object->peer_id},'message':msg,disable_mentions:true});");
 				}
 				else
 					$botModule->sendSilentMessage($data->object->peer_id, ", У вас нет права пить чай!", $data->object->from_id);

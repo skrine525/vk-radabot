@@ -14,7 +14,8 @@ class PermissionSystem{
 		'prohibit_autokick' => ['label' => 'Запретить автокик', 'type' => 0],
 		'prohibit_antiflood' => ['label' => 'Запретить антифлуд', 'type' => 0],
 		'set_permits' => ['label' => 'Управлять правами', 'type' => 0],
-		'drink_tea' => ['label' => 'Пить чай', 'type' => 2]
+		'drink_tea' => ['label' => 'Пить чай', 'type' => 2],
+		'use_chat_messanger' => ['label' => 'Использовать Чат-мессенджер', 'type' => 0]
 	];
 
 	private $db;
@@ -22,34 +23,44 @@ class PermissionSystem{
 
 	function __construct($db){
 		$this->db = $db;
-		$this->owner_id = $this->db->getValueLegacy(["owner_id"]);
+
+		$query = new MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, "owner_id" => 1]]);
+		$cursor = $this->db->executeQuery($query);
+		$extractor = new Database\CursorValueExtractor($cursor);
+		$this->owner_id = $extractor->getValue('0.owner_id');
 	}
 
 	public function getChatOwnerID(){
 		return $this->owner_id;
 	}
 
-	public function isPermissionExists($permission_id){
+	public function isPermissionExists(string $permission_id){
 		return array_key_exists($permission_id, self::PERMISSION_LIST);
 	}
 
-	public function getUserPermissions($user_id){
+	public function getUserPermissions(int $user_id){
 		$permissions = [];
 		if($user_id == $this->owner_id){
-			$db_permissions = $this->db->getValueLegacy(['chat_settings', 'user_permissions', "id{$user_id}"], []);
+			$query = new MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.user_permissions.id{$user_id}" => 1]]);
+			$cursor = $this->db->executeQuery($query);
+			$extractor = new Database\CursorValueExtractor($cursor);
+			$db_permissions = $extractor->getValue([0, 'chat_settings', 'user_permissions', "id{$user_id}"], []);
 			foreach (self::PERMISSION_LIST as $key => $value) {
 				if($value['type'] == 0 || $value['type'] == 1)
 					$permissions[] = $key;
-				elseif(array_key_exists($key, $db_permissions) && $db_permissions[$key])
+				elseif(array_key_exists($key, $db_permissions) && $db_permissions->$key)
 					$permissions[] = $key;
 				elseif($value['type'] == 3)
 					$permissions[] = $key;
 			}
 		}
 		else{
-			$db_permissions = $this->db->getValueLegacy(['chat_settings', 'user_permissions', "id{$user_id}"], []);
+			$query = new MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.user_permissions.id{$user_id}" => 1]]);
+			$cursor = $this->db->executeQuery($query);
+			$extractor = new Database\CursorValueExtractor($cursor);
+			$db_permissions = $extractor->getValue([0, 'chat_settings', 'user_permissions', "id{$user_id}"], []);
 			foreach (self::PERMISSION_LIST as $key => $value) {
-				if(array_key_exists($key, $db_permissions) && $db_permissions[$key])
+				if(array_key_exists($key, $db_permissions) && $db_permissions->$key)
 					$permissions[] = $key;
 				elseif($value['type'] == 1 || $value['type'] == 3)
 					$permissions[] = $key;
@@ -58,7 +69,7 @@ class PermissionSystem{
 		return $permissions;
 	}
 
-	public function checkUserPermission($user_id, $permission_id){
+	public function checkUserPermission(int $user_id, string $permission_id){
 		if(!$this->isPermissionExists($permission_id))
 			return null;
 
@@ -75,20 +86,25 @@ class PermissionSystem{
 				$default_state = true;
 		}
 
-		return $this->db->getValueLegacy(['chat_settings', 'user_permissions', "id{$user_id}", $permission_id], $default_state);
+		$query = new MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.user_permissions.id{$user_id}" => 1]]);
+		$cursor = $this->db->executeQuery($query);
+		$extractor = new Database\CursorValueExtractor($cursor);
+		return $extractor->getValue([0, 'chat_settings', 'user_permissions', "id{$user_id}", $permission_id], $default_state);
 	}
 
-	public function addUserPermission($user_id, $permission_id){
+	public function addUserPermission(int $user_id, string $permission_id){
 		// Проверка на владельца и существования разрешения
 		if(!$this->isPermissionExists($permission_id) || $user_id <= 0 || ($user_id == $this->owner_id && (self::PERMISSION_LIST[$permission_id]['type'] == 0 || self::PERMISSION_LIST[$permission_id]['type'] == 1)))
 			return false;
 
 		if(!$this->checkUserPermission($user_id, $permission_id)){
+			$bulk = new MongoDB\Driver\BulkWrite;
 			if(self::PERMISSION_LIST[$permission_id]['type'] == 0 || self::PERMISSION_LIST[$permission_id]['type'] == 2)
-				$this->db->setValueLegacy(['chat_settings', 'user_permissions', "id{$user_id}", $permission_id], true);
+				$bulk->update(['_id' => $this->db->getDocumentID()], ['$set' => ["chat_settings.user_permissions.id{$user_id}.{$permission_id}" => true]]);
 			elseif(self::PERMISSION_LIST[$permission_id]['type'] == 1 || self::PERMISSION_LIST[$permission_id]['type'] == 3)
-				$this->db->unsetValueLegacy(['chat_settings', 'user_permissions', "id{$user_id}", $permission_id]);
+				$bulk->update(['_id' => $this->db->getDocumentID()], ['$unset' => ["chat_settings.user_permissions.id{$user_id}.{$permission_id}" => 0]]);
 
+			$this->db->executeBulkWrite($bulk);
 			return true;
 		}
 		else
@@ -101,11 +117,13 @@ class PermissionSystem{
 			return false;
 
 		if($this->checkUserPermission($user_id, $permission_id)){
+			$bulk = new MongoDB\Driver\BulkWrite;
 			if(self::PERMISSION_LIST[$permission_id]['type'] == 0 || self::PERMISSION_LIST[$permission_id]['type'] == 2)
-				$this->db->unsetValueLegacy(['chat_settings', 'user_permissions', "id{$user_id}", $permission_id]);
+				$bulk->update(['_id' => $this->db->getDocumentID()], ['$unset' => ["chat_settings.user_permissions.id{$user_id}.{$permission_id}" => 0]]);
 			elseif(self::PERMISSION_LIST[$permission_id]['type'] == 1 || self::PERMISSION_LIST[$permission_id]['type'] == 3)
-				$this->db->setValueLegacy(['chat_settings', 'user_permissions', "id{$user_id}", $permission_id], false);
+				$bulk->update(['_id' => $this->db->getDocumentID()], ['$set' => ["chat_settings.user_permissions.id{$user_id}.{$permission_id}" => false]]);
 			
+			$this->db->executeBulkWrite($bulk);
 			return true;
 		}
 		else
@@ -121,8 +139,9 @@ class ChatModes{
 		'auto_referendum' => ['label' => 'Авто выборы', 'default_state' => false],
 		'economy_enabled' => ['label' => 'Экономика', 'default_state' => false],
 		'roleplay_enabled' => ['label' => 'РП', 'default_state' => true],
-		'games_enabled' => ['label' => "Игры", 'default_state' => true],
-		'legacy_enabled' => ['label' => "Legacy", 'default_state' => false]
+		'games_enabled' => ['label' => 'Игры', 'default_state' => true],
+		'legacy_enabled' => ['label' => 'Legacy', 'default_state' => false],
+		'chat_messanger' => ['label' => 'Чат-мессенджер', 'default_state' => true]
 	];
 
 	private $db;
@@ -133,15 +152,19 @@ class ChatModes{
 			return false;
 		else{
 			$this->db = $db;
+
+			$query = new MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.chat_modes" => 1]]);
+			$cursor = $this->db->executeQuery($query);
+			$extractor = new Database\CursorValueExtractor($cursor);
+			$db_modes = $extractor->getValue("chat_settings.chat_modes", []);
+
 			$this->modes = array();
-			$db_modes = $this->db->getValueLegacy(array("chat_settings", "chat_modes"), array());
 			foreach(self::MODE_LIST as $key => $value) {
 				if(array_key_exists($key, $db_modes))
-					$this->modes[$key] = $db_modes[$key];
+					$this->modes[$key] = $db_modes->$key;
 				else
 					$this->modes[$key] = $value["default_state"];
 			}
-			unset($db_modes);
 		}
 	}
 
@@ -156,29 +179,43 @@ class ChatModes{
 		if(gettype($name) != "string" || !array_key_exists($name, self::MODE_LIST))
 			return null;
 
-		return bot_get_array_value($this->modes, $name, self::MODE_LIST[$name]["default_state"]);
+		$query = new MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.chat_modes.{$name}" => 1]]);
+		$cursor = $this->db->executeQuery($query);
+		$extractor = new Database\CursorValueExtractor($cursor);
+		return $extractor->getValue([0, 'chat_settings', 'chat_modes', $name], self::MODE_LIST[$name]["default_state"]);
 	}
 
 	public function setModeValue($name, $value){
 		if(gettype($name) != "string" || gettype($value) != "boolean" || !array_key_exists($name, self::MODE_LIST))
 			return false;
 
+		$bulk = new MongoDB\Driver\BulkWrite;
 		if($value === self::MODE_LIST[$name]["default_state"])
-			unset($this->modes[$name]);
+			$bulk->update(['_id' => $this->db->getDocumentID()], ['$unset' => ["chat_settings.chat_modes.{$name}" => 0]]);
 		else
-			$this->modes[$name] = $value;
+			$bulk->update(['_id' => $this->db->getDocumentID()], ['$set' => ["chat_settings.chat_modes.{$name}" => $value]]);
 
-		$this->db->setValueLegacy(array("chat_settings", "chat_modes"), $this->modes);
+		$this->db->executeBulkWrite($bulk);
 		return true;
 	}
 
 	public function getModeList(){
+		$query = new MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.chat_modes" => 1]]);
+		$cursor = $this->db->executeQuery($query);
+		$extractor = new Database\CursorValueExtractor($cursor);
+		$db_modes = $extractor->getValue("0.chat_settings.chat_modes", []);
+
 		$list = array();
 		foreach (self::MODE_LIST as $key => $value) {
+			if(array_key_exists($key, $db_modes))
+				$mode_value = $db_modes->$key;
+			else
+				$mode_value = $value["default_state"];
+
 			$list[] = array(
 				'name' => $key,
 				'label' => $value["label"],
-				'value' => $this->getModeValue($key)
+				'value' => $mode_value
 			);
 		}
 		return $list;

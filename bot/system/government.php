@@ -88,13 +88,11 @@ function government_api_getdata($db){
 		'election' => false
 	];
 
-	$query = new MongoDB\Driver\Query(['_id' => $db->getID()], ['projection' => ["_id" => 0, 'government' => 1]]);
-	$cursor = $db->getMongoDB()->executeQuery("{$db->getDatabaseName()}.chats", $query);
+	$query = new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["_id" => 0, 'government' => 1]]);
+	$cursor = $db->executeQuery($query);
 	$extractor = new Database\CursorValueExtractor($cursor);
 	$db_data = Database\CursorValueExtractor::objectToArray($extractor->getValue("0.government", []));
-	return array_merge($DB_GOVERNMENT_DEFAULT, $db_data);
-	/*
-	$data = array();
+	$data = [];
 	foreach ($DB_GOVERNMENT_DEFAULT as $key => $value) {
 		if(array_key_exists($key, $db_data))
 			$data[$key] = $db_data[$key];
@@ -102,7 +100,6 @@ function government_api_getdata($db){
 			$data[$key] = $value;
 	}
 	return $data;
-	*/
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -235,8 +232,8 @@ function government_laws_cpanel($finput){
 				'content' => $content
 			);
 			$bulk = new MongoDB\Driver\BulkWrite;
-			$bulk->update(['_id' => $db->getID()], ['$set' => ["government.laws" => $gov['laws']]]);
-			$db->getMongoDB()->executeBulkWrite("{$db->getDatabaseName()}.chats", $bulk);
+			$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["government.laws" => $gov['laws']]]);
+			$db->executeBulkWrite($bulk);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "@id{$data->object->from_id} (Правительство) обновило законы.");
 		}
 		else{
@@ -265,8 +262,8 @@ function government_laws_cpanel($finput){
 				}
 				$gov["laws"] = $laws;
 				$bulk = new MongoDB\Driver\BulkWrite;
-				$bulk->update(['_id' => $db->getID()], ['$set' => ["government.laws" => $gov['laws']]]);
-				$db->getMongoDB()->executeBulkWrite("{$db->getDatabaseName()}.chats", $bulk);
+				$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["government.laws" => $gov['laws']]]);
+				$db->executeBulkWrite($bulk);
 				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Вы отменили закон №{$law_id}.");
 			}
 			else{
@@ -341,8 +338,8 @@ function government_laws_cpanel($finput){
 		$gov["laws"][$to-1] = $gov["laws"][$from-1];
 		$gov["laws"][$from-1] = $tmp;
 		$bulk = new MongoDB\Driver\BulkWrite;
-		$bulk->update(['_id' => $db->getID()], ['$set' => ["government.laws" => $gov['laws']]]);
-		$db->getMongoDB()->executeBulkWrite("{$db->getDatabaseName()}.chats", $bulk);
+		$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["government.laws" => $gov['laws']]]);
+		$db->executeBulkWrite($bulk);
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Закон №{$from} перемещен на место закона №{$to}.");
 
 	}
@@ -464,8 +461,8 @@ function government_batch($finput){
 			}
 
 			$bulk = new MongoDB\Driver\BulkWrite;
-			$bulk->update(['_id' => $db->getID()], ['$unset' => ["government.batches.batch{$data->object->from_id}" => 0]]);
-			$db->getMongoDB()->executeBulkWrite("{$db->getDatabaseName()}.chats", $bulk);
+			$bulk->update(['_id' => $db->getDocumentID()], ['$unset' => ["government.batches.batch{$data->object->from_id}" => 0]]);
+			$db->executeBulkWrite($bulk);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Партия удалена.");
 			break;
 			
@@ -571,8 +568,8 @@ function government_batch_cb($finput){
 			'can_be_elected' => true
 		];
 		$bulk = new MongoDB\Driver\BulkWrite;
-		$bulk->update(['_id' => $db->getID()], ['$set' => ["government.batches.batch{$data->object->user_id}" => $batch]]);
-		$db->getMongoDB()->executeBulkWrite("{$db->getDatabaseName()}.chats", $bulk);
+		$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["government.batches.batch{$data->object->user_id}" => $batch]]);
+		$db->executeBulkWrite($bulk);
 
 		$message = "%appeal%, ✅Партия создана.";
 		break;
@@ -621,8 +618,8 @@ function government_anthem($finput){
 			if ($first_audio_id != -1){
 				$anthem = "audio{$data->object->attachments[$first_audio_id]->audio->owner_id}_{$data->object->attachments[$first_audio_id]->audio->id}";
 				$bulk = new MongoDB\Driver\BulkWrite;
-				$bulk->update(['_id' => $db->getID()], ['$set' => ['government.anthem' => $anthem]]);
-				$db->getMongoDB()->executeBulkWrite("{$db->getDatabaseName()}.chats", $bulk);
+				$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ['government.anthem' => $anthem]]);
+				$db->executeBulkWrite($bulk);
 				$msg = "@id{$president_id} (Президент) изменил гимн государства.";
 				$messagesModule->sendSilentMessage($data->object->peer_id, $msg);
 			} else {
@@ -873,8 +870,8 @@ function government_election_start($finput){
 				$election['users']["id{$value}"] = 0;
 			}
 			$bulk = new MongoDB\Driver\BulkWrite;
-			$bulk->update(['_id' => $db->getID()], ['$set' => ['government.rally' => false, 'government.election' => $election]]);
-			$db->getMongoDB()->executeBulkWrite("{$db->getDatabaseName()}.chats", $bulk);
+			$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ['government.rally' => false, 'government.election' => $election]]);
+			$db->executeBulkWrite($bulk);
 		}
 		else
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, выборы уже проходят.");
@@ -902,8 +899,8 @@ function government_election_candidate($finput){
 	$time = time();
 	if($time - $gov['election']['start_time'] >= Goverment::ELECTION_DURATION){
 		$bulk = new MongoDB\Driver\BulkWrite;
-		$bulk->update(['_id' => $db->getID()], ['$set' => ['government.election' => false]]);
-		$db->getMongoDB()->executeBulkWrite("{$db->getDatabaseName()}.chats", $bulk);
+		$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ['government.election' => false]]);
+		$db->executeBulkWrite($bulk);
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Время выборов закончено. Неудалось набрать кандидатов.");
 		return;
 	}
@@ -933,14 +930,14 @@ function government_election_candidate($finput){
 
 	if($gov['election']['candidate1']['batch_id'] === 0){
 		$bulk = new MongoDB\Driver\BulkWrite;
-		$bulk->update(['_id' => $db->getID()], ['$set' => ['government.election.candidate1.batch_id' => $user_batch_id]]);
-		$db->getMongoDB()->executeBulkWrite("{$db->getDatabaseName()}.chats", $bulk);
+		$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ['government.election.candidate1.batch_id' => $user_batch_id]]);
+		$db->executeBulkWrite($bulk);
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Вы зарегистрировались как Кандидат №1.");
 	}
 	elseif($gov['election']['candidate2']['batch_id'] === 0){
 		$bulk = new MongoDB\Driver\BulkWrite;
-		$bulk->update(['_id' => $db->getID()], ['$set' => ['government.election.candidate2.batch_id' => $user_batch_id]]);
-		$db->getMongoDB()->executeBulkWrite("{$db->getDatabaseName()}.chats", $bulk);
+		$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ['government.election.candidate2.batch_id' => $user_batch_id]]);
+		$db->executeBulkWrite($bulk);
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Вы зарегистрировались как Кандидат №2.\nИспользуйте !голосовать.");
 	}
 	else
@@ -1026,12 +1023,12 @@ function government_election_vote_cb($finput){
 		$bulk = new MongoDB\Driver\BulkWrite;
 		switch ($candidate){
 			case 1:
-			$bulk->update(['_id' => $db->getID()], ['$inc' => ['government.election.candidate1.voters_count' => 1], '$set' => ["government.election.users.id{$data->object->user_id}" => $time]]);
+			$bulk->update(['_id' => $db->getDocumentID()], ['$inc' => ['government.election.candidate1.voters_count' => 1], '$set' => ["government.election.users.id{$data->object->user_id}" => $time]]);
 			$message = '✏ Вы проголосовали за Кандидата №1. Вы можете еще проголосовать через 10 минут.';
 			break;
 
 			case 2:
-			$bulk->update(['_id' => $db->getID()], ['$inc' => ['government.election.candidate2.voters_count' => 1], '$set' => ["government.election.users.id{$data->object->user_id}" => $time]]);
+			$bulk->update(['_id' => $db->getDocumentID()], ['$inc' => ['government.election.candidate2.voters_count' => 1], '$set' => ["government.election.users.id{$data->object->user_id}" => $time]]);
 			$message = '✏ Вы проголосовали за Кандидата №2. Вы можете еще проголосовать через 10 минут.';
 			break;
 			
@@ -1040,7 +1037,7 @@ function government_election_vote_cb($finput){
 			return;
 			break;
 		}
-		$db->getMongoDB()->executeBulkWrite("{$db->getDatabaseName()}.chats", $bulk);
+		$db->executeBulkWrite($bulk);
 		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, $message);
 	}
 	else{
@@ -1077,10 +1074,10 @@ function government_election_system($finput){
 				$batch_id = $gov['election']['candidate1']['batch_id'];
 				$gov['batches'][$batch_id]['terms_count']++;
 				if($gov['ruling_batch']['id'] === $batch_id)
-					$bulk->update(['_id' => $db->getID()], ['$inc' => ['government.ruling_batch.terms_count' => 1, "government.batches.{$batch_id}.terms_count" => 1], '$set' => ['government.ruling_batch.elected_time' => $gov['election']['start_time']+Goverment::ELECTION_DURATION]]);
+					$bulk->update(['_id' => $db->getDocumentID()], ['$inc' => ['government.ruling_batch.terms_count' => 1, "government.batches.{$batch_id}.terms_count" => 1], '$set' => ['government.ruling_batch.elected_time' => $gov['election']['start_time']+Goverment::ELECTION_DURATION]]);
 				else{
 					$ruling_batch = ['id' => $batch_id, 'legitimacy' => 100, 'terms_count' => 1, 'elected_time' => $gov['election']['start_time']+Goverment::ELECTION_DURATION];
-					$bulk->update(['_id' => $db->getID()], ['$inc' => ["government.batches.{$batch_id}.terms_count" => 1], '$set' => ["government.ruling_batch" => $ruling_batch]]);
+					$bulk->update(['_id' => $db->getDocumentID()], ['$inc' => ["government.batches.{$batch_id}.terms_count" => 1], '$set' => ["government.ruling_batch" => $ruling_batch]]);
 				}
 				$candidate_id = $gov['batches'][$batch_id]['leader_id'];
 				$all_voters_count = $gov['election']['candidate1']['voters_count'] + $gov['election']['candidate2']['voters_count'];
@@ -1091,10 +1088,10 @@ function government_election_system($finput){
 				$batch_id = $gov['election']['candidate2']['batch_id'];
 				$gov['batches'][$batch_id]['terms_count']++;
 				if($gov['ruling_batch']['id'] === $batch_id)
-					$bulk->update(['_id' => $db->getID()], ['$inc' => ['government.ruling_batch.terms_count' => 1, "government.batches.{$batch_id}.terms_count" => 1], '$set' => ['government.ruling_batch.elected_time' => $gov['election']['start_time']+Goverment::ELECTION_DURATION]]);
+					$bulk->update(['_id' => $db->getDocumentID()], ['$inc' => ['government.ruling_batch.terms_count' => 1, "government.batches.{$batch_id}.terms_count" => 1], '$set' => ['government.ruling_batch.elected_time' => $gov['election']['start_time']+Goverment::ELECTION_DURATION]]);
 				else{
 					$ruling_batch = ['id' => $batch_id, 'legitimacy' => 100, 'terms_count' => 1, 'elected_time' => $gov['election']['start_time']+Goverment::ELECTION_DURATION];
-					$bulk->update(['_id' => $db->getID()], ['$inc' => ["government.batches.{$batch_id}.terms_count" => 1], '$set' => ["government.ruling_batch" => $ruling_batch]]);
+					$bulk->update(['_id' => $db->getDocumentID()], ['$inc' => ["government.batches.{$batch_id}.terms_count" => 1], '$set' => ["government.ruling_batch" => $ruling_batch]]);
 				}
 				$candidate_id = $gov['batches'][$batch_id]['leader_id'];
 				$all_voters_count = $gov['election']['candidate1']['voters_count'] + $gov['election']['candidate2']['voters_count'];
@@ -1105,14 +1102,14 @@ function government_election_system($finput){
 				$messagesModule->sendSilentMessage($data->object->peer_id, "⛔Выборы окончены. Президент не выбран, так как оба кандидата набрали одинаковое количество голосов.");
 		}
 
-		$bulk->update(['_id' => $db->getID()], ['$set' => ['government.election' => false]]);
-		$db->getMongoDB()->executeBulkWrite("{$db->getDatabaseName()}.chats", $bulk);
+		$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ['government.election' => false]]);
+		$db->executeBulkWrite($bulk);
 		return true;
 	}
 	elseif($time - $gov['election']["last_notification_time"] >= 600){
 		$bulk = new MongoDB\Driver\BulkWrite;
-		$bulk->update(['_id' => $db->getID()], ['$set' => ['government.election.last_notification_time' => $time]]);
-		$db->getMongoDB()->executeBulkWrite("{$db->getDatabaseName()}.chats", $bulk);
+		$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ['government.election.last_notification_time' => $time]]);
+		$db->executeBulkWrite($bulk);
 
 		if($gov['election']['candidate1']['batch_id'] === 0 || $gov['election']['candidate2']['batch_id'] === 0){
 			$msg = "Начались выборы в президенты беседы. Чтобы зарегистрироваться, как кандидат, используйте команду [!баллотироваться].";
