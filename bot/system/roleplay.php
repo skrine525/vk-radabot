@@ -50,14 +50,12 @@ namespace Roleplay{
 		}
 
 		private function getArgv(){
-			$text_command_argv_count = count(bot_parse_argv($this->text_command));
-			$argv = array();
-			$argv[] = bot_get_array_value($this->argv, $text_command_argv_count, false);
-			if($this->allowDescription)
-				$argv[] = bot_get_array_value($this->argv, $text_command_argv_count + 1, false);
-			else
-				$argv[] = false;
-			return $argv;
+			$text_command_argv_count = count(bot_parse_argv($this->text_command));					// Количество аргументов РП-команды
+			$argv_count = count($this->argv);														// Количество аргументов полученного события
+			$processed_argv = array();
+			for($i = $text_command_argv_count; $i < $argv_count; $i++)
+				$processed_argv[] = $this->argv[$i];
+			return $processed_argv;
 		}
 
 		public function setPermittedMemberGender($gender, $message){
@@ -77,7 +75,7 @@ namespace Roleplay{
 		private function generateDescriptionMessageVKScriptCode($message){
 			if($this->allowDescription){
 				if(gettype($message) == "string"){
-					$formated_message = addcslashes($message, "\n");
+					$formated_message = addslashes($message);
 					return "var DESCRIPTION_MSG=\" {$formated_message}\";";
 				}
 				else
@@ -135,18 +133,26 @@ namespace Roleplay{
 			$member_id = 0;
 			if(array_key_exists(0, $this->data->object->fwd_messages)){
 				$member_id = $this->data->object->fwd_messages[0]->from_id;
-				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($argv[0]);
+				$descriptionMessage = str_ireplace("\n", " ", bot_gettext_by_argv($argv, 0));
+				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($descriptionMessage);
 			}
-			elseif(bot_get_userid_by_mention($argv[0], $member_id))
-				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($argv[1]);
-			elseif(bot_get_userid_by_nick($this->db, $argv[0], $member_id))
-				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($argv[1]);
+			elseif(bot_get_userid_by_mention($argv[0], $member_id)){
+				$descriptionMessage = str_ireplace("\n", " ", bot_gettext_by_argv($argv, 1));
+				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($descriptionMessage);
+			}
+			elseif(bot_get_userid_by_nick($this->db, $argv[0], $member_id)){
+				$descriptionMessage = str_ireplace("\n", " ", bot_gettext_by_argv($argv, 1));
+				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($descriptionMessage);
+			}
 			elseif(is_numeric($argv[0])){
 				$member_id = intval($argv[0]);
-				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($argv[1]);
+				$descriptionMessage = str_ireplace("\n", " ", bot_gettext_by_argv($argv, 1));
+				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($descriptionMessage);
 			}
-			else
-				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($argv[1]);
+			else{
+				$descriptionMessage = str_ireplace("\n", " ", bot_gettext_by_argv($argv, 1));
+				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($descriptionMessage);
+			}
 
 
 			if($member_id > 0){
@@ -278,7 +284,7 @@ namespace{
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
 		} else {
-			$act = mb_substr($data->object->text, 4, mb_strlen($data->object->text)-1);
+			$act = bot_gettext_by_argv($argv, 1);
 			if(mb_substr($act, mb_strlen($act)-1, mb_strlen($act)-1) != "."){
 				$act = $act . ".";
 			}
@@ -303,7 +309,7 @@ namespace{
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
 		} else {
-			$act = mb_substr($data->object->text, 5, mb_strlen($data->object->text)-1);
+			$act = bot_gettext_by_argv($argv, 1);
 			if(mb_substr($act, mb_strlen($act)-1, mb_strlen($act)-1) != "."){
 				$act = $act . ".";
 			}
@@ -334,7 +340,7 @@ namespace{
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
 		} else {
-			$act = mb_substr($data->object->text, 4, mb_strlen($data->object->text)-1);
+			$act = bot_gettext_by_argv($argv, 1);
 			$act = mb_strtoupper(mb_substr($act, 0, 1)) . mb_substr($act, 1, mb_strlen($act)-1);
 			if(mb_substr($act, mb_strlen($act)-1, mb_strlen($act)-1) != "."){
 				$act = $act . ".";
@@ -360,7 +366,7 @@ namespace{
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
 		} else {
-			$text = mb_substr($data->object->text, 3, mb_strlen($data->object->text)-1);
+			$text = bot_gettext_by_argv($argv, 1);
 			$vowels_letters = array('а', 'о', 'и', 'е', 'ё', 'э', 'ы', 'у', 'ю', 'я'/*, 'a', 'e', 'i', 'o', 'u'*/);
 			$new_text = "";
 			$symbols = preg_split('//u', $text, null, PREG_SPLIT_NO_EMPTY);
@@ -404,7 +410,7 @@ namespace{
 		$db = $finput->db;
 
 		// Проверка режима
-		$chatModes = new ChatModes($db);
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
@@ -430,7 +436,7 @@ namespace{
 		$db = $finput->db;
 
 		// Проверка режима
-		$chatModes = new ChatModes($db);
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
@@ -456,7 +462,7 @@ namespace{
 		$db = $finput->db;
 
 		// Проверка режима
-		$chatModes = new ChatModes($db);
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
@@ -471,14 +477,13 @@ namespace{
 		$handler->maleMessageToMyself = "%FROM_USERNAME% уебал сам себе%DESCRIPTION_MSG%.👊🏻";
 		$handler->femaleMessageToMyself = "%FROM_USERNAME% уебала сама себе%DESCRIPTION_MSG%.👊🏻";
 		$handler->maleMessageToAll = "%FROM_USERNAME% уебал всем%DESCRIPTION_MSG%.👊🏻";
-		$handler->femaleMessageToAll = "%FROM_USERNAME% уебал всем%DESCRIPTION_MSG%.👊🏻";
+		$handler->femaleMessageToAll = "%FROM_USERNAME% уебала всем%DESCRIPTION_MSG%.👊🏻";
 
 		$member_id = $handler->handle();
 		if($member_id !== false && $data->object->from_id != $member_id){
-			$stats["chat_stats.users.id{$member_id}.bump_count"] = 1;
-			$bulk = new MongoDB\Driver\BulkWrite;
-			$bulk->update(['_id' => $db->getDocumentID()], ['$inc' => $stats]);
-			$db->executeBulkWrite($bulk);
+			$statsManager = new StatsManager($db);
+			$statsManager->update("bump_count", 1);
+			$statsManager->commit($member_id);
 		}
 	}
 
@@ -489,7 +494,7 @@ namespace{
 		$db = $finput->db;
 
 		// Проверка режима
-		$chatModes = new ChatModes($db);
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
@@ -515,7 +520,7 @@ namespace{
 		$db = $finput->db;
 
 		// Проверка режима
-		$chatModes = new ChatModes($db);
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
@@ -541,7 +546,7 @@ namespace{
 		$db = $finput->db;
 
 		// Проверка режима
-		$chatModes = new ChatModes($db);
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
@@ -550,12 +555,12 @@ namespace{
 		}
 
 		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Харкнуть");
-		$handler->maleMessage = "%FROM_USERNAME% харкнул в %MEMBER_USERNAME_ACC%.";
-		$handler->femaleMessage = "%FROM_USERNAME% харкнула в %MEMBER_USERNAME_ACC%.";
-		$handler->maleMessageToMyself = "%FROM_USERNAME% харкнул сам на себя.";
-		$handler->femaleMessageToMyself = "%FROM_USERNAME% харкнула сама на себя.";
-		$handler->maleMessageToAll = "%FROM_USERNAME% харкнул на всех.";
-		$handler->femaleMessageToAll = "%FROM_USERNAME% харкнула на всех.";
+		$handler->maleMessage = "%FROM_USERNAME% харкнул в %MEMBER_USERNAME_ACC%.🤮";
+		$handler->femaleMessage = "%FROM_USERNAME% харкнула в %MEMBER_USERNAME_ACC%.🤮";
+		$handler->maleMessageToMyself = "%FROM_USERNAME% харкнул сам на себя.🤮";
+		$handler->femaleMessageToMyself = "%FROM_USERNAME% харкнула сама на себя.🤮";
+		$handler->maleMessageToAll = "%FROM_USERNAME% харкнул на всех.🤮";
+		$handler->femaleMessageToAll = "%FROM_USERNAME% харкнула на всех.🤮";
 
 		$handler->handle();
 	}
@@ -567,7 +572,7 @@ namespace{
 		$db = $finput->db;
 
 		// Проверка режима
-		$chatModes = new ChatModes($db);
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
@@ -594,7 +599,7 @@ namespace{
 		$db = $finput->db;
 
 		// Проверка режима
-		$chatModes = new ChatModes($db);
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
@@ -621,7 +626,7 @@ namespace{
 		$db = $finput->db;
 
 		// Проверка режима
-		$chatModes = new ChatModes($db);
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
@@ -630,12 +635,12 @@ namespace{
 		}
 
 		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Послать");
-		$handler->maleMessage = "%FROM_USERNAME% послал %MEMBER_USERNAME_ACC%.";
-		$handler->femaleMessage = "%FROM_USERNAME% послала %MEMBER_USERNAME_ACC%.";
-		$handler->maleMessageToMyself = "%FROM_USERNAME% послал сам себя.";
-		$handler->femaleMessageToMyself = "%FROM_USERNAME% послала сама себя.";
-		$handler->maleMessageToAll = "%FROM_USERNAME% послал всех.";
-		$handler->femaleMessageToAll = "%FROM_USERNAME% послала всех.";
+		$handler->maleMessage = "%FROM_USERNAME% послал %MEMBER_USERNAME_ACC%.😡";
+		$handler->femaleMessage = "%FROM_USERNAME% послала %MEMBER_USERNAME_ACC%.😡";
+		$handler->maleMessageToMyself = "%FROM_USERNAME% послал сам себя.😡";
+		$handler->femaleMessageToMyself = "%FROM_USERNAME% послала сама себя.😡";
+		$handler->maleMessageToAll = "%FROM_USERNAME% послал всех.😡";
+		$handler->femaleMessageToAll = "%FROM_USERNAME% послала всех.😡";
 
 		$handler->handle();
 	}
@@ -647,7 +652,7 @@ namespace{
 		$db = $finput->db;
 
 		// Проверка режима
-		$chatModes = new ChatModes($db);
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
@@ -656,12 +661,12 @@ namespace{
 		}
 
 		$handler = new Roleplay\ActWithHandler($db, $data, $argv, "Кастрировать");
-		$handler->maleMessage = "%FROM_USERNAME% кастрировал %MEMBER_USERNAME_ACC%.";
-		$handler->femaleMessage = "%FROM_USERNAME% кастрировала %MEMBER_USERNAME_ACC%.";
+		$handler->maleMessage = "%FROM_USERNAME% кастрировал %MEMBER_USERNAME_ACC%.🙊";
+		$handler->femaleMessage = "%FROM_USERNAME% кастрировала %MEMBER_USERNAME_ACC%.🙊";
 		$handler->maleMessageToMyself = "%FROM_USERNAME%, нельзя кастрировать себя.😐";
 		$handler->femaleMessageToMyself = "%FROM_USERNAME%, нельзя кастрировать себя.😐";
-		$handler->maleMessageToAll = "%FROM_USERNAME% кастрировал всех.";
-		$handler->femaleMessageToAll = "%FROM_USERNAME% кастрировала всех.";
+		$handler->maleMessageToAll = "%FROM_USERNAME% кастрировал всех.🙊";
+		$handler->femaleMessageToAll = "%FROM_USERNAME% кастрировала всех.🙊";
 
 		$handler->handle();
 	}
@@ -673,7 +678,7 @@ namespace{
 		$db = $finput->db;
 
 		// Проверка режима
-		$chatModes = new ChatModes($db);
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
@@ -699,7 +704,7 @@ namespace{
 		$db = $finput->db;
 
 		// Проверка режима
-		$chatModes = new ChatModes($db);
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
@@ -725,7 +730,7 @@ namespace{
 		$db = $finput->db;
 
 		// Проверка режима
-		$chatModes = new ChatModes($db);
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
@@ -751,7 +756,7 @@ namespace{
 		$db = $finput->db;
 
 		// Проверка режима
-		$chatModes = new ChatModes($db);
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
@@ -777,7 +782,7 @@ namespace{
 		$db = $finput->db;
 
 		// Проверка режима
-		$chatModes = new ChatModes($db);
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
@@ -803,7 +808,7 @@ namespace{
 		$db = $finput->db;
 
 		// Проверка режима
-		$chatModes = new ChatModes($db);
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
@@ -829,7 +834,7 @@ namespace{
 		$db = $finput->db;
 
 		// Проверка режима
-		$chatModes = new ChatModes($db);
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
@@ -855,7 +860,7 @@ namespace{
 		$db = $finput->db;
 
 		// Проверка режима
-		$chatModes = new ChatModes($db);
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);

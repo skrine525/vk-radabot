@@ -59,12 +59,6 @@
 		"salary": 3500,
 		"item_dependencies": ["edu:level_4", "immovables:level_3"]
 	},
-	"president": {
-		"name": "Президент",
-		"rest_time": 2100,
-		"salary": 3500,
-		"item_dependencies": ["edu:level_3", "govdoc:presidential_certificate", "immovables:level_3"]
-	},
 	"engineer": {
 		"name": "Инженер",
 		"rest_time": 2400,

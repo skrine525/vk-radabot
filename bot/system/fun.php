@@ -115,7 +115,7 @@ function fun_memes_control_panel($finput){
 
 	$botModule = new BotModule($db);
 
-	$chatModes = new ChatModes($db);
+	$chatModes = $finput->event->getChatModes();
 	if(!$chatModes->getModeValue("allow_memes")){ // Проверка режима
 		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Панель управления мемами недоступна, так как в беседе отключен Режим allow_memes.", $data->object->from_id);
 		return;
@@ -126,8 +126,8 @@ function fun_memes_control_panel($finput){
 	else
 		$command = "";
 	if($command == "add"){
-		$forbidden_names = array("%__appeal__%", "%__ownername__%", "*all", "%appeal%"); // Массив запрещенных наименований мемов
-		$meme_name = mb_strtolower(mb_substr($data->object->text, 11));
+		$forbidden_names = array("%__appeal__%", "%__ownername__%", "-all", "%appeal%"); // Массив запрещенных наименований мемов
+		$meme_name = mb_strtolower(bot_gettext_by_argv($argv, 2));
 		if($meme_name == ""){
 			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Не найдено название!", $data->object->from_id);
 			return;
@@ -213,39 +213,50 @@ function fun_memes_control_panel($finput){
 		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Мем сохранен!", $data->object->from_id);
 	}
 	elseif($command == "del"){
-		$meme_name = mb_strtolower(mb_substr($data->object->text, 11));
+		$meme_name = mb_strtolower(bot_gettext_by_argv($argv, 1));
 		$memes = $db->getValueLegacy(array("fun", "memes"), array());
 		if($meme_name == ""){
 			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Не найдено название!", $data->object->from_id);
 			return;
 		}
-		if(!array_key_exists($meme_name, $memes) && $meme_name != "*all"){
-			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔мема с именем \"{$meme_name}\" не существует.", $data->object->from_id);
+		if(!array_key_exists($meme_name, $memes) && $meme_name != "-all"){
+			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Мема с именем \"{$meme_name}\" не существует.", $data->object->from_id);
 			return;
 		}
 
-		if($meme_name == "*all"){
-			$permissionSystem = new PermissionSystem($db);
+		if($meme_name == "-all"){
+			$permissionSystem = $finput->event->getPermissionSystem();
 			if(!$permissionSystem->checkUserPermission($data->object->from_id, 'customize_chat')){ // Проверка разрешения
 				$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы не можете удалять мемы других пользователей.", $data->object->from_id);
 				return;
 			}
 
 			json_decode(vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Все мемы в беседе были удалены!','disable_mentions':true});"))->response;
-			$db->unsetValueLegacy(array("fun", "memes"));
-		} else {
+
+			$bulk = new MongoDB\Driver\BulkWrite;
+			$bulk->update(['_id' => $db->getDocumentID()], ['$unset' => ["fun.memes" => 0]]);
+			$db->executeBulkWrite($bulk);
+		}
+		else{
 			if($memes[$meme_name]["owner_id"] == $data->object->from_id){
 				$botModule->sendSilentMessage($data->object->peer_id, ", ✅Мем \"{$meme_name}\" удален!", $data->object->from_id);
-				$db->unsetValueLegacy(array("fun", "memes", $meme_name));
-			} else {
-				$permissionSystem = new PermissionSystem($db);
+
+				$bulk = new MongoDB\Driver\BulkWrite;
+				$bulk->update(['_id' => $db->getDocumentID()], ['$unset' => ["fun.memes.{$meme_name}" => 0]]);
+				$db->executeBulkWrite($bulk);
+			}
+			else {
+				$permissionSystem = $finput->event->getPermissionSystem();
 				if(!$permissionSystem->checkUserPermission($data->object->from_id, 'customize_chat')){ // Проверка разрешения
 					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы не можете удалять мемы других пользователей.", $data->object->from_id);
 					return;
 				}
 
 				json_decode(vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Мем \"{$meme_name}\" удален!','disable_mentions':true});"))->response;
-				$db->unsetValueLegacy(array("fun", "memes", $meme_name));
+
+				$bulk = new MongoDB\Driver\BulkWrite;
+				$bulk->update(['_id' => $db->getDocumentID()], ['$unset' => ["fun.memes.{$meme_name}" => 0]]);
+				$db->executeBulkWrite($bulk);
 			}
 		}
 	}
@@ -265,7 +276,7 @@ function fun_memes_control_panel($finput){
 		$botModule->sendSilentMessage($data->object->peer_id, ", 📝список мемов в беседе:\n".$meme_str_list, $data->object->from_id);
 	}
 	elseif($command == "info"){
-		$meme_name = mb_strtolower(mb_substr($data->object->text, 12));
+		$meme_name = mb_strtolower(bot_gettext_by_argv($argv, 2));
 
 		if($meme_name == ""){
 			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔введите имя мема.", $data->object->from_id);
@@ -312,7 +323,7 @@ function fun_memes_control_panel($finput){
 			'!memes list - Список мемов беседы',
 			'!memes add <name> <attachment> - Добавление мема',
 			'!memes del <name> - Удаление мема',
-			'!memes del *all - Удаление всех мемов из беседы',
+			'!memes del -all - Удаление всех мемов из беседы',
 			'!memes info <name> - Информация о меме'
 		);
 		$botModule->sendCommandListFromArray($data, ", ⛔используйте:", $commands);
@@ -387,16 +398,15 @@ function fun_memes_control_panel_cb($finput){
 	}
 }
 
-function fun_memes_handler($data, $db){
-	$chatModes = new ChatModes($db);
+function fun_memes_handler($data, $db, $finput){
+	$chatModes = $finput->event->getChatModes();
 	if(!$chatModes->getModeValue("allow_memes"))
 		return false;
 
 	$meme_name = mb_strtolower($data->object->text);
 	$query = new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["fun.memes.{$meme_name}.content" => 1]]);
-	$cursor = $db->executeQuery($query);
-	$exstractor = new Database\CursorValueExtractor($cursor);
-	$meme = $exstractor->getValue([0, "fun", "memes", $meme_name, "content"], false);
+	$extractor = $db->executeQuery($query);
+	$meme = $extractor->getValue([0, "fun", "memes", $meme_name, "content"], false);
 	if($meme !== false){
 		$botModule = new BotModule($db);
 		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%,", 'attachment' => $meme, 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
@@ -414,13 +424,13 @@ function fun_handler($finput){
 
 	$text = mb_strtolower($data->object->text);
 
-	if(Legacy\SysMemes::handler($data, $text, $db))
+	if(Legacy\SysMemes::handler($data, $text, $db, $finput))
 		return true;
-	elseif(fun_memes_handler($data, $db))
+	elseif(fun_memes_handler($data, $db, $finput))
 		return true;
 	elseif(Legacy\SysMemes::payloadHandler($data, $db))
 		return true;
-	elseif(Legacy\imgoingsleeping($data, $db, $text))
+	elseif(Legacy\imgoingsleeping($data, $db, $text, $finput))
 		return true;
 	return false;
 }
@@ -568,7 +578,7 @@ function fun_howmuch($finput){
 		$unitname = $argv[1];
 	else
 		$unitname = "";
-	$add = mb_substr($data->object->text, 10+mb_strlen($unitname));
+	$add = bot_gettext_by_argv($argv, 2);
 
 	if($unitname == "" || $add == ""){
 		$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, "%appeal%, используйте:", array("Сколько <ед. измерения> <дополнение>"));
@@ -640,7 +650,7 @@ function fun_whois_nom($finput){
 
 	$botModule = new BotModule($db);
 
-	$text = mb_substr($data->object->text, 5);
+	$text = bot_gettext_by_argv($argv, 1);
 	if($text == ""){
 		$botModule->sendCommandListFromArray($data, ", используйте:", array(
 			'!Кто <текст>'
@@ -662,7 +672,7 @@ function fun_whois_acc($finput){
 
 	$botModule = new BotModule($db);
 
-	$text = mb_substr($data->object->text, 6);
+	$text = bot_gettext_by_argv($argv, 1);
 	if($text == ""){
 		$botModule->sendCommandListFromArray($data, ", используйте:", array(
 			'!Кого <текст>'
@@ -684,7 +694,7 @@ function fun_whois_dat($finput){
 
 	$botModule = new BotModule($db);
 
-	$text = mb_substr($data->object->text, 6);
+	$text = bot_gettext_by_argv($argv, 1);
 	if($text == ""){
 		$botModule->sendCommandListFromArray($data, ", используйте:", array(
 			'!Кому <текст>'
@@ -704,7 +714,7 @@ function fun_tts($finput){
 	$argv = $finput->argv;
 	$db = $finput->db;
 
-	$message = mb_substr($data->object->text, 4);
+	$message = bot_gettext_by_argv($argv, 1);
 	$botModule = new BotModule($db);
 
 	if($message == ""){
@@ -776,7 +786,7 @@ function fun_info($finput){
 
 	$botModule = new BotModule($db);
 
-	$expression = mb_substr($data->object->text, 6);
+	$expression = bot_gettext_by_argv($argv, 1);
 
 	if($expression == ""){
 		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔используйте \"Инфа <выражение>\".", $data->object->from_id);
@@ -796,7 +806,7 @@ function fun_say($finput){
 
 	$botModule = new BotModule($db);
 
-	$params = mb_substr($data->object->text, 4);
+	$params = bot_gettext_by_argv($argv, 1);
 
 	parse_str($params, $vars);
 

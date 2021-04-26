@@ -59,7 +59,7 @@ namespace Legacy{
 	}
 
 	function fun_pet_dbset($db, $pet){
-		$bulk = new MongoDB\Driver\BulkWrite;
+		$bulk = new \MongoDB\Driver\BulkWrite;
 		$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["fun.pet" => $pet]]);
 		$db->executeBulkWrite($bulk);
 	}
@@ -209,8 +209,8 @@ namespace Legacy{
 			return $exists;
 		}
 
-		public static function handler($data, $meme_name, &$db){
-			$chatModes = new \ChatModes($db);
+		public static function handler($data, $meme_name, $db, $finput){
+			$chatModes = $finput->event->getChatModes();
 			if(!$chatModes->getModeValue("allow_memes") || !$chatModes->getModeValue("legacy_enabled"))
 				return false;
 
@@ -444,7 +444,7 @@ namespace Legacy{
 				break;
 
 				case 'попить чай':
-				$permissionSystem = new \PermissionSystem($db);
+				$permissionSystem = $finput->event->getPermissionSystem();
 				if($permissionSystem->checkUserPermission($data->object->from_id, 'drink_tea')){
 					$bulk = new \MongoDB\Driver\BulkWrite;
 					$bulk->update(['_id' => $db->getDocumentID()], ['$inc' => ["fun.tea_count.id{$data->object->from_id}" => 1]]);
@@ -464,7 +464,7 @@ namespace Legacy{
 			return true;
 		}
 
-		public static function payloadHandler($data, &$db){
+		public static function payloadHandler($data, $db){
 			if(property_exists($data->object, 'payload')){
 				$payload = json_decode($data->object->payload);
 				if($payload->command == "fun"){
@@ -609,8 +609,8 @@ namespace Legacy{
 		}
 	}
 
-	function imgoingsleeping($data, $db, $text){
-		$chatModes = new \ChatModes($db);
+	function imgoingsleeping($data, $db, $text, $finput){
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue("legacy_enabled"))
 			return;
 

@@ -11,8 +11,8 @@ class PermissionSystem{
 		'change_nick' => ['label' => 'Управлять никами', 'type' => 0],
 		'customize_chat' => ['label' => 'Управлять чатом', 'type' => 0],
 		'manage_punishments' => ['label' => 'Управлять наказаниями', 'type' => 0],
-		'prohibit_autokick' => ['label' => 'Запретить автокик', 'type' => 0],
-		'prohibit_antiflood' => ['label' => 'Запретить антифлуд', 'type' => 0],
+		'prohibit_autokick' => ['label' => 'Игнорировать автокик', 'type' => 0],
+		'prohibit_antiflood' => ['label' => 'Игнорировать антифлуд', 'type' => 0],
 		'set_permits' => ['label' => 'Управлять правами', 'type' => 0],
 		'drink_tea' => ['label' => 'Пить чай', 'type' => 2],
 		'use_chat_messanger' => ['label' => 'Использовать Чат-мессенджер', 'type' => 0]
@@ -25,8 +25,7 @@ class PermissionSystem{
 		$this->db = $db;
 
 		$query = new MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, "owner_id" => 1]]);
-		$cursor = $this->db->executeQuery($query);
-		$extractor = new Database\CursorValueExtractor($cursor);
+		$extractor = $this->db->executeQuery($query);
 		$this->owner_id = $extractor->getValue('0.owner_id');
 	}
 
@@ -42,8 +41,7 @@ class PermissionSystem{
 		$permissions = [];
 		if($user_id == $this->owner_id){
 			$query = new MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.user_permissions.id{$user_id}" => 1]]);
-			$cursor = $this->db->executeQuery($query);
-			$extractor = new Database\CursorValueExtractor($cursor);
+			$extractor = $this->db->executeQuery($query);
 			$db_permissions = $extractor->getValue([0, 'chat_settings', 'user_permissions', "id{$user_id}"], []);
 			foreach (self::PERMISSION_LIST as $key => $value) {
 				if($value['type'] == 0 || $value['type'] == 1)
@@ -56,8 +54,7 @@ class PermissionSystem{
 		}
 		else{
 			$query = new MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.user_permissions.id{$user_id}" => 1]]);
-			$cursor = $this->db->executeQuery($query);
-			$extractor = new Database\CursorValueExtractor($cursor);
+			$extractor = $this->db->executeQuery($query);
 			$db_permissions = $extractor->getValue([0, 'chat_settings', 'user_permissions', "id{$user_id}"], []);
 			foreach (self::PERMISSION_LIST as $key => $value) {
 				if(array_key_exists($key, $db_permissions) && $db_permissions->$key)
@@ -87,8 +84,7 @@ class PermissionSystem{
 		}
 
 		$query = new MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.user_permissions.id{$user_id}" => 1]]);
-		$cursor = $this->db->executeQuery($query);
-		$extractor = new Database\CursorValueExtractor($cursor);
+		$extractor = $this->db->executeQuery($query);
 		return $extractor->getValue([0, 'chat_settings', 'user_permissions', "id{$user_id}", $permission_id], $default_state);
 	}
 
@@ -154,8 +150,7 @@ class ChatModes{
 			$this->db = $db;
 
 			$query = new MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.chat_modes" => 1]]);
-			$cursor = $this->db->executeQuery($query);
-			$extractor = new Database\CursorValueExtractor($cursor);
+			$extractor = $this->db->executeQuery($query);
 			$db_modes = $extractor->getValue("chat_settings.chat_modes", []);
 
 			$this->modes = array();
@@ -180,8 +175,7 @@ class ChatModes{
 			return null;
 
 		$query = new MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.chat_modes.{$name}" => 1]]);
-		$cursor = $this->db->executeQuery($query);
-		$extractor = new Database\CursorValueExtractor($cursor);
+		$extractor = $this->db->executeQuery($query);
 		return $extractor->getValue([0, 'chat_settings', 'chat_modes', $name], self::MODE_LIST[$name]["default_state"]);
 	}
 
@@ -201,8 +195,7 @@ class ChatModes{
 
 	public function getModeList(){
 		$query = new MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.chat_modes" => 1]]);
-		$cursor = $this->db->executeQuery($query);
-		$extractor = new Database\CursorValueExtractor($cursor);
+		$extractor = $this->db->executeQuery($query);
 		$db_modes = $extractor->getValue("0.chat_settings.chat_modes", []);
 
 		$list = array();
@@ -224,32 +217,45 @@ class ChatModes{
 
 class BanSystem{
 	public static function getBanList($db){
-		return array_values($db->getValueLegacy(array("chat_settings", "banned_users"), array()));
+		$query = new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, "chat_settings.banned_users" => 1]]);
+		$extractor = $db->executeQuery($query);
+		$banned_users = $extractor->getValue([0, 'chat_settings', 'banned_users'], []);
+		$ban_list = [];
+		foreach ($banned_users as $user){
+			$ban_list[] = $user;
+		}
+		return $ban_list;
 	}
 
 	public static function getUserBanInfo($db, $user_id){
-		return $db->getValueLegacy(array("chat_settings", "banned_users", "id{$user_id}"), false);
+		$query = new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, "chat_settings.banned_users.id{$user_id}" => 1]]);
+		$extractor = $db->executeQuery($query);
+		$ban_info = $extractor->getValue([0, 'chat_settings', 'banned_users', "id{$user_id}"], false);
+		return $ban_info;
 	}
 
-	public static function banUser(&$db, $user_id, $reason, $banned_by, $time){
+	public static function banUser($db, $user_id, $reason, $banned_by, $time){
 		if(BanSystem::getUserBanInfo($db, $user_id) !== false)
 			return false;
 		else{
-			$data = array(
+			$ban_info = array(
 				'user_id' => intval($user_id),
 				'reason' => $reason,
 				'banned_by' => $banned_by,
 				'time' => $time
 			);
-			$db->setValueLegacy(array("chat_settings", "banned_users", "id{$user_id}"), $data);
-
+			$bulk = new MongoDB\Driver\BulkWrite;
+			$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["chat_settings.banned_users.id{$user_id}" => $ban_info]]);
+			$db->executeBulkWrite($bulk);
 			return true;
 		}
 	}
 
-	public static function unbanUser(&$db, $user_id){
+	public static function unbanUser($db, $user_id){
 		if(BanSystem::getUserBanInfo($db, $user_id) !== false){
-			$db->unsetValueLegacy(array("chat_settings", "banned_users", "id{$user_id}"));
+			$bulk = new MongoDB\Driver\BulkWrite;
+			$bulk->update(['_id' => $db->getDocumentID()], ['$unset' => ["chat_settings.banned_users.id{$user_id}" => 0]]);
+			$db->executeBulkWrite($bulk);
 			return true;
 		}
 		else
@@ -258,27 +264,14 @@ class BanSystem{
 }
 
 class AntiFlood{
-	private $antiflood_database;
-	private $chat_id;
+	private $db;
 
-	const TIME_INTERVAL = 10; // Промежуток времени в секундах
-	const MSG_COUNT_MAX = 5; // Максимальное количество сообщений в промежуток времени
-	const MSG_LENGTH_MAX = 2048; // Максимальная длинна сообщения
+	const TIME_INTERVAL = 10; 				// Промежуток времени в секундах
+	const MSG_COUNT_MAX = 5; 				// Максимальное количество сообщений в промежуток времени
+	const MSG_LENGTH_MAX = 2048; 			// Максимальная длинна сообщения
 
-	function __construct($peer_id){
-		$this->chat_id = $peer_id - 2000000000;
-
-		if(!file_exists(BOTPATH_DATA."/antiflood"))
-		mkdir(BOTPATH_DATA."/antiflood");
-
-		if(file_exists(BOTPATH_DATA."/antiflood/chat{$this->chat_id}.json"))
-			$this->antiflood_database = json_decode(file_get_contents(BOTPATH_DATA."/antiflood/chat{$this->chat_id}.json"), true);
-		else
-			$this->antiflood_database = array();
-	}
-
-	public function save(){
-		file_put_contents(BOTPATH_DATA."/antiflood/chat{$this->chat_id}.json", json_encode($this->antiflood_database, JSON_UNESCAPED_UNICODE));
+	function __construct($db){
+		$this->db = $db;
 	}
 
 	public function checkMember($data){
@@ -289,38 +282,36 @@ class AntiFlood{
 		if(mb_strlen($text) > self::MSG_LENGTH_MAX) // Ограничение на длинну сообщения
 			return true;
 
-		if(array_key_exists("member{$member_id}", $this->antiflood_database)){ // Ограничение на частоту сообщений
-			$user_data = &$this->antiflood_database["member{$member_id}"];
-			foreach ($user_data as $key => $value){
-				if($date - $value >= AntiFlood::TIME_INTERVAL)
-					unset($user_data[$key]);
-			}
-			$user_data = array_filter($user_data);
-			$user_data[] = $date;
-			if(count($user_data) > AntiFlood::MSG_COUNT_MAX)
-				return true;
-			else
-				return false;
+		$query = new MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ['_id' => 0, "member{$member_id}" => 1]]);
+		$extractor = $this->db->executeQuery($query, 'antiflood');
+		$user_data = (array) $extractor->getValue([0, "member{$member_id}"], []);
+
+		// Ограничение на частоту сообщений
+		foreach ($user_data as $key => $value){
+			if($date - $value >= AntiFlood::TIME_INTERVAL)
+				unset($user_data[$key]);
 		}
-		else{
-			$this->antiflood_database["member{$member_id}"] = array($date);
+		$user_data = array_filter($user_data);
+		$user_data[] = $date;
+		// Сохранение новых данных
+		$bulk = new MongoDB\Driver\BulkWrite;
+		$bulk->update(['_id' => $this->db->getDocumentID()], ['$set' => ["member{$member_id}" => $user_data]], ['upsert' => true]);
+		$this->db->executeBulkWrite($bulk, 'antiflood');
+
+		if(count($user_data) > AntiFlood::MSG_COUNT_MAX)
+			return true;
+		else
 			return false;
-		}
 	}
 
-	public static function handler($data, $db){
-		$chatModes = new ChatModes($db);
-		if(!$chatModes->getModeValue('antiflood_enabled')){
-			if(file_exists(BOTPATH_DATA."/antiflood/chat{$data->object->peer_id}.json"))
-				unlink(BOTPATH_DATA."/antiflood/chat{$data->object->peer_id}.json");
+	public static function handler($data, $db, $chatModes, $permissionSystem){
+		if(!$chatModes->getModeValue('antiflood_enabled'))
 			return false;
-		}
 
 		$returnValue = false;
-		$floodSystem = new AntiFlood($data->object->peer_id);
+		$floodSystem = new AntiFlood($db);
 		if($floodSystem->checkMember($data)){
 			$messagesModule = new Bot\Messages($db);
-			$permissionSystem = new PermissionSystem($db);
 
 			if($permissionSystem->checkUserPermission($data->object->from_id, 'prohibit_antiflood')) // Проверка разрешения
 				return false;
@@ -330,7 +321,6 @@ class AntiFlood{
 			if(gettype($r) == "object" && property_exists($r, 'response'))
 				$returnValue = $r->response;
 		}
-		$floodSystem->save();
 		return $returnValue;
 	}
 }
@@ -352,7 +342,7 @@ function manager_initcmd($event){
 	//$event->addTextMessageCommand("!ранги", 'manager_show_user_ranks');
 	$event->addTextMessageCommand("!приветствие", 'manager_greeting');
 	$event->addTextMessageCommand("!modes", "manager_mode_list");
-	$event->addTextMessageCommand("!panel", "manager_panel_control");
+	$event->addTextMessageCommand("!панель", "manager_panel_control");
 	$event->addTextMessageCommand("панель", "manager_panel_show");
 	$event->addTextMessageCommand("!права", 'manager_permissions_menu');
 
@@ -373,7 +363,7 @@ function manager_mode_list($finput){
 
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
-	$chatModes = new ChatModes($db);
+	$chatModes = $finput->event->getChatModes();
 
 	if(array_key_exists(1, $argv))
 		$list_number_from_word = intval($argv[1]);
@@ -442,13 +432,13 @@ function manager_mode_cpanel_cb($finput){
 	$message = "";
 	$keyboard_buttons = array();
 
-	$chatModes = new ChatModes($db);
+	$chatModes = $finput->event->getChatModes();
 
 	$list_number = bot_get_array_value($payload, 2, 1);
 	$mode_name = bot_get_array_value($payload, 3, false);
 
 	if($mode_name !== false){
-		$permissionSystem = new PermissionSystem($db);
+		$permissionSystem = $finput->event->getPermissionSystem();
 		if(!$permissionSystem->checkUserPermission($data->object->user_id, 'customize_chat')){ // Проверка разрешения
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ У вас нет прав для использования этой функции.");
 			return;
@@ -514,7 +504,7 @@ function manager_ban_user($finput){
 	$argv = $finput->argv;
 	$db = $finput->db;
 
-	$permissionSystem = new PermissionSystem($db);
+	$permissionSystem = $finput->event->getPermissionSystem();
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
 
@@ -525,14 +515,14 @@ function manager_ban_user($finput){
 
 	if(array_key_exists(0, $data->object->fwd_messages)){
 		$member_id = $data->object->fwd_messages[0]->from_id;
-		$reason = mb_substr($data->object->text, 5);
+		$reason = bot_gettext_by_argv($argv, 1);
 	} elseif(array_key_exists(1, $argv) && bot_get_userid_by_mention($argv[1], $member_id)){
-		$reason = mb_substr($data->object->text, 6 + mb_strlen($argv[1]));
+		$reason = bot_gettext_by_argv($argv, 2);
 	} elseif(array_key_exists(1, $argv) && bot_get_userid_by_nick($db, $argv[1], $member_id)){
-		$reason = mb_substr($data->object->text, 6 + mb_strlen($argv[1]));
+		$reason = bot_gettext_by_argv($argv, 2);
 	} elseif(array_key_exists(1, $argv) && is_numeric($argv[1])) {
 		$member_id = intval($argv[1]);
-		$reason = mb_substr($data->object->text, 6 + mb_strlen($argv[1]));
+		$reason = bot_gettext_by_argv($argv, 2);
 	} else $member_id = 0;
 
 	if($member_id == 0){
@@ -570,7 +560,7 @@ function manager_unban_user($finput){
 	$db = $finput->db;
 
 	$botModule = new BotModule($db);
-	$permissionSystem = new PermissionSystem($db);
+	$permissionSystem = $finput->event->getPermissionSystem();
 
 	if(!$permissionSystem->checkUserPermission($data->object->from_id, 'manage_punishments')){ // Проверка ранга (Президент)
 		$botModule->sendSystemMsg_NoRights($data);
@@ -649,8 +639,8 @@ function manager_unban_user($finput){
 	$banned_users = BanSystem::getBanList($db);
 	for($i = 0; $i < sizeof($member_ids); $i++){
 		for($j = 0; $j < sizeof($banned_users); $j++){
-			if($member_ids[$i] == $banned_users[$j]["user_id"]){
-				$unbanned_member_ids[] = $banned_users[$j]["user_id"];
+			if($member_ids[$i] == $banned_users[$j]->user_id){
+				$unbanned_member_ids[] = $banned_users[$j]->user_id;
 			}
 		}
 	}
@@ -683,7 +673,7 @@ function manager_unban_user($finput){
 	if($res->response == 'ok'){
 		for($i = 0; $i < sizeof($unbanned_member_ids); $i++){
 			for($j = 0; $j < sizeof($banned_users); $j++){
-				if($unbanned_member_ids[$i] == $banned_users[$j]["user_id"]){
+				if($unbanned_member_ids[$i] == $banned_users[$j]->user_id){
 					BanSystem::unbanUser($db, $unbanned_member_ids[$i]);
 				}
 			}
@@ -743,7 +733,7 @@ function manager_banlist_user($finput){
 	////////////////////////////////////////////////////
 
 	for($i = 0; $i < count($list_out); $i++){
-		$users_list[] = $list_out[$i]["user_id"];
+		$users_list[] = $list_out[$i]->user_id;
 	}
 
 	$users_list = json_encode($users_list, JSON_UNESCAPED_UNICODE);
@@ -761,10 +751,8 @@ function manager_baninfo_user($finput){
 
 	$botModule = new BotModule($db);
 
-	if(array_key_exists(0, $data->object->fwd_messages)){
+	if(array_key_exists(0, $data->object->fwd_messages))
 		$member_id = $data->object->fwd_messages[0]->from_id;
-		$reason = mb_substr($data->object->text, 5);
-	}
 	elseif(array_key_exists(1, $argv) && bot_get_userid_by_mention($argv[1], $member_id)){}
 	elseif(array_key_exists(1, $argv) && bot_get_userid_by_nick($db, $argv[1], $member_id)){}
 	elseif(array_key_exists(1, $argv) && is_numeric($argv[1])) {
@@ -782,7 +770,7 @@ function manager_baninfo_user($finput){
 
 	if($user_baninfo !== false){
 		$baninfo = json_encode($user_baninfo, JSON_UNESCAPED_UNICODE);
-		$strtime = gmdate("d.m.Y", $user_baninfo["time"]+10800);
+		$strtime = gmdate("d.m.Y", $user_baninfo->time+10800);
 		vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 			var baninfo = {$baninfo};
 			var users = API.users.get({'user_ids':[baninfo.user_id,baninfo.banned_by],'fields':'first_name_ins,last_name_ins'});
@@ -806,7 +794,7 @@ function manager_kick_user($finput){
 
 	$botModule = new BotModule($db);
 
-	$permissionSystem = new PermissionSystem($db);
+	$permissionSystem = $finput->event->getPermissionSystem();
 	if(!$permissionSystem->checkUserPermission($data->object->from_id, 'manage_punishments')){ // Проверка разрешения
 		$botModule->sendSystemMsg_NoRights($data);
 		return;
@@ -944,9 +932,14 @@ function manager_nick($finput){
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
 
-	if(array_key_exists(1, $argv)){
-		$nick = mb_substr($data->object->text, 5);
+	$nick = bot_gettext_by_argv($argv, 1);
+	if($nick !== false){
 		$nick = str_ireplace("\n", "", $nick);
+		if($nick == ''){
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Ник не может быть пустой");
+			return;
+		}
+
 		if(!array_key_exists(0, $data->object->fwd_messages)){
 			if(mb_strlen($nick) <= 15){
 				$nicknames = $db->getValueLegacy(array("chat_settings", "user_nicknames"), array());
@@ -960,7 +953,10 @@ function manager_nick($finput){
 					return;
 				}
 
-				$db->setValueLegacy(array("chat_settings", "user_nicknames", "id{$data->object->from_id}"), $nick);
+				$bulk = new MongoDB\Driver\BulkWrite;
+				$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["chat_settings.user_nicknames.id{$data->object->from_id}" => $nick]]);
+				$db->executeBulkWrite($bulk);
+
 				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Ник установлен.");
 			}
 			else
@@ -973,7 +969,7 @@ function manager_nick($finput){
 			}
 
 			if(mb_strlen($nick) <= 15){
-				$permissionSystem = new PermissionSystem($db);
+				$permissionSystem = $finput->event->getPermissionSystem();
 				if(!$permissionSystem->checkUserPermission($data->object->from_id, 'change_nick')){ // Проверка разрешения
 					$messagesModule->sendSilentMessage($data->object->peer_id, Bot\Messages::MESSAGE_NO_RIGHTS);
 					return;
@@ -984,7 +980,10 @@ function manager_nick($finput){
 					return;
 				}
 
-				$db->setValueLegacy(array("chat_settings", "user_nicknames", "id{$data->object->fwd_messages[0]->from_id}"), $nick);
+				$bulk = new MongoDB\Driver\BulkWrite;
+				$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["chat_settings.user_nicknames.id{$data->object->fwd_messages[0]->from_id}" => $nick]]);
+				$db->executeBulkWrite($bulk);
+
 				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Ник @id{$data->object->fwd_messages[0]->from_id} (пользователя) изменён!");
 			}
 			else
@@ -995,26 +994,33 @@ function manager_nick($finput){
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте \"!ник <ник>\" для управления ником.");
 }
 
-function manager_remove_nick($data, &$db){
+function manager_remove_nick($data, $db, $finput){
 	$botModule = new BotModule($db);
 
 	if(!array_key_exists(0, $data->object->fwd_messages)){
-		$db->unsetValueLegacy(array("chat_settings", "user_nicknames", "id{$data->object->from_id}"));
-		$msg = ", ✅ник убран.";
+		$bulk = new MongoDB\Driver\BulkWrite;
+		$bulk->update(['_id' => $db->getDocumentID()], ['$unset' => ["chat_settings.user_nicknames.id{$data->object->from_id}" => 0]]);
+		$db->executeBulkWrite($bulk);
+
+		$msg = ", ✅Ник убран.";
 		vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 			return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 			");
 	}
 	else{
-		$permissionSystem = new PermissionSystem($db);
+		$permissionSystem = $finput->event->getPermissionSystem();
 		if(!$permissionSystem->checkUserPermission($data->object->from_id, 'change_nick')){ // Проверка разрешения
 			$botModule->sendSystemMsg_NoRights($data);
 			return;
 		}
 
-		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%, ✅ник @id{$data->object->fwd_messages[0]->from_id} (пользователя) убран!", 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
+		$request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%, ✅Ник @id{$data->object->fwd_messages[0]->from_id} (пользователя) убран!", 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 		$request = vk_parse_var($request, "appeal");
-		$db->unsetValueLegacy(array("chat_settings", "user_nicknames", "id{$data->object->fwd_messages[0]->from_id}"));
+
+		$bulk = new MongoDB\Driver\BulkWrite;
+		$bulk->update(['_id' => $db->getDocumentID()], ['$unset' => ["chat_settings.user_nicknames.id{$data->object->fwd_messages[0]->from_id}" => 0]]);
+		$db->executeBulkWrite($bulk);
+
 		json_decode(vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 			API.messages.send({$request});
 			"));
@@ -1034,7 +1040,7 @@ function manager_show_nicknames($finput){
 	else
 		$list_number_from_word = 1;
 
-	$user_nicknames = $db->getValueLegacy(array("chat_settings", "user_nicknames"));
+	$user_nicknames = $db->getValueLegacy(array("chat_settings", "user_nicknames"), []);
 	$nicknames = array();
 	foreach ($user_nicknames as $key => $val) {
 		$nicknames[] = array(
@@ -1098,7 +1104,7 @@ function manager_greeting($finput){
 	$argv = $finput->argv;
 	$db = $finput->db;
 
-	$permissionSystem = new PermissionSystem($db);
+	$permissionSystem = $finput->event->getPermissionSystem();
 	$botModule = new BotModule($db);
 
 	if(!$permissionSystem->checkUserPermission($data->object->from_id, 'customize_chat')){ // Проверка разрешения
@@ -1111,23 +1117,27 @@ function manager_greeting($finput){
 	else
 		$command = "";
 	if($command == 'установить'){
-		$invited_greeting = mb_substr($data->object->text, 24, mb_strlen($data->object->text));
-		$db->setValueLegacy(array("chat_settings", "invited_greeting"), $invited_greeting);
-		$msg = ", ✅приветствие установлено.";
+		$invited_greeting = bot_gettext_by_argv($argv, 2);
+
+		$bulk = new MongoDB\Driver\BulkWrite;
+		$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["chat_settings.invited_greeting" => $invited_greeting]]);
+		$db->executeBulkWrite($bulk);
+
+		$msg = ", ✅Приветствие установлено.";
 		json_decode(vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 			API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 			"));
 	} elseif($command == 'показать'){
 		$invited_greeting = $db->getValueLegacy(array("chat_settings", "invited_greeting"), false);
 		if($invited_greeting !== false){
-			$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%, приветствие в беседе:\n{$invited_greeting}", 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
+			$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%, Приветствие в беседе:\n{$invited_greeting}", 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 			$json_request = vk_parse_var($json_request, "appeal");
 			vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 				API.messages.send({$json_request});
 				return 'ok';
 				");
 		} else {
-			$msg = ", ⛔приветствие не установлено.";
+			$msg = ", ⛔Приветствие не установлено.";
 			vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 				API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 				return 'ok';
@@ -1136,21 +1146,24 @@ function manager_greeting($finput){
 	} elseif($command == 'убрать'){
 		$invited_greeting = $db->getValueLegacy(array("chat_settings", "invited_greeting"), false);
 		if($invited_greeting !== false){
-			$db->unsetValueLegacy(array("chat_settings", "invited_greeting"));
-			$msg = ", ✅приветствие убрано.";
+			$bulk = new MongoDB\Driver\BulkWrite;
+			$bulk->update(['_id' => $db->getDocumentID()], ['$unset' => ["chat_settings.invited_greeting" => 0]]);
+			$db->executeBulkWrite($bulk);
+
+			$msg = ", ✅Приветствие убрано.";
 			json_decode(vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 				API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 				"));
 
 		} else {
-			$msg = ", ⛔приветствие не установлено.";
+			$msg = ", ⛔Приветствие не установлено.";
 			vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 				API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 				return 'ok';
 				");
 		}
 	} else{
-		$msg = ", ⛔используйте \"!приветствие установить/показать/убрать\".";
+		$msg = ", ⛔Используйте \"!приветствие установить/показать/убрать\".";
 		vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 			API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 			return 'ok';
@@ -1337,7 +1350,7 @@ function manager_panel_control($finput){
 	$command = mb_strtolower(bot_get_array_value($argv, 1, ""));
 
 	if($command == "создать"){
-		$text_command = mb_substr($data->object->text, 16);
+		$text_command = bot_gettext_by_argv($argv, 2);
 		if($text_command == ""){
 			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Используйте [!панель создать <команда>], чтобы создать новый элемент.", $data->object->from_id);
 			return;
@@ -1382,7 +1395,7 @@ function manager_panel_control($finput){
 	elseif($command == "название"){
 		$user_panel = $db->getValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
 		$argvt = bot_get_array_value($argv, 2, 0);
-		$name = mb_substr($data->object->text, 18+mb_strlen($argvt));
+		$name = bot_gettext_by_argv($argv, 2);
 		if($argvt == "" || !is_numeric($argvt) || $name == ""){
 			$botModule->sendSilentMessage($data->object->peer_id, ", Используйте [!панель название <номер> <название>], чтобы изменить название элемента.", $data->object->from_id);
 			return;
@@ -1404,7 +1417,7 @@ function manager_panel_control($finput){
 	elseif($command == "команда"){
 		$user_panel = $db->getValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
 		$argvt = bot_get_array_value($argv, 2, 0);
-		$text_command = mb_substr($data->object->text, 17+mb_strlen($argvt));
+		$text_command = bot_gettext_by_argv($argv, 2);
 		if($argvt == "" || !is_numeric($argvt) || $text_command == ""){
 			$botModule->sendSilentMessage($data->object->peer_id, ", Используйте [!панель команда <номер> <команда>], чтобы изменить команду элемента.", $data->object->from_id);
 			return;
@@ -1539,9 +1552,9 @@ function manager_panel_keyboard_handler($finput){
 				)
 			);
 		$result = $finput->event->runTextMessageCommand($modified_data);
-		if($result->code == Bot\Event::COMMAND_RESULT_OK)
+		if($result->code == Bot\ChatEvent::COMMAND_RESULT_OK)
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "✅ Команда выполнена!");
-		elseif($result->code == Bot\Event::COMMAND_RESULT_UNKNOWN)
+		elseif($result->code == Bot\ChatEvent::COMMAND_RESULT_UNKNOWN)
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ Ошибка. Данной команды не существует.");
 	}
 	else{
@@ -1559,7 +1572,7 @@ function manager_permissions_menu($finput){
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
 
-	$permissionSystem = new PermissionSystem($db);
+	$permissionSystem = $finput->event->getPermissionSystem();
 
 	if(array_key_exists(0, $data->object->fwd_messages))
 		$member_id = $data->object->fwd_messages[0]->from_id;
@@ -1655,7 +1668,7 @@ function manager_permissions_menu_cb($finput){
 	$payload = $finput->payload;
 	$db = $finput->db;
 
-	$permissionSystem = new PermissionSystem($db);
+	$permissionSystem = $finput->event->getPermissionSystem();
 
 	$message = "";
 	$keyboard_buttons = [];

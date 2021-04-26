@@ -43,17 +43,6 @@
 			}
 		},
 
-		"govdoc": {
-			"presidential_certificate":{
-				"name": "Удостоверение президента",
-				"price": 0,
-				"max_count": 1,
-				"can_sell": false,
-				"can_buy": false,
-				"hidden": false
-			}
-		},
-
 		"car":{
 			"level_1": {
 				"name": "Лада-2106",
@@ -410,6 +399,10 @@
 			"name": "Телефон",
 			"type": "item",
 			"items": "phone"
+		},
+		{
+			"name": "Бизнес",
+			"type": "enterprise"
 		}
 	],
 
@@ -421,7 +414,7 @@
 	      	"improvment":{
 	      		"workers": [
 		      		{
-		      			"name": "Улучшение условий рабочих Ⅰ",
+		      			"name": "Расширение персонала Ⅰ",
 			          	"duration": 7200,
 			          	"workers_required": 5,
 			          	"exp_required": 50,
@@ -429,7 +422,7 @@
 			          	"new_workers": 5
 		      		},
 		      		{
-		      			"name": "Улучшение условий рабочих Ⅱ",
+		      			"name": "Расширение персонала Ⅱ",
 			          	"duration": 14400,
 			          	"workers_required": 10,
 			          	"exp_required": 100,
@@ -437,7 +430,7 @@
 			          	"new_workers": 10
 		      		},
 		      		{
-		      			"name": "Улучшение условий рабочих Ⅲ",
+		      			"name": "Расширение персонала Ⅲ",
 			          	"duration": 28800,
 			          	"workers_required": 20,
 			          	"exp_required": 390,
@@ -445,7 +438,7 @@
 			          	"new_workers": 30
 		      		},
 		      		{
-		      			"name": "Улучшение условий рабочих Ⅳ",
+		      			"name": "Расширение персонала Ⅳ",
 			          	"duration": 43200,
 			          	"workers_required": 50,
 			          	"exp_required": 1000,
@@ -453,7 +446,7 @@
 			          	"new_workers": 30
 		      		},
 		      		{
-		      			"name": "Улучшение условий рабочих Ⅴ",
+		      			"name": "Расширение персонала Ⅴ",
 			          	"duration": 57600,
 			          	"workers_required": 80,
 			          	"exp_required": 2480,
@@ -461,7 +454,7 @@
 			          	"new_workers": 30
 		      		},
 		      		{
-		      			"name": "Улучшение условий рабочих Ⅵ",
+		      			"name": "Расширение персонала Ⅵ",
 			          	"duration": 72000,
 			          	"workers_required": 110,
 			          	"exp_required": 3180,
@@ -471,14 +464,14 @@
 	      		],
 		      	"contracts": [
 		      		{
-		      			"name": "Расширение торговой сети Ⅰ",
+		      			"name": "Расширение сети Ⅰ",
 			          	"duration": 21600,
 			          	"workers_required": 20,
 			          	"exp_required": 450,
 			          	"cost": 125000
 		      		},
 		      		{
-		      			"name": "Расширение торговой сети II",
+		      			"name": "Расширение сети II",
 			          	"duration": 64800,
 			          	"workers_required": 165,
 			          	"exp_required": 5920,
@@ -488,7 +481,7 @@
 	      	},
 	      	"contracts": [
 		        {
-		          	"name": "Продажа товаров Ⅰ",
+		          	"name": "Продажа Ⅰ",
 		          	"duration": 5400,
 		          	"workers_required": 5,
 		          	"cost": 2500,
@@ -496,7 +489,7 @@
 		          	"exp": 10
 		        },
 		        {
-		          	"name": "Продажа товаров Ⅱ",
+		          	"name": "Продажа Ⅱ",
 		          	"duration": 7200,
 		          	"workers_required": 15,
 		          	"cost": 6950,
@@ -504,7 +497,7 @@
 		          	"exp": 30
 		        },
 		        {
-		          	"name": "Продажа товаров Ⅲ",
+		          	"name": "Продажа Ⅲ",
 		          	"duration": 12600,
 		          	"workers_required": 25,
 		          	"cost": 15500,
@@ -512,7 +505,7 @@
 		          	"exp": 50
 		        },
 		        {
-		          	"name": "Продажа товаров Ⅳ",
+		          	"name": "Продажа Ⅳ",
 		          	"duration": 25200,
 		          	"workers_required": 50,
 		          	"cost": 44750,
@@ -520,7 +513,7 @@
 		          	"exp": 210
 		        },
 		        {
-		          	"name": "Продажа товаров Ⅴ",
+		          	"name": "Продажа Ⅴ",
 		          	"duration": 50400,
 		          	"workers_required": 90,
 		          	"cost": 185400,

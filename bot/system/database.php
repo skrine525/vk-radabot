@@ -2,7 +2,8 @@
 
 namespace Database{
 	class Manager{
-		private $mongo;
+		private $type;
+		private $mongodb;
 		private $db_name;
 		private $id;
 
@@ -10,7 +11,7 @@ namespace Database{
 		private $writing_force;
 
 		function __construct($mongodb_uri, $db_name, $peer_id){
-			$this->mongo = new \MongoDB\Driver\Manager($mongodb_uri);
+			$this->mongodb = new \MongoDB\Driver\Manager($mongodb_uri);
 			$this->db_name = $db_name;
 			$this->writing_force = null;
 
@@ -18,14 +19,17 @@ namespace Database{
 			if($peer_id > 2000000000){
 				$id = $peer_id - 2000000000;
 				$this->document_id = "chat{$id}";
+				$this->type = "chat";
 			}
-			else
-				$this->document_id = "user{$peer_id}";
+			else{
+				$this->document_id = "id{$peer_id}";
+				$this->type = "user";
+			}
 
 			// Проверка на существование
 			$query = new \MongoDB\Driver\Query(['_id' => $this->document_id], ['projection' => ['_id' => 1]]);
 			try{
-				$cursor = $this->mongo->executeQuery("{$this->db_name}.chats", $query);
+				$cursor = $this->mongodb->executeQuery("{$this->db_name}.chats", $query);
 			}
 			catch(Exception $e){
 				die("Database Error: {$e->getMessage()}");
@@ -47,26 +51,42 @@ namespace Database{
 		}
 
 		public function getMongoDB(){
-			return $this->mongo;
+			return $this->mongodb;
+		}
+
+		public function getType(){
+			return $this->type;
 		}
 
 		public function setWritingForce($value){
 			$this->writing_force = $value;
 		}
 
-		public function executeQuery(\MongoDB\Driver\Query $query, $collection = 'chats'){
+		public function executeQuery(\MongoDB\Driver\Query $query, string $collection = ''){
+			if($collection == ''){
+				if($this->type == 'chat')
+					$collection = 'chats';
+				else
+					$collection = 'users';
+			}
 			try{
-				$cursor = $this->mongo->executeQuery("{$this->db_name}.{$collection}", $query);
-				return $cursor;
+				$cursor = $this->mongodb->executeQuery("{$this->db_name}.{$collection}", $query);
+				return new CursorValueExtractor($cursor);
 			}
 			catch(Exception $e){
 				die("Database Error: {$e->getMessage()}");
 			}
 		}
 
-		public function executeBulkWrite(\MongoDB\Driver\BulkWrite $bulk, $collection = 'chats'){
+		public function executeBulkWrite(\MongoDB\Driver\BulkWrite $bulk, string $collection = ''){
+			if($collection == ''){
+				if($this->type == 'chat')
+					$collection = 'chats';
+				else
+					$collection = 'users';
+			}
 			try{
-				$result = $this->mongo->executeBulkWrite("{$this->db_name}.{$collection}", $bulk);
+				$result = $this->mongodb->executeBulkWrite("{$this->db_name}.{$collection}", $bulk);
 				return $result;
 			}
 			catch(Exception $e){
@@ -82,9 +102,8 @@ namespace Database{
 				$query = new \MongoDB\Driver\Query(['_id' => $this->document_id], ['projection' => ["_id" => 0, implode(".", $keys) => 1]]);
 			else
 				$query = new \MongoDB\Driver\Query(['_id' => $this->document_id]);
-			$cursor = $this->executeQuery($query);
+			$extractor = $this->executeQuery($query);
 
-			$extractor = new CursorValueExtractor($cursor);
 			$path = [0];
 			$path = array_merge($path, $keys);
 			$value = $extractor->getValue($path, $default);
@@ -108,20 +127,6 @@ namespace Database{
 			$result = $this->executeBulkWrite($bulk);
 			return $result;
 		}
-
-		public function unsetValueLegacy($keys){
-			if(is_null($keys) || !$this->exists || !$this->document_id)
-				return false;
-			$keys_count = count($keys);
-			if($keys_count > 0)
-				$arr = [implode(".", $keys) => 0];
-			else
-				return false;
-			$bulk = new \MongoDB\Driver\BulkWrite;
-			$bulk->update(['_id' => $this->document_id], ['$unset' => $arr], ['upsert' => true]);
-			$result = $this->executeBulkWrite($bulk);
-			return $result->isAcknowledged();
-		}
 	}
 
 	class CursorValueExtractor{
@@ -137,6 +142,10 @@ namespace Database{
 
 		public function getValueCount(){
 			return $this->values_count;
+		}
+
+		public function getCursor(){
+			return $this->cursor;
 		}
 
 		public function getValue($path, $default = null){

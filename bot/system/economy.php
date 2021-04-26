@@ -41,14 +41,14 @@ namespace Economy{
 	}
 
 	class UserEconomyManager{
-		private $db;
 		private $user_id;
+		private $user_data;
+		private $writeArray;
 
-		function __construct($db, $user_id){
-			if($user_id <= 0)
-				return false;
-			$this->db = $db;
+		function __construct(int $user_id, array $user_data, array &$writeArray){
 			$this->user_id = $user_id;
+			$this->user_data = $user_data;
+			$this->writeArray = &$writeArray;
 		}
 
 		public function getMoney(){
@@ -146,7 +146,7 @@ namespace Economy{
 					}
 				}
 				if($count > 0 && $count <= $item_info->max_count){
-					$user_items = $this->db->getValueLegacy(array("economy", "users", "id{$this->user_id}", "items"), array());
+					$user_items = $this->getData('items', array());
 					$user_items[] = "{$type}:{$id}:{$count}";
 					$this->setData("items", $user_items);
 					return true;
@@ -174,47 +174,73 @@ namespace Economy{
 			return false;
 		}
 
-		public function setData($name, $value){
-			$keys = array("economy", "users", "id{$this->user_id}");
-			if(gettype($name) == "array"){
-				foreach ($name as $value)
-					$keys[] = $value;
+		public function setData($path, $value){
+			$user_data = &$this->user_data;
+			if(gettype($path) == "array"){
+				$imploded_path = "economy.users.id{$this->user_id}";
+				foreach ($path as $name){
+					if(gettype($user_data) == "array" && array_key_exists($name, $user_data))
+						$user_data = &$user_data[$name];
+					else{
+						$user_data[$name] = array();
+						$user_data = &$user_data[$name];
+					}
+					$imploded_path .= ".{$name}";
+				}
+				$user_data = $value;
+				$this->writeArray['$set'][$imploded_path] = $value;
 			}
-			else
-				$keys[] = $name;
-
-			$bulk = new \MongoDB\Driver\BulkWrite;
-			$bulk->update(['_id' => $this->db->getDocumentID()], ['$set' => [implode('.', $keys) => $value]]);
-			$this->db->executeBulkWrite($bulk);
+			else{
+				$user_data[$path] = $value;
+				$this->writeArray['$set']["economy.users.id{$this->user_id}.{$path}"] = $value;
+			}
 		}
 
-		public function getData($name, $default = false){
-			$keys = array("economy", "users", "id{$this->user_id}");
-			if(gettype($name) == "array"){
-				foreach ($name as $value)
-					$keys[] = $value;
+		public function getData($path, $default = false){
+			$user_data = $this->user_data;
+			$data = $default;
+
+			if(gettype($path) == "array"){
+				foreach ($path as $name){
+					if(array_key_exists($name, $user_data))
+						$user_data = &$user_data[$name];
+					else
+						return $default;
+				}
+				return $user_data;
 			}
+			elseif(array_key_exists($path, $user_data))
+				return $user_data[$path];
 			else
-				$keys[] = $name;
-			
-			$query = new \MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, implode('.', $keys) => 1]]);
-			$cursor = $this->db->executeQuery($query);
-			$extractor = new \Database\CursorValueExtractor($cursor);
-			return \Database\CursorValueExtractor::objectToArray($extractor->getValue(array_merge([0], $keys), $default));
+				return $default;
 		}
 
-		public function deleteData($name){
-			$keys = array("economy", "users", "id{$this->user_id}");
-			if(gettype($name) == "array"){
-				foreach ($name as $key => $value)
-					$keys[] = $value;
+		public function unsetData($path){
+			$user_data = &$this->user_data;
+			if(gettype($path) == "array"){
+				$imploded_path = "economy.users.id{$this->user_id}";
+				foreach ($path as $name){
+					if(gettype($user_data) == "array" && array_key_exists($name, $user_data)){
+						$user_data = &$user_data[$name];
+						$imploded_path .= ".{$name}";
+					}
+					else
+						return false;
+				}
+
+				unset($user_data);
+				$this->writeArray['$unset'][$imploded_path] = 0;
+				return true;
 			}
-			else
-				$keys[] = $name;
-			
-			$bulk = new \Driver\BulkWrite;
-			$bulk->update(['_id' => $this->db->getDocumentID()], ['$unset' => [implode('.', $keys) => 0]]);
-			$this->db->executeBulkWrite($bulk);
+			else{
+				if(array_key_exists($path, $user_data)){
+					unset($user_data[$path]);
+					$this->writeArray['$unset']["economy.users.id{$this->user_id}.{$path}"] = 0;
+					return true;
+				}
+				else
+					return false;
+			}
 		}
 
 		// Работа
@@ -225,7 +251,7 @@ namespace Economy{
 			return $this->getData("job");
 		}
 		public function deleteJob(){
-			return $this->deleteData("job");
+			return $this->unsetData("job");
 		}
 
 		// Компании
@@ -318,10 +344,8 @@ namespace Economy{
 		private static function readDataFiles(){
 			if(!self::$is_read){
 				self::$economy_data = json_decode(file_get_contents(BOTPATH_DATA."/economy/economy.json"), true);
-				if(is_null(self::$economy_data)){
-					error_log("Invalid economy.json config file");
-					exit;
-				}
+				if(is_null(self::$economy_data))
+					die('Invalid economy.json config file');
 				self::$is_read = true;
 			}
 		}
@@ -338,6 +362,7 @@ namespace Economy{
 
 	class EnterpriseEconomyManager{
 		private $db;
+		private $writeArray;
 
 		static private function generateRandomString($length) {
 		    $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -366,47 +391,39 @@ namespace Economy{
 			}
 		}
 
-		function __construct($db){
+		function __construct($db, &$writeArray){
 			$this->db = $db;
+			$this->writeArray = &$writeArray;
 		}
 
-		public static function getTypeName($type){
-			if($type == "null"){
-				return "Не указано";
-			}
-			else {
-
-			}
-		}
-
-		public function createEnterprise($type, $owner_id){
+		public function createEnterprise(string $type, int $owner_id){
 			$id = '';
 			$attempts = 0;
-			$enterprise_ids = array_keys($this->db->getValueLegacy(array("economy", "enterprises"), array()));
 			while(true){
 				$id = self::generateRandomString(5+intdiv($attempts, 10));
-				if(array_search($id, $enterprise_ids) === false)
+				$query = new \MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["economy.enterprises.{$id}.id" => 1]]);
+				$extractor = $this->db->executeQuery($query);
+				$enterprise_by_id = $extractor->getValue([0, 'economy', 'enterprises', $id, 'id'], false);
+				if($enterprise_by_id === false)
 					break;
 				$attempts++;
 			}
 			unset($attempts);
 
-			$types = array_keys(EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types"));
-			if(array_search($type, $types) === false)
-				return false;
-
-			if(gettype($owner_id) != "integer")
+			$enterprise_types = EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types");
+			if(!array_key_exists($type, $enterprise_types))
 				return false;
 
 			$time = time();
 
-			$enterprise = array(
+			$this->writeArray['$set']["economy.enterprises.{$id}"] = array(
 				'id' => $id,
 				'name' => $id,
 				'type' => $type,
+				'cost' => $enterprise_types[$type]['price'],
 				'created_time' => $time,
 				'owner_id' => $owner_id,
-				'workers' => 5,
+				'workers' => $enterprise_types[$type]['initial_workers'],
 				'involved_workers' => 0,
 				'capital' => 0,
 				'exp' => 0,
@@ -417,14 +434,15 @@ namespace Economy{
 				),
 				'contracts' => array()
 			);
-			$bulk = new MongoDB\Driver\BulkWrite;
+
 			return $id;
-			$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["economy.enterprises.{$id}" => $enterprise]]);
-			$db->executeBulkWrite($bulk);
 		}
 
 		public function getEnterprise($id){
-			$enterprise = $this->db->getValueLegacy(array("economy", "enterprises", $id), false);
+			$query = new \MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["economy.enterprises.{$id}" => 1]]);
+			$extractor = $this->db->executeQuery($query);
+			$enterprise = \Database\CursorValueExtractor::objectToArray($extractor->getValue([0, 'economy', 'enterprises', $id], false));
+
 			if($enterprise !== false){
 				$time = time();
 				$contract_count = count($enterprise["contracts"]);
@@ -462,11 +480,10 @@ namespace Economy{
 				return false;
 		}
 
-		public function saveEnterprise($id, $data){
+		public function saveEnterprise(string $id, array $data){
 			if(gettype($id) == "string" && $id != ""){
-				$bulk = new MongoDB\Driver\BulkWrite;
-				$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["economy.enterprises.{$id}" => $data]]);
-				return $db->executeBulkWrite($bulk);
+				$this->writeArray['$set']["economy.enterprises.{$id}"] = $data;
+				return true;
 			}
 			else
 				return false;
@@ -484,21 +501,36 @@ namespace Economy{
 
 	class Main{
 		private $db;
+		private $writeArray;
 
-		function __construct(&$db){
-			$this->db = &$db;
+		function __construct($db){
+			$this->db = $db;
+			$this->writeArray = [];
+		}
+
+		function __destruct(){
+			if(count($this->writeArray) > 0){
+				$bulk = new \MongoDB\Driver\BulkWrite;
+				$bulk->update(['_id' => $this->db->getDocumentID()], $this->writeArray);
+				$this->db->executeBulkWrite($bulk);
+			}
 		}
 
 		function getUserArray(){
-			return $this->db->getValueLegacy(array("economy", "users"), array());
+			$query = new \MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, "economy.users" => 1]]);
+			$extractor = $this->db->executeQuery($query);
+			return \Database\CursorValueExtractor::objectToArray($extractor->getValue("0.economy.users", []));
 		}
 
-		function getUser($user_id){
-			return new UserEconomyManager($this->db, $user_id);
+		function getUser($user_id){		
+			$query = new \MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, "economy.users.id{$user_id}" => 1]]);
+			$extractor = $this->db->executeQuery($query);
+			$user_data = \Database\CursorValueExtractor::objectToArray($extractor->getValue([0, 'economy', 'users', "id{$user_id}"], []));
+			return new UserEconomyManager($user_id, $user_data, $this->writeArray);
 		}
 
 		function initEnterpriseSystem(){
-			return new EnterpriseEconomyManager($this->db);
+			return new EnterpriseEconomyManager($this->db, $this->writeArray);
 		}
 
 		function checkUser($user_id){
@@ -519,13 +551,14 @@ namespace Economy{
 namespace{
 	// Инициализация команд
 	function economy_initcmd(&$event){ // Инициализация тексовых команд модуля экономики
-		$chatModes = new ChatModes($event->getDatabase());
+		$chatModes = $event->getChatModes();
 		if(!$chatModes->getModeValue("economy_enabled")) // Отключаем, если в беседе запрещена экономика
 			return;
 
 		$event->addTextMessageCommand("!счет", "economy_show_user_stats");
 		$event->addTextMessageCommand("!счёт", "economy_show_user_stats");
-		$event->addTextMessageCommand("!работа", "economy_work");
+		$event->addTextMessageCommand("!работа", "economy_job");
+		$event->addTextMessageCommand("!работать", "economy_work");
 		$event->addTextMessageCommand("!профессии", "economy_joblist");
 		$event->addTextMessageCommand("!профессия", "economy_jobinfo");
 		$event->addTextMessageCommand("!купить", "economy_buy");
@@ -671,7 +704,7 @@ namespace{
 		$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
 	}
 
-	function economy_work($finput){
+	function economy_job($finput){
 		// Инициализация базовых переменных
 		$data = $finput->data; 
 		$argv = $finput->argv;
@@ -681,6 +714,78 @@ namespace{
 		$messagesModule->setAppealID($data->object->from_id);
 		$keyboard = vk_keyboard_inline(array(array(vk_callback_button("Работа", array("economy_work", $data->object->from_id), "positive"))));
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, Используйте кнопку ниже для работы.", array('keyboard' => $keyboard));
+	}
+
+	function economy_work($finput){
+		// Инициализация базовых переменных
+		$data = $finput->data; 
+		$argv = $finput->argv;
+		$db = $finput->db;
+
+		$date = time();
+
+		$messagesModule = new Bot\Messages($db);
+		$messagesModule->setAppealID($data->object->from_id);
+		
+		$economy = new Economy\Main($db);
+		$user_economy = $economy->getUser($data->object->from_id);
+
+		$job_id = $user_economy->getJob();
+		if($job_id !== false){
+			if(!Economy\Job::jobExists($job_id)){
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Вы работаете на несуществующей профессии.");
+				return;
+			}
+
+			$item_dependencies = Economy\Job::getJobArray()[$job_id]["item_dependencies"];
+			for($i = 0; $i < count($item_dependencies); $i++){
+				$item = Economy\Item::getItemObjectFromString($item_dependencies[$i]);
+				if($user_economy->checkItem($item->type, $item->id) === false){
+					$dependency_item_name = Economy\Item::getItemName($item->type, $item->id);
+					$job_name = Economy\Job::getNameByID($job_id);
+					$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Вы не можете работать по профессии {$job_name}. Вам необходимо иметь {$dependency_item_name}.");
+					return;
+				}
+			}
+			$job = Economy\Job::getJobArray()[$job_id];
+			$last_working_time = $user_economy->getData("last_working_time");
+			if($last_working_time === false)
+				$last_working_time = 0;
+
+			if($date - $last_working_time >= $job["rest_time"]){
+				$user_economy->setData("last_working_time", $date);
+				$default_salary = $job["salary"];
+				$random_number = mt_rand(0, 65535);
+				if($random_number % 4 == 0){
+					$bonus = $default_salary * 0.25;
+					$salary = $default_salary + $bonus;
+					$salary_text = Economy\Main::getFormatedMoney($default_salary);
+					$bonus_text = Economy\Main::getFormatedMoney($bonus);
+					$work_message = "✅Вы заработали \${$salary_text} и \${$bonus_text} в качестве премии.";
+				}
+				else{
+					$salary = $default_salary;
+					$salary_text = Economy\Main::getFormatedMoney($salary);
+					$work_message = "✅Вы заработали \${$salary_text}.";
+				}
+				$user_economy->changeMoney($salary);
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, {$work_message}");
+			}
+			else{
+				$time = $job["rest_time"] - ($date - $last_working_time);
+				$minutes = intdiv($time, 60);
+				$seconds = $time % 60;
+				$left_time_text = "";
+				if($minutes != 0)
+					$left_time_text = "{$minutes} мин. ";
+				$left_time_text = $left_time_text."{$seconds} сек.";
+				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Вы сильно устали! Приходите через {$left_time_text}");
+			}
+		}
+		else{
+			$keyboard = vk_keyboard_inline(array(array(vk_callback_button("Устроиться", array('economy_jobcontrol', $data->object->from_id), 'primary'))));
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Вы нигде не работаете. Устройтесь на работу.", ['keyboard' => $keyboard]);
+		}
 	}
 
 	function economy_work_cb($finput){
@@ -1912,7 +2017,7 @@ namespace{
 		if($command == "выбрать"){
 			$argvt = bot_get_array_value($argv, 2, "");
 			if($argvt == "0"){
-				$user_economy->deleteData("selected_enterprise_index");
+				$user_economy->unsetData("selected_enterprise_index");
 				$botModule->sendSilentMessage($data->object->peer_id, ", ✅Информация о выбранном бизнесе очищена.", $data->object->from_id);
 			}
 			elseif($argvt == ""){
@@ -1965,7 +2070,8 @@ namespace{
 				$enterprise_types = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types");
 				$type = $enterprise_types[$enterprise["type"]]["name"];
 				$capital = Economy\Main::getFormatedMoney($enterprise["capital"]);
-				$msg = ", информация о бизнесе:\n📎ID: {$enterprise["id"]}\n📝Название: {$enterprise["name"]}\n🔒Тип: {$type}\n💰Бюджет: \${$capital}\n👥Рабочие: {$enterprise["involved_workers"]}/{$enterprise["workers"]}\n📊Опыт: {$enterprise["exp"]}\n📄Контракты: {$current_contracts_count}/{$enterprise["max_contracts"]}";
+				$cost = Economy\Main::getFormatedMoney($enterprise['cost']);
+				$msg = ", информация о бизнесе:\n📎ID: {$enterprise["id"]}\n📝Название: {$enterprise["name"]}\n🔒Тип: {$type}\n💳Стоимость: {$cost}\n💰Бюджет: \${$capital}\n👥Рабочие: {$enterprise["involved_workers"]}/{$enterprise["workers"]}\n📊Опыт: {$enterprise["exp"]}\n📄Контракты: {$current_contracts_count}/{$enterprise["max_contracts"]}";
 				$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 			}
 			else{
@@ -2040,7 +2146,7 @@ namespace{
 			if($index > 0 && $user_enterprises_count >= $index){
 				$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$index-1]);
 
-				$name = mb_substr($data->object->text, 17);
+				$name = bot_gettext_by_argv($argv, 2);
 				if($name == ""){
 					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите название.", $data->object->from_id);
 					return;
@@ -2221,6 +2327,7 @@ namespace{
 					return;
 				}
 				$enterprise["capital"] = $capital_after_start;
+				$enterprise["cost"] += $contract["cost"];
 				$enterprise["exp"] = $exp_after_start;
 				$enterprise["involved_workers"] = $involved_workers_after_start;
 				$enterprise["contracts"][] = array (
@@ -2455,7 +2562,7 @@ namespace{
 				$index = intval($argvt);
 				$selected_enterprise_index = $user_economy->getData("selected_enterprise_index", 0);
 				if($index == $selected_enterprise_index){
-					$user_economy->deleteData("selected_enterprise_index");
+					$user_economy->unsetData("selected_enterprise_index");
 				}
 				else if(count($user_enterprises) >= $index){
 					$user_economy->setData("selected_enterprise_index", $index);
@@ -2510,7 +2617,8 @@ namespace{
 				$enterprise_types = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("enterprise_types");
 				$type = $enterprise_types[$enterprise["type"]]["name"];
 				$capital = Economy\Main::getFormatedMoney($enterprise["capital"]);
-				$message = "%appeal%, информация о бизнесе:\n📎ID: {$enterprise["id"]}\n📝Название: {$enterprise["name"]}\n🔒Тип: {$type}\n💰Бюджет: \${$capital}\n👥Рабочие: {$enterprise["involved_workers"]}/{$enterprise["workers"]}\n📊Опыт: {$enterprise["exp"]}\n📄Контракты: {$current_contracts_count}/{$enterprise["max_contracts"]}";
+				$cost = Economy\Main::getFormatedMoney($enterprise["cost"]);
+				$message = "%appeal%, информация о бизнесе:\n📎ID: {$enterprise["id"]}\n📝Название: {$enterprise["name"]}\n🔒Тип: {$type}\n💳Стоимость: {$cost}\n💰Бюджет: \${$capital}\n👥Рабочие: {$enterprise["involved_workers"]}/{$enterprise["workers"]}\n📊Опыт: {$enterprise["exp"]}\n📄Контракты: {$current_contracts_count}/{$enterprise["max_contracts"]}";
 				$keyboard_buttons = array(array(vk_callback_button("⬅ Назад", array('economy_company', $testing_user_id, 0), 'negative')));
 			}
 			else{
@@ -3023,11 +3131,12 @@ namespace{
 						return;
 					}
 					$enterprise["capital"] = $capital_after_start;
+					$enterprise["cost"] += $contract["cost"];
 					$enterprise["exp"] = $exp_after_start;
 					$enterprise["involved_workers"] = $involved_workers_after_start;
 					$enterprise["contracts"][] = array (
 						"type" => $type,
-						"started_by" => $data->object->from_id,
+						"started_by" => $data->object->user_id,
 						"start_time" => time(),
 						"contract_info" => $contract
 					);
@@ -3079,11 +3188,19 @@ namespace{
 				$user_id = intval(mb_substr($user_ids[$i], 2));
 				$user_economy = $economy->getUser($user_id);
 				$capital = $user_economy->getMoney();
+
 				$user_items = $user_economy->getItems();
 				$items = Economy\EconomyConfigFile::getEconomyConfigFileDataFromSection("items");
 				for($j = 0; $j < count($user_items); $j++){
 					$item_info = Economy\Item::getItemInfo($user_items[$j]->type, $user_items[$j]->id);
 					$capital += $item_info->price;
+				}
+
+				$enterpriseSystem = $economy->initEnterpriseSystem();
+				$user_enterprises = $user_economy->getEnterprises();
+				foreach ($user_enterprises as $id) {
+					$enterprise = $enterpriseSystem->getEnterprise($id);
+					$capital += $enterprise['cost'] + $enterprise['capital'];
 				}
 
 				if($capital != 0){

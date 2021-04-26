@@ -1,15 +1,19 @@
 <?php
 
 namespace Bot{
-	class Event{
+	class ChatEvent{
 		// Переменные
 		private $data;
-		private $db;
 		private $textMessageCommands;				// Массив текстовых команд
 		private $textButtonCommands;				// Массив команд Text-кнопок
 		private $callbackButtonCommands;			// Массив команд Callback-кнопок
-		private $nonCommandTextMessageHandlers;				// Массив не командных обработчиков события message_new
+		private $nonCommandTextMessageHandlers;		// Массив не командных обработчиков события message_new
 		private $hint_char;							// Переменная знака, отвещающий за подсказски
+
+		// Объекты различных модулей
+		private $db;								// База данных
+		private $chatModes;							// Режимы беседы
+		private $permissionSystem;					// Система прав
 
 		// Константы
 		const COMMAND_RESULT_OK = 0;				// Константа результата выполнения команды без ошибок
@@ -17,28 +21,26 @@ namespace Bot{
 		const COMMAND_RESULT_UNKNOWN = 2;			// Константа резулятата выполнения неизвестной команды
 		const COMMAND_RESULT_INVALID_DATA = 3;		// Константа результата выполнения команды с неправильно переданными данными
 
-		function __construct($data) {
-			$this->data = $data;
-			$this->textMessageCommands = [];
-			$this->textButtonCommands = [];
-			$this->callbackButtonCommands = [];
-			$this->nonCommandTextMessageHandlers = [];
+		function __construct($data){
+			if($data->object->peer_id > 2000000000){
+				// Базовые переменные
+				$this->data = $data;
+				$this->textMessageCommands = [];
+				$this->textButtonCommands = [];
+				$this->callbackButtonCommands = [];
+				$this->nonCommandTextMessageHandlers = [];
 
-			if($this->data->object->peer_id > 2000000000){
-				// Если идентификатор назначения группового чата, то подгружаем Базу данных группового чата
+				// Подгрузка базы данных
 				$database_info = bot_getconfig("DATABASE");
 				$this->db = new \Database\Manager("mongodb://{$database_info['HOST']}:{$database_info['PORT']}", $database_info['NAME'], $this->data->object->peer_id);
 
+				// Подгрузка других модулей
+				$this->chatModes = new \ChatModes($this->db);					// Режимы беседы
+				$this->permissionSystem = new \PermissionSystem($this->db);		// Систима прав
 			}
-		}
-
-		public function setHintChar($char){
-			if(mb_strlen($char) == 1){
-				$this->hint_char = $char;
-				return true;
+			else{
+				die("Error: {$data->object->peer_id} is not chat peer_id.");
 			}
-			else
-				return false;
 		}
 
 		public function getData(){
@@ -48,6 +50,23 @@ namespace Bot{
 	  	public function getDatabase(){
 	  		return $this->db;
 	  	}
+
+	  	public function getChatModes(){
+	  		return $this->chatModes;
+	  	}
+
+	  	public function getPermissionSystem(){
+	  		return $this->permissionSystem;
+	  	}
+
+		public function setHintChar($char){
+			if(mb_strlen($char) == 1){
+				$this->hint_char = $char;
+				return true;
+			}
+			else
+				return false;
+		}
 
 	  	public function addNonCommandTextMessageHandler($callback){
 	  		if(array_search($callback, $this->nonCommandTextMessageHandlers) === false && is_callable($callback)){
@@ -127,7 +146,7 @@ namespace Bot{
 
 					// Проверка на существование беседы в Базе данных, если команда не способна игнорировать это
 					if(!$command_data->ignore_db && !$this->db->isExists())
-						return (object) ['code' => Event::COMMAND_RESULT_NO_DB];
+						return (object) ['code' => ChatEvent::COMMAND_RESULT_NO_DB];
 
 					$finput = (object) array(
 						'data' => $data,
@@ -139,11 +158,11 @@ namespace Bot{
 					$execution_time = microtime(true);							// Начало подсчета времени исполнения Callback'а
 					call_user_func_array($callback, array($finput)); 			// Выполнение Callback'а
 					$execution_time = microtime(true) - $execution_time;		// Конец подсчета времени исполнения Callback'а
-					return (object) ['code' => Event::COMMAND_RESULT_OK, 'command' => $command, 'finput' => $finput, 'execution_time' => $execution_time];
+					return (object) ['code' => ChatEvent::COMMAND_RESULT_OK, 'command' => $command, 'finput' => $finput, 'execution_time' => $execution_time];
 				}
-				return (object) ['code' => Event::COMMAND_RESULT_UNKNOWN, 'command' => $command];
+				return (object) ['code' => ChatEvent::COMMAND_RESULT_UNKNOWN, 'command' => $command];
 	  		}
-	  		return (object) ['code' => Event::COMMAND_RESULT_INVALID_DATA];
+	  		return (object) ['code' => ChatEvent::COMMAND_RESULT_INVALID_DATA];
 	  	}
 
 	  	public function runTextButtonCommand($data){
@@ -156,7 +175,7 @@ namespace Bot{
 
 							// Проверка на существование беседы в Базе данных, если команда не способна игнорировать это
 							if(!$command_data->ignore_db && !$this->db->isExists())
-								return (object) ['code' => Event::COMMAND_RESULT_NO_DB];
+								return (object) ['code' => ChatEvent::COMMAND_RESULT_NO_DB];
 
 							$finput = (object) array(
 								'data' => $data,
@@ -169,13 +188,13 @@ namespace Bot{
 							$execution_time = microtime(true);							// Начало подсчета времени исполнения Callback'а
 							call_user_func_array($callback, array($finput)); 			// Выполнение Callback'а
 							$execution_time = microtime(true) - $execution_time;		// Конец подсчета времени исполнения Callback'а
-							return (object) ['code' => Event::COMMAND_RESULT_OK, 'command' => $payload->command, 'finput' => $finput, 'execution_time' => $execution_time];
+							return (object) ['code' => ChatEvent::COMMAND_RESULT_OK, 'command' => $payload->command, 'finput' => $finput, 'execution_time' => $execution_time];
 						}
-						return (object) ['code' => Event::COMMAND_RESULT_UNKNOWN, 'command' => $payload->command];
+						return (object) ['code' => ChatEvent::COMMAND_RESULT_UNKNOWN, 'command' => $payload->command];
 					}
 	  			}
 	  		}
-	  		return (object) ['code' => Event::COMMAND_RESULT_INVALID_DATA];
+	  		return (object) ['code' => ChatEvent::COMMAND_RESULT_INVALID_DATA];
 	  	}
 
 	  	public function runCallbackButtonCommand($data){
@@ -188,7 +207,7 @@ namespace Bot{
 							
 							// Проверка на существование беседы в Базе данных, если команда не способна игнорировать это
 							if(!$command_data->ignore_db && !$this->db->isExists())
-								return (object) ['code' => Event::COMMAND_RESULT_NO_DB];
+								return (object) ['code' => ChatEvent::COMMAND_RESULT_NO_DB];
 
 							$finput = (object) array(
 								'data' => $data,
@@ -201,13 +220,13 @@ namespace Bot{
 							$execution_time = microtime(true);							// Начало подсчета времени исполнения Callback'а
 							call_user_func_array($callback, array($finput)); 			// Выполнение Callback'а
 							$execution_time = microtime(true) - $execution_time;		// Конец подсчета времени исполнения Callback'а
-							return (object) ['code' => Event::COMMAND_RESULT_OK, 'command' => $payload[0], 'finput' => $finput, 'execution_time' => $execution_time];
+							return (object) ['code' => ChatEvent::COMMAND_RESULT_OK, 'command' => $payload[0], 'finput' => $finput, 'execution_time' => $execution_time];
 						}
-						return (object) ['code' => Event::COMMAND_RESULT_UNKNOWN, 'command' => $payload[0]];
+						return (object) ['code' => ChatEvent::COMMAND_RESULT_UNKNOWN, 'command' => $payload[0]];
 					}
 	  			}
 	  		}
-	  		return (object) ['code' => Event::COMMAND_RESULT_INVALID_DATA];
+	  		return (object) ['code' => ChatEvent::COMMAND_RESULT_INVALID_DATA];
 	  	}
 
 	  	public function handle(){
@@ -219,22 +238,22 @@ namespace Bot{
 
 				// Обработка клавиатурных команд
 				$result = $this->runTextButtonCommand($this->data);
-				if($result->code == Event::COMMAND_RESULT_OK)
+				if($result->code == ChatEvent::COMMAND_RESULT_OK)
 					return true;
-				elseif($result->code == Event::COMMAND_RESULT_NO_DB){
+				elseif($result->code == ChatEvent::COMMAND_RESULT_NO_DB){
 					bot_message_not_reg($this->data);
 					return false;
 				}
 
 				// Обработка тектовых команд
 				$result = $this->runTextMessageCommand($this->data);
-				if($result->code == Event::COMMAND_RESULT_OK)
+				if($result->code == ChatEvent::COMMAND_RESULT_OK)
 					return true;
-				elseif($result->code == Event::COMMAND_RESULT_NO_DB){
+				elseif($result->code == ChatEvent::COMMAND_RESULT_NO_DB){
 					bot_message_not_reg($this->data);
 					return false;
 				}
-				elseif($this->db->isExists() && gettype($this->hint_char) == "string" && $result->code == Event::COMMAND_RESULT_UNKNOWN && mb_strlen($result->command) >= 1 && mb_substr($result->command, 0, 1) == $this->hint_char){
+				elseif($this->db->isExists() && gettype($this->hint_char) == "string" && $result->code == ChatEvent::COMMAND_RESULT_UNKNOWN && mb_strlen($result->command) >= 1 && mb_substr($result->command, 0, 1) == $this->hint_char){
 					// Подсказки, если пользователь неправильно ввел команду
 					$commands = $this->getTextMessageCommandList();
 					$commands_data = [];
@@ -279,9 +298,9 @@ namespace Bot{
 
 				// Обработка клавиатурных команд
 				$result = $this->runCallbackButtonCommand($this->data);
-				if($result->code == Event::COMMAND_RESULT_OK)
+				if($result->code == ChatEvent::COMMAND_RESULT_OK)
 					return true;
-				elseif($result->code == Event::COMMAND_RESULT_NO_DB){
+				elseif($result->code == ChatEvent::COMMAND_RESULT_NO_DB){
 					bot_message_not_reg($this->data);
 					return false;
 				}
@@ -502,7 +521,7 @@ namespace{
 			///////////////////////////
 
 			// Инициализируем класс
-			$event = new Bot\Event($data);
+			$event = new Bot\ChatEvent($data);
 			$event->setHintChar("!");													// Устанавливаем первый символ для отображения подсказок
 
 			debug_cmdinit($event);														// Инициализация команд отладочного режима
@@ -729,8 +748,8 @@ namespace{
 		if (!$db->isExists()){
 			$snackbar1_json = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "&#9940; У вас нет прав для этой команды."), JSON_UNESCAPED_UNICODE)));
 			$snackbar2_json = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "&#9940; Эта беседа не является групповым."), JSON_UNESCAPED_UNICODE)));
-			$response = json_decode(vk_execute($messagesModule->buildVKSciptAppealByID($data->object->user_id).bot_test_rights_exe($data->object->peer_id, $data->object->user_id, "API.messages.sendMessageEventAnswer({$snackbar1_json});return 0;", true)."var chat=API.messages.getConversationsById({'peer_ids':[{$data->object->peer_id}],'extended':1}).items[0];
-				if(chat.peer.type!='chat'){API.messages.sendMessageEventAnswer({$snackbar2_json});return 0;}API.messages.edit({'peer_id':{$data->object->peer_id},'conversation_message_id':{$data->object->conversation_message_id},'message':appeal+', ✅Беседа успешно зарегистрирована.','disable_mentions':true});return 1;"))->response;
+			$response = json_decode(vk_execute($messagesModule->buildVKSciptAppealByID($data->object->user_id).bot_test_rights_exe($data->object->peer_id, $data->object->user_id, "API.messages.sendMessageChatEventAnswer({$snackbar1_json});return 0;", true)."var chat=API.messages.getConversationsById({'peer_ids':[{$data->object->peer_id}],'extended':1}).items[0];
+				if(chat.peer.type!='chat'){API.messages.sendMessageChatEventAnswer({$snackbar2_json});return 0;}API.messages.edit({'peer_id':{$data->object->peer_id},'conversation_message_id':{$data->object->conversation_message_id},'message':appeal+', ✅Беседа успешно зарегистрирована.','disable_mentions':true});return 1;"))->response;
 			if($response == 1){
 				$chat_id = $data->object->peer_id - 2000000000;
 				$bulk = new MongoDB\Driver\BulkWrite;
@@ -743,26 +762,38 @@ namespace{
 	}
 
 
-	function bot_parse_argv($text){
+	function bot_parse_argv(string $text){
+		$text = addcslashes($text, "\n");
 		$argv = array();
 		foreach (str_getcsv($text, ' ') as $v) {
 			if($v != "")
-				$argv[] = $v;
+				$argv[] = stripcslashes($v);
 		}
 		return $argv;
+	}
+
+	function bot_gettext_by_argv(array $argv, int $start, int $end = 0){
+		$argv_end = count($argv) - 1;
+		if($end <= 0 || $end > $argv_end)
+			$end = $argv_end;
+		elseif($start > $argv_end)
+			return false;
+		$text_array = [];
+		for($i = $start; $i <= $end; $i++)
+			$text_array[] = $argv[$i];
+		return implode(' ', $text_array);
 	}
 
 	function bot_pre_handle($event){
 		$db = $event->getDatabase();
 		$data = $event->getData();
-		
 
 		if($data->object->peer_id > 2000000000){
 			if($db->isExists()){
 				switch ($data->type){
 					case 'message_new':
 					// Антифлуд
-					if(AntiFlood::handler($data, $db)){
+					if(AntiFlood::handler($data, $db, $event->getChatModes(), $event->getPermissionSystem())){
 						$event->exit();
 						exit;
 					}
@@ -880,8 +911,7 @@ namespace{
 			'owner_id' => 1,
 			'chat_settings.chat_modes' => 1
 		]]);
-		$cursor = $db->executeQuery($query);
-		$extractor = new Database\CursorValueExtractor($cursor);
+		$extractor = $db->executeQuery($query);
 
 		// Необходимые переменные
 		$chat_id = $extractor->getValue([0, "chat_id"]);
@@ -921,17 +951,59 @@ namespace{
 		$messagesModule = new Bot\Messages($db);
 		$messagesModule->setAppealID($data->object->from_id);
 
-		$chatModes = new ChatModes($db);
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue('chat_messanger')){
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Чат-мессенджер отключен администратором беседы.");
 			return;
 		}
 
-		$permissionSystem = new PermissionSystem($db);
+		$permissionSystem = $finput->event->getPermissionSystem();
 		if(!$permissionSystem->checkUserPermission($data->object->from_id, 'use_chat_messanger')){
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Вы не имеете права использовать Чат-мессенджер.");
 			return;
 		}
+
+		$reciever_id = intval(bot_get_array_value($argv, 1, 0));
+		if($reciever_id <= 0){
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте !сообщение <ID беседы> <сообщение>.");
+			return;
+		}
+
+		$sender_id = $data->object->peer_id - 2000000000;
+		if($reciever_id == $sender_id){
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Невозможно отправить сообщение самому себе.");
+			return;
+		}
+
+		$query = new MongoDB\Driver\Query(['_id' => "chat{$reciever_id}"], ['projection' => ['chat_settings.chat_modes.chat_messanger' => 1]]);
+		$extractor = $db->executeQuery($query);
+
+		$reciever_document_id = $extractor->getValue('0._id');
+		if(is_null($reciever_document_id)){
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Указанной беседы не найдено.");
+			return;
+		}
+
+		$reciever_chat_messanger_state = $extractor->getValue('0.chat_settings.chat_modes.chat_messanger', ChatModes::MODE_LIST['chat_messanger']['default_state']);
+		if(!$reciever_chat_messanger_state){
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔В указанной беседе отключен Чат-мессенджер.");
+			return;
+		}
+
+		$message = bot_gettext_by_argv($argv, 2);
+		if($message == ''){
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте !сообщение <ID беседы> <сообщение>.");
+			return;
+		}
+		elseif(mb_strlen($message) > 100){
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Сообщение не может превышать 100 символов.");
+			return;
+		}
+
+		$inserteMessageArgs = json_encode(['peer_id' => $reciever_id+2000000000, 'message' => "📩Вам пришло сообщение из другой беседы (ID: {$sender_id}).\n\n{$message}\n\nЧтобы ответить, используйте [!сообщение {$sender_id} <сообщение>].", 'disable_mentions' => true], JSON_UNESCAPED_UNICODE);
+
+		vk_execute($messagesModule->buildVKSciptAppealByID($data->object->from_id)."var result=API.messages.send({$inserteMessageArgs});
+			if(\"1\"+result== \"1\"){API.messages.send({peer_id:{$data->object->peer_id},message:appeal+', ⛔Сообщение не отправлено. Бот не имеет права писать в эту беседу.',disable_mentions:true});return false;}else{API.messages.send({peer_id:{$data->object->peer_id},message:appeal+', ✅Сообщение отправлено.',disable_mentions:true});return true;}");
 	}
 
 	function bot_keyboard_remove($data){
@@ -976,7 +1048,7 @@ namespace{
 		if($command == "кнопки")
 			bot_keyboard_remove($data);
 		elseif($command == "ник")
-			manager_remove_nick($data, $db);
+			manager_remove_nick($data, $db, $finput);
 		else{
 			$commands = array(
 				'!убрать кнопки - Убирает кнопки',
@@ -1019,7 +1091,7 @@ namespace{
 		$argv = $finput->argv;
 		$db = $finput->db;
 
-		$str_data = mb_substr($data->object->text, 8);
+		$str_data = bot_gettext_by_argv($argv, 1);
 		$messagesModule = new Bot\Messages($db);
 		$messagesModule->setAppealID($data->object->from_id);
 
@@ -1262,7 +1334,7 @@ namespace{
 			if($data->object->action->type == "chat_kick_user"){
 				if($data->object->action->member_id == $data->object->from_id){
 					$chat_id = $data->object->peer_id - 2000000000;
-					$permissionSystem = new PermissionSystem($db);
+					$permissionSystem = $finput->event->getPermissionSystem();
 					if(!$permissionSystem->checkUserPermission($data->object->action->member_id, 'prohibit_autokick')){ // Проверка ранга (Президент)
 						vk_execute("var user=API.users.get({'user_ids':[{$data->object->from_id}]})[0];var msg='Пока, @id{$data->object->from_id} ('+user.first_name+' '+user.last_name+'). Больше ты сюда не вернешься!';API.messages.send({'peer_id':{$data->object->peer_id}, 'message':msg});API.messages.removeChatUser({'chat_id':{$chat_id},'user_id':{$data->object->action->member_id}});return 'ok';");
 						return true;
@@ -1282,10 +1354,10 @@ namespace{
 				else{
 					$banned_users = BanSystem::getBanList($db);
 					$isBanned = false;
-					for($i = 0; $i < sizeof($banned_users); $i++){
-						if($banned_users[$i]["user_id"] == $data->object->action->member_id){
+					foreach ($banned_users as $banned_user) {
+						if($banned_user->user_id == $data->object->action->member_id){
 							$chat_id = $data->object->peer_id - 2000000000;
-							$permissionSystem = new PermissionSystem($db);
+							$permissionSystem = $finput->event->getPermissionSystem();
 							if($permissionSystem->checkUserPermission($data->object->from_id, 'manage_punishments')){ // Проверка ранга (Президент)
 								vk_execute("API.messages.send({'peer_id':{$data->object->peer_id},'message':'@id{$data->object->action->member_id} (Пользователь) был приглашен @id{$data->object->from_id} (администратором) беседы и автоматически разбанен.'});");
 								BanSystem::unbanUser($db, $data->object->action->member_id);
@@ -1314,7 +1386,7 @@ namespace{
 
 		$messagesModule = new Bot\Messages();
 
-		$chatModes = new ChatModes($db);
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue("games_enabled")){ // Отключаем, если в беседе запрещены игры
 			$messagesModule->setAppealID($data->object->from_id);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔В чате отключены игры!");
@@ -1343,7 +1415,7 @@ namespace{
 			));
 		}
 		elseif($payload[1] == 10){
-			$chatModes = new ChatModes($db);
+			$chatModes = $finput->event->getChatModes();
 			if(!$chatModes->getModeValue("games_enabled")){ // Отключаем, если в беседе запрещены игры
 				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ В чате отключены игры!');
 				return;
@@ -1398,7 +1470,7 @@ namespace{
 			}
 		}
 		elseif($payload[1] >= 1 && $payload[1] <= 9){
-			$chatModes = new ChatModes($db);
+			$chatModes = $finput->event->getChatModes();
 			if(!$chatModes->getModeValue("games_enabled")){ // Отключаем, если в беседе запрещены игры
 				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ В чате отключены игры!');
 				return;
@@ -1603,7 +1675,7 @@ namespace{
 		// Функция тестирования пользователя
 		$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
 		if($testing_user_id !== $data->object->user_id){
-			$permissionSystem = new PermissionSystem($db);
+			$permissionSystem = $finput->event->getPermissionSystem();
 			if(!$permissionSystem->checkUserPermission($data->object->user_id, 'customize_chat')){ // Проверка разрешения
 				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
 				return;
@@ -1632,7 +1704,7 @@ namespace{
 
 			$elements[] = vk_callback_button("Список команд", array('bot_cmdlist', $testing_user_id), 'primary');
 
-			$chatModes = new ChatModes($db);
+			$chatModes = $finput->event->getChatModes();
 			if($chatModes->getModeValue("economy_enabled")){ // Проверка режима экономики
 				$elements[] = vk_callback_button("Работа", array('economy_work', $testing_user_id), 'primary');
 				$elements[] = vk_callback_button("Бизнес", array('economy_company', $testing_user_id), 'primary');
@@ -1640,7 +1712,7 @@ namespace{
 				$elements[] = vk_callback_button("Магазин", array('economy_shop', $testing_user_id), 'primary');
 			}
 
-			$permissionSystem = new PermissionSystem($db);
+			$permissionSystem = $finput->event->getPermissionSystem();
 			if($permissionSystem->checkUserPermission($data->object->user_id, 'customize_chat')){ // Проверка разрешения
 				$elements[] = vk_callback_button("Режимы", array('manager_mode', $testing_user_id), 'primary');
 			}

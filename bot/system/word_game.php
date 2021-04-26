@@ -14,7 +14,7 @@ function wordgame_cmd($finput){
 
 	$session = wordgame_get_session($data->object->peer_id);
 	if(array_key_exists(1, $argv) && mb_strtolower($argv[1]) == 'старт'){
-		$chatModes = new ChatModes($db);
+		$chatModes = $finput->event->getChatModes();
 		if(!$chatModes->getModeValue("games_enabled")){ // Отключаем, если в беседе запрещены игры
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
@@ -53,7 +53,7 @@ function wordgame_cmd($finput){
 	} elseif (mb_strtolower($argv[1]) == 'стоп') {
 		if(array_key_exists('word_game', $session)){
 			if($session["word_game"]["started_by"] != $data->object->from_id){
-				$permissionSystem = new PermissionSystem($db);
+				$permissionSystem = $finput->event->getPermissionSystem();
 				if(!$permissionSystem->checkUserPermission($data->object->from_id, 'customize_chat')){ // Проверка разрешения
 					$messagesModule = new Bot\Messages($db);
 					$messagesModule->sendMessage($data->object->peer_id, "[Слова] Вы не имеете права останавливать игру, запущенную другим пользователем.");
@@ -140,13 +140,13 @@ function wordgame_del_session($peer_id){
 	return GameController::deleteSession($chat_id, 'word_game');
 }
 
-function wordgame_get_encoded_word($db){
-	$word = preg_split('//u', $db["word_game"]["current_word"]["word"], null, PREG_SPLIT_NO_EMPTY);
+function wordgame_get_encoded_word($session){
+	$word = preg_split('//u', $session["word_game"]["current_word"]["word"], null, PREG_SPLIT_NO_EMPTY);
 	$en_word = "";
 	for($i = 0; $i < sizeof($word); $i++){
 		$is_symbol_encrypted = true;
-		for($j = 0; $j < sizeof($db["word_game"]["current_word"]["opened_symbols"]); $j++){
-			if($i == $db["word_game"]["current_word"]["opened_symbols"][$j]){
+		for($j = 0; $j < sizeof($session["word_game"]["current_word"]["opened_symbols"]); $j++){
+			if($i == $session["word_game"]["current_word"]["opened_symbols"][$j]){
 				$en_word = $en_word . $word[$i];
 				$is_symbol_encrypted = false;
 			}
@@ -157,23 +157,23 @@ function wordgame_get_encoded_word($db){
 	return $en_word;
 }
 
-function wordgame_reset_word(&$db, $date, $user_id){
+function wordgame_reset_word(&$session, $date, $user_id){
 	while (true){
 		$database = json_decode(file_get_contents("https://engine.lifeis.porn/api/words.php?rus=true"), true);
 		if($database["ok"]){
 			$word = $database["data"]["word"];
 			$explanation = $database["data"]["explanation"];
 			//$explanation = mb_strtoupper(mb_substr($explanation, 0, 1)) . mb_strtolower(mb_substr($explanation, 1));
-			$db["word_game"]["current_word"]["word"] = $word;
-			$db["word_game"]["current_word"]["explanation"] = $explanation;
-			$db["word_game"]["current_word"]["word_guessing_time"] = $date;
-			$db["word_game"]["current_word"]["opened_symbols"] = array();
-			$db["word_game"]["current_word"]["can_reset"] = false;
-			$db["word_game"]["current_word"]["used_hints"] = 0;
-			$db["word_game"]["current_word"]["last_using_hints_time"] = 0;
-			$db["word_game"]["started_by"] = $user_id;
+			$session["word_game"]["current_word"]["word"] = $word;
+			$session["word_game"]["current_word"]["explanation"] = $explanation;
+			$session["word_game"]["current_word"]["word_guessing_time"] = $date;
+			$session["word_game"]["current_word"]["opened_symbols"] = array();
+			$session["word_game"]["current_word"]["can_reset"] = false;
+			$session["word_game"]["current_word"]["used_hints"] = 0;
+			$session["word_game"]["current_word"]["last_using_hints_time"] = 0;
+			$session["word_game"]["started_by"] = $user_id;
 
-			if (mb_strlen($db["word_game"]["current_word"]["word"]) > 3)
+			if (mb_strlen($session["word_game"]["current_word"]["word"]) > 3)
 				break;
 			}
 	}
@@ -196,7 +196,7 @@ function wordgame_gameplay_cb($finput){
 			wordgame_del_session($data->object->peer_id);
 			$msg = "[Слова] Игра остановлена.";
 			$snackbar_json_request = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "✅ Выполнено!"), JSON_UNESCAPED_UNICODE)));
-			vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}','keyboard':'{$empty_keyboard}'});");
+			vk_execute("API.messages.sendMessageChatEventAnswer({$snackbar_json_request});return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}','keyboard':'{$empty_keyboard}'});");
 		}
 		else{
 			$act = bot_get_array_value($payload, 1, 0);
@@ -204,7 +204,7 @@ function wordgame_gameplay_cb($finput){
 			switch ($act) {
 				case 1:
 				if($session["word_game"]["started_by"] != $data->object->user_id){
-					$permissionSystem = new PermissionSystem($db);
+					$permissionSystem = $finput->event->getPermissionSystem();
 					if(!$permissionSystem->checkUserPermission($data->object->user_id, 'customize_chat')){ // Проверка разрешения
 						bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Вы не имеете права останавливать игру, запущенную другим пользователем.');
 						return;
@@ -215,11 +215,11 @@ function wordgame_gameplay_cb($finput){
 				$msg = "[Слова] Игра остановлена.";
 				$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'keyboard' => $empty_keyboard), JSON_UNESCAPED_UNICODE);
 				$snackbar_json_request = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "✅ Выполнено!"), JSON_UNESCAPED_UNICODE)));
-				vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}','keyboard':'{$empty_keyboard}'});");
+				vk_execute("API.messages.sendMessageChatEventAnswer({$snackbar_json_request});return API.messages.send({'peer_id':{$data->object->peer_id},'message':'{$msg}','keyboard':'{$empty_keyboard}'});");
 				break;
 
 				case 2:
-				$chatModes = new ChatModes($db);
+				$chatModes = $finput->event->getChatModes();
 				if(!$chatModes->getModeValue("games_enabled")){ // Отключаем, если в беседе запрещены игры
 					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ В чате отключены игры!');
 					return;
@@ -261,13 +261,13 @@ function wordgame_gameplay_cb($finput){
 								$msg = "[Слова] Больше подсказок нет! Слово ({$wordlen} б.): {$word}.\nОписание: {$explanation}.";
 								$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'keyboard' => $keyboard), JSON_UNESCAPED_UNICODE);
 								$snackbar_json_request = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "✅ Подсказка использована!"), JSON_UNESCAPED_UNICODE)));
-								vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
+								vk_execute("API.messages.sendMessageChatEventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
 							}
 							else {
 								$msg = "[Слова] Подсказка использована. Слово ({$wordlen} б.): {$word}.\nОписание: {$explanation}.";
 								$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg), JSON_UNESCAPED_UNICODE);
 								$snackbar_json_request = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "✅ Подсказка использована!"), JSON_UNESCAPED_UNICODE)));
-								vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
+								vk_execute("API.messages.sendMessageChatEventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
 							}
 						}
 						else {
@@ -283,7 +283,7 @@ function wordgame_gameplay_cb($finput){
 				break;
 
 				case 3:
-				$chatModes = new ChatModes($db);
+				$chatModes = $finput->event->getChatModes();
 				if(!$chatModes->getModeValue("games_enabled")){ // Отключаем, если в беседе запрещены игры
 					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ В чате отключены игры!');
 					return;
@@ -296,14 +296,14 @@ function wordgame_gameplay_cb($finput){
 					$msg = "[Слова] Слово ({$wordlen} б.): {$word}.\nОписание: {$explanation}.";
 					$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg), JSON_UNESCAPED_UNICODE);
 					$snackbar_json_request = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "✅ Слово отображено!"), JSON_UNESCAPED_UNICODE)));
-					vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
+					vk_execute("API.messages.sendMessageChatEventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
 				}
 				else
 				 	bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Необходимо Продолжить игру!');
 				break;
 
 				case 4:
-				$chatModes = new ChatModes($db);
+				$chatModes = $finput->event->getChatModes();
 				if(!$chatModes->getModeValue("games_enabled")){ // Отключаем, если в беседе запрещены игры
 					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ В чате отключены игры!');
 					return;
@@ -326,7 +326,7 @@ function wordgame_gameplay_cb($finput){
 							));
 							$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'keyboard' => $keyboard), JSON_UNESCAPED_UNICODE);
 							$snackbar_json_request = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "✅ Выполнено."), JSON_UNESCAPED_UNICODE)));
-							vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
+							vk_execute("API.messages.sendMessageChatEventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
 						}
 						else
 							bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Нельзя сдаться раньше 20 секунд после использования всех подсказок');
@@ -339,7 +339,7 @@ function wordgame_gameplay_cb($finput){
 				break;
 
 				case 5:
-				$chatModes = new ChatModes($db);
+				$chatModes = $finput->event->getChatModes();
 				if(!$chatModes->getModeValue("games_enabled")){ // Отключаем, если в беседе запрещены игры
 					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ В чате отключены игры!');
 					return;
@@ -365,7 +365,7 @@ function wordgame_gameplay_cb($finput){
 					));
 					$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $msg, 'keyboard' => $keyboard), JSON_UNESCAPED_UNICODE);
 					$snackbar_json_request = json_encode(array('event_id' => $data->object->event_id, 'user_id' => $data->object->user_id, 'peer_id' => $data->object->peer_id, 'event_data' => json_encode(array('type' => 'show_snackbar', 'text' => "✅ Выполнено."), JSON_UNESCAPED_UNICODE)));
-					vk_execute("API.messages.sendMessageEventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
+					vk_execute("API.messages.sendMessageChatEventAnswer({$snackbar_json_request});return API.messages.send({$json_request});");
 				}
 				else
 					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Необходимо Завершить партию!');
@@ -387,7 +387,7 @@ function wordgame_gameplay($finput){
 	$data = $finput->data; 
 	$db = $finput->db;
 
-	$chatModes = new ChatModes($db);
+	$chatModes = $finput->event->getChatModes();
 	if(!$chatModes->getModeValue("games_enabled")) // Отключаем, если в беседе запрещены игры
 		return;
 
