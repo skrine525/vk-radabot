@@ -942,7 +942,7 @@ function manager_nick($finput){
 
 		if(!array_key_exists(0, $data->object->fwd_messages)){
 			if(mb_strlen($nick) <= 15){
-				$nicknames = $db->getValueLegacy(array("chat_settings", "user_nicknames"), array());
+				$nicknames = (array) $db->executeQuery(new \MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, "chat_settings.user_nicknames" => 1]]))->getValue([0, "chat_settings", "user_nicknames"], []);
 
 				// Проверка ника на уникальность без учета регистра
 				foreach ($nicknames as $key => $value) {
@@ -974,7 +974,7 @@ function manager_nick($finput){
 					$messagesModule->sendSilentMessage($data->object->peer_id, Bot\Messages::MESSAGE_NO_RIGHTS);
 					return;
 				}
-				$nicknames = $db->getValueLegacy(array("chat_settings", "user_nicknames"), array());
+				$nicknames = (array) $db->executeQuery(new \MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, "chat_settings.user_nicknames" => 1]]))->getValue([0, "chat_settings", "user_nicknames"], []);
 				if(array_search($nick, $nicknames) !== false){
 					$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Указанный ник занят!");
 					return;
@@ -1040,7 +1040,7 @@ function manager_show_nicknames($finput){
 	else
 		$list_number_from_word = 1;
 
-	$user_nicknames = $db->getValueLegacy(array("chat_settings", "user_nicknames"), []);
+	$user_nicknames = (array) $db->executeQuery(new \MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, "chat_settings.user_nicknames" => 1]]))->getValue([0, "chat_settings", "user_nicknames"], []);
 	$nicknames = array();
 	foreach ($user_nicknames as $key => $val) {
 		$nicknames[] = array(
@@ -1128,7 +1128,7 @@ function manager_greeting($finput){
 			API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 			"));
 	} elseif($command == 'показать'){
-		$invited_greeting = $db->getValueLegacy(array("chat_settings", "invited_greeting"), false);
+		$invited_greeting = $db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, 'chat_settings.invited_greeting' => 1]]))->getValue('0.chat_settings.invited_greeting', false);
 		if($invited_greeting !== false){
 			$json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => "%appeal%, Приветствие в беседе:\n{$invited_greeting}", 'disable_mentions' => true), JSON_UNESCAPED_UNICODE);
 			$json_request = vk_parse_var($json_request, "appeal");
@@ -1136,56 +1136,40 @@ function manager_greeting($finput){
 				API.messages.send({$json_request});
 				return 'ok';
 				");
-		} else {
+		}
+		else {
 			$msg = ", ⛔Приветствие не установлено.";
 			vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
 				API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
 				return 'ok';
 				");
 		}
-	} elseif($command == 'убрать'){
-		$invited_greeting = $db->getValueLegacy(array("chat_settings", "invited_greeting"), false);
-		if($invited_greeting !== false){
-			$bulk = new MongoDB\Driver\BulkWrite;
-			$bulk->update(['_id' => $db->getDocumentID()], ['$unset' => ["chat_settings.invited_greeting" => 0]]);
-			$db->executeBulkWrite($bulk);
-
+	}
+	elseif($command == 'убрать'){
+		$bulk = new MongoDB\Driver\BulkWrite;
+		$bulk->update(['_id' => $db->getDocumentID()], ['$unset' => ["chat_settings.invited_greeting" => 0]]);
+		$writeResult = $db->executeBulkWrite($bulk);
+		if($writeResult->getModifiedCount() > 0){
 			$msg = ", ✅Приветствие убрано.";
-			json_decode(vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
-				API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
-				"));
-
-		} else {
-			$msg = ", ⛔Приветствие не установлено.";
-			vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
-				API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
-				return 'ok';
-				");
+			json_decode(vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});"));
 		}
-	} else{
+		else{
+			$msg = ", ⛔Приветствие не установлено.";
+			vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});return 'ok';");
+		}
+	}
+	else{
 		$msg = ", ⛔Используйте \"!приветствие установить/показать/убрать\".";
-		vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
-			API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});
-			return 'ok';
-			");
+		vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}','disable_mentions':true});return 'ok';");
 	}
 }
 
 function manager_show_invited_greetings($data, $db){
-	$greetings_text = $db->getValueLegacy(array("chat_settings", "invited_greeting"), false);
+	$greetings_text = $db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, 'chat_settings.invited_greeting' => 1]]))->getValue('0.chat_settings.invited_greeting', false);
 	if($greetings_text !== false && $data->object->action->member_id > 0){
 		$parsing_vars = array('USERID', 'USERNAME', 'USERNAME_GEN', 'USERNAME_DAT', 'USERNAME_ACC', 'USERNAME_INS', 'USERNAME_ABL');
 
-		$system_code = "
-			var user = API.users.get({'user_ids':[{$data->object->action->member_id}],'fields':'first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'})[0];
-			var USERID = '@id'+user.id;
-			var USERNAME = user.first_name+' '+user.last_name;
-			var USERNAME_GEN = user.first_name_gen+' '+user.last_name_gen;
-			var USERNAME_DAT = user.first_name_dat+' '+user.last_name_dat;
-			var USERNAME_ACC = user.first_name_acc+' '+user.last_name_acc;
-			var USERNAME_INS = user.first_name_ins+' '+user.last_name_ins;
-			var USERNAME_ABL = user.first_name_abl+' '+user.last_name_abl;
-		";
+		$system_code = "var user=API.users.get({'user_ids':[{$data->object->action->member_id}],'fields':'first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'})[0];var USERID='@id'+user.id;var USERNAME=user.first_name+' '+user.last_name;var USERNAME_GEN=user.first_name_gen+' '+user.last_name_gen;var USERNAME_DAT=user.first_name_dat+' '+user.last_name_dat;var USERNAME_ACC=user.first_name_acc+' '+user.last_name_acc;var USERNAME_INS=user.first_name_ins+' '+user.last_name_ins;var USERNAME_ABL=user.first_name_abl+' '+user.last_name_abl;";
 
 		$message_json_request = json_encode(array('peer_id' => $data->object->peer_id, 'message' => $greetings_text), JSON_UNESCAPED_UNICODE);
 
@@ -1291,7 +1275,9 @@ function manager_panel_show($finput){
 
 	$botModule = new BotModule($db);
 
-	$user_panel = $db->getValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
+	$database_path = "chat_settings.user_panels.id{$data->object->from_id}";
+	$user_panel = $db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, $database_path => 1]]))->getValue("0.{$database_path}", []);
+	$user_panel = Database\CursorValueExtractor::objectToArray($user_panel);
 
 	if(array_key_exists('elements', $user_panel))
 		$element_count = count($user_panel["elements"]);
@@ -1359,7 +1345,7 @@ function manager_panel_control($finput){
 			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Команда не может быть больше 64 символов.", $data->object->from_id);
 			return;
 		}
-		$user_panel = $db->getValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
+		$user_panel = Database\CursorValueExtractor::objectToArray($db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.user_panels.id{$data->object->from_id}" => 1]]))->getValue([0, 'chat_settings', 'user_panels', "id{$data->object->from_id}"], []));
 		if(array_key_exists('elements', $user_panel))
 			$element_count = count($user_panel["elements"]);
 		else
@@ -1377,11 +1363,12 @@ function manager_panel_control($finput){
 			'command' => $text_command,
 			'color' => 1
 		);
-		$db->setValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), $user_panel);
+		$bulk = new MongoDB\Driver\BulkWrite; $bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["chat_settings.user_panels.id{$data->object->from_id}" => $user_panel]]);
+		$db->executeBulkWrite($bulk);
 		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Панель с командой [{$text_command}] успешно создана. Её номер: {$panel_id}.", $data->object->from_id);
 	}
 	elseif($command == "список"){
-		$user_panel = $db->getValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
+		$user_panel = Database\CursorValueExtractor::objectToArray($db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.user_panels.id{$data->object->from_id}" => 1]]))->getValue([0, 'chat_settings', 'user_panels', "id{$data->object->from_id}"], []));
 		if(count($user_panel["elements"]) > 0){
 			$msg = ', список ваших элементов:';
 			$id = 1; foreach ($user_panel["elements"] as $element) {
@@ -1393,9 +1380,9 @@ function manager_panel_control($finput){
 			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Ваша панель пуста.", $data->object->from_id);
 	}
 	elseif($command == "название"){
-		$user_panel = $db->getValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
+		$user_panel = Database\CursorValueExtractor::objectToArray($db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.user_panels.id{$data->object->from_id}" => 1]]))->getValue([0, 'chat_settings', 'user_panels', "id{$data->object->from_id}"], []));
 		$argvt = bot_get_array_value($argv, 2, 0);
-		$name = bot_gettext_by_argv($argv, 2);
+		$name = bot_gettext_by_argv($argv, 3);
 		if($argvt == "" || !is_numeric($argvt) || $name == ""){
 			$botModule->sendSilentMessage($data->object->peer_id, ", Используйте [!панель название <номер> <название>], чтобы изменить название элемента.", $data->object->from_id);
 			return;
@@ -1411,11 +1398,12 @@ function manager_panel_control($finput){
 		}
 		$user_panel["elements"][$id]["name"] = $name;
 		$user_panel["last_change_time"] = time();
-		$db->setValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), $user_panel);
+		$bulk = new MongoDB\Driver\BulkWrite; $bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["chat_settings.user_panels.id{$data->object->from_id}" => $user_panel]]);
+		$db->executeBulkWrite($bulk);
 		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Название элемента №{$argvt} успешно изменено.", $data->object->from_id);
 	}
 	elseif($command == "команда"){
-		$user_panel = $db->getValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
+		$user_panel = Database\CursorValueExtractor::objectToArray($db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.user_panels.id{$data->object->from_id}" => 1]]))->getValue([0, 'chat_settings', 'user_panels', "id{$data->object->from_id}"], []));
 		$argvt = bot_get_array_value($argv, 2, 0);
 		$text_command = bot_gettext_by_argv($argv, 2);
 		if($argvt == "" || !is_numeric($argvt) || $text_command == ""){
@@ -1433,11 +1421,12 @@ function manager_panel_control($finput){
 		}
 		$user_panel["elements"][$id]["command"] = $text_command;
 		$user_panel["last_change_time"] = time();
-		$db->setValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), $user_panel);
+		$bulk = new MongoDB\Driver\BulkWrite; $bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["chat_settings.user_panels.id{$data->object->from_id}" => $user_panel]]);
+		$db->executeBulkWrite($bulk);
 		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Команда элемента №{$argvt} успешно изменено.", $data->object->from_id);
 	}
 	elseif($command == "цвет"){
-		$user_panel = $db->getValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
+		$user_panel = Database\CursorValueExtractor::objectToArray($db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.user_panels.id{$data->object->from_id}" => 1]]))->getValue([0, 'chat_settings', 'user_panels', "id{$data->object->from_id}"], []));
 		$argvt1 = intval(bot_get_array_value($argv, 2, 0));
 		$argvt2 = intval(bot_get_array_value($argv, 3, 0));
 		if($argvt1 == 0 || $argvt2 == 0){
@@ -1455,7 +1444,8 @@ function manager_panel_control($finput){
 		}
 		$user_panel["elements"][$id]["color"] = $argvt2;
 		$user_panel["last_change_time"] = time();
-		$db->setValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), $user_panel);
+		$bulk = new MongoDB\Driver\BulkWrite; $bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["chat_settings.user_panels.id{$data->object->from_id}" => $user_panel]]);
+		$db->executeBulkWrite($bulk);
 		switch ($argvt2) {
 			case 1:
 				$color_name = "Белый";
@@ -1476,7 +1466,7 @@ function manager_panel_control($finput){
 		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Название элемента номер {$argvt1} успешно изменено. Установлен цвет: {$color_name}.", $data->object->from_id);
 	}
 	elseif($command == "удалить"){
-		$user_panel = $db->getValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), array());
+		$user_panel = Database\CursorValueExtractor::objectToArray($db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.user_panels.id{$data->object->from_id}" => 1]]))->getValue([0, 'chat_settings', 'user_panels', "id{$data->object->from_id}"], []));
 		$argvt = intval(bot_get_array_value($argv, 2, 0));
 		if($argvt == 0){
 			$botModule->sendSilentMessage($data->object->peer_id, ", Используйте [!панель удалить <номер>], чтобы удалить элемент.", $data->object->from_id);
@@ -1490,7 +1480,8 @@ function manager_panel_control($finput){
 		unset($user_panel["elements"][$id]);
 		$user_panel["elements"] = array_values($user_panel["elements"]);
 		$user_panel["last_change_time"] = time();
-		$db->setValueLegacy(array("chat_settings", "user_panels", "id{$data->object->from_id}"), $user_panel);
+		$bulk = new MongoDB\Driver\BulkWrite; $bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["chat_settings.user_panels.id{$data->object->from_id}" => $user_panel]]);
+		$db->executeBulkWrite($bulk);
 		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Элемент под номером {$argvt} успешно удален.", $data->object->from_id);
 	}
 	else{
@@ -1521,7 +1512,9 @@ function manager_panel_keyboard_handler($finput){
 	if(is_null($user_id) || is_null($last_change_time) || is_null($last_change_time))
 		return;
 
-	$user_panel = $db->getValueLegacy(array("chat_settings", "user_panels", "id{$user_id}"), false);
+	$database_path = "chat_settings.user_panels.id{$user_id}";
+	$user_panel = $db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, $database_path => 1]]))->getValue("0.{$database_path}", false);
+	$user_panel = Database\CursorValueExtractor::objectToArray($user_panel);
 	if($user_panel === false)
 		return;
 
@@ -1535,22 +1528,22 @@ function manager_panel_keyboard_handler($finput){
 	}
 	if(array_key_exists($element_id, $user_panel["elements"])){
 		$modified_data = (object) array(
-				'type' => 'message_new',
-				'object' => (object) array(
-					'date' => time(),
-					'from_id' => $data->object->user_id,
-					'id' => 0,
-					'out' => 0,
-					'peer_id' => $data->object->peer_id,
-					'text' => $user_panel["elements"][$element_id]["command"],
-					'conversation_message_id' => $data->object->conversation_message_id,
-					'fwd_messages' => array(),
-					'important' => false,
-					'random_id' => 0,
-					'attachments' => array(),
-					'is_hidden' => false
-				)
-			);
+			'type' => 'message_new',
+			'object' => (object) array(
+				'date' => time(),
+				'from_id' => $data->object->user_id,
+				'id' => 0,
+				'out' => 0,
+				'peer_id' => $data->object->peer_id,
+				'text' => $user_panel["elements"][$element_id]["command"],
+				'conversation_message_id' => $data->object->conversation_message_id,
+				'fwd_messages' => array(),
+				'important' => false,
+				'random_id' => 0,
+				'attachments' => array(),
+				'is_hidden' => false
+			)
+		);
 		$result = $finput->event->runTextMessageCommand($modified_data);
 		if($result->code == Bot\ChatEvent::COMMAND_RESULT_OK)
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "✅ Команда выполнена!");

@@ -1,4 +1,72 @@
 {
+	"jobs":{
+		"janitor": {
+			"name": "Дворник",
+			"rest_time": 1200,
+			"salary": 800,
+			"item_dependencies": []
+		},
+		"scavenger": {
+			"name": "Уборщик мусора",
+			"rest_time": 1200,
+			"salary": 800,
+			"item_dependencies": []
+		},
+		"newspaper_delivery_man": {
+			"name": "Доставщик газет",
+			"rest_time": 1200,
+			"salary": 1000,
+			"item_dependencies": ["edu:level_1", "immovables:level_1"]
+		},
+		"food_delivery_man": {
+			"name": "Доставщик еды",
+			"rest_time": 1200,
+			"salary": 1000,
+			"item_dependencies": ["edu:level_1", "immovables:level_1"]
+		},
+		"sales_assistant": {
+			"name": "Помощник продавца",
+			"rest_time": 1500,
+			"salary": 1625,
+			"item_dependencies": ["edu:level_2", "immovables:level_1"]
+		},
+		"waiter": {
+			"name": "Официант",
+			"rest_time": 1500,
+			"salary": 1625,
+			"item_dependencies": ["edu:level_2", "immovables:level_1"]
+		},
+		"mechanic_turner": {
+			"name": "Токарь-Механик",
+			"rest_time": 1800,
+			"salary": 2400,
+			"item_dependencies": ["edu:level_3", "immovables:level_2"]
+		},
+		"welder": {
+			"name": "Сварщик",
+			"rest_time": 1800,
+			"salary": 2400,
+			"item_dependencies": ["edu:level_3", "immovables:level_2"]
+		},
+		"it_specialist": {
+			"name": "IT-специалист",
+			"rest_time": 2100,
+			"salary": 3500,
+			"item_dependencies": ["edu:level_4", "immovables:level_3"]
+		},
+		"politician": {
+			"name": "Политик",
+			"rest_time": 2100,
+			"salary": 3500,
+			"item_dependencies": ["edu:level_4", "immovables:level_3"]
+		},
+		"engineer": {
+			"name": "Инженер",
+			"rest_time": 2400,
+			"salary": 5200,
+			"item_dependencies": ["edu:level_5", "immovables:level_4"]
+		}
+	},
 	"items":{
 		"special": {
 			"best_girl": {
@@ -42,7 +110,6 @@
 				"hidden": false
 			}
 		},
-
 		"car":{
 			"level_1": {
 				"name": "Лада-2106",
@@ -157,7 +224,6 @@
 				"hidden": true
 			}
 		},
-
 		"immovables": {
 			"level_1": {
 				"name": "Номер в мотеле",
@@ -232,7 +298,6 @@
 				"hidden": false
 			}
 		},
-
 		"phone": {
 			"level_1": {
 				"name": "Nokia 3310",
@@ -323,7 +388,6 @@
 				"hidden": false
 			}
 		},
-
 		"edu": {
 			"level_1": {
 				"name": "Начальное образование",
@@ -383,7 +447,6 @@
 			}
 		}
 	},
-
 	"shop_sections":[
 		{
 			"name": "Автомобиль",
@@ -405,7 +468,6 @@
 			"type": "enterprise"
 		}
 	],
-
 	"enterprise_types": {
 	    "shop": {
 	      	"name": "Магазин",

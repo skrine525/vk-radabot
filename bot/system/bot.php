@@ -3,7 +3,7 @@
 namespace Bot{
 	class ChatEvent{
 		// Переменные
-		private $data;
+		private $data;								// Объект события ВК
 		private $textMessageCommands;				// Массив текстовых команд
 		private $textButtonCommands;				// Массив команд Text-кнопок
 		private $callbackButtonCommands;			// Массив команд Callback-кнопок
@@ -21,7 +21,7 @@ namespace Bot{
 		const COMMAND_RESULT_UNKNOWN = 2;			// Константа резулятата выполнения неизвестной команды
 		const COMMAND_RESULT_INVALID_DATA = 3;		// Константа результата выполнения команды с неправильно переданными данными
 
-		function __construct($data){
+		function __construct(\stdClass $data){
 			if($data->object->peer_id > 2000000000){
 				// Базовые переменные
 				$this->data = $data;
@@ -59,7 +59,7 @@ namespace Bot{
 	  		return $this->permissionSystem;
 	  	}
 
-		public function setHintChar($char){
+		public function setHintChar(string $char){
 			if(mb_strlen($char) == 1){
 				$this->hint_char = $char;
 				return true;
@@ -76,8 +76,8 @@ namespace Bot{
 	  		return false;
 	  	}
 
-	  	public function addTextMessageCommand($command, $callback, $ignore_db = false){
-	  		if(!$this->isTextMessageCommand($command) && is_callable($callback)){
+	  	public function addTextMessageCommand(string $command, callable $callback, bool $ignore_db = false){
+	  		if(!$this->isTextMessageCommand($command)){
 	  			$this->textMessageCommands[$command] = (object) array(
 	  				'callback' => $callback,
 	  				'ignore_db' => $ignore_db
@@ -88,12 +88,12 @@ namespace Bot{
 	  			return false;
 	  	}
 
-	  	public function isTextMessageCommand($command){
+	  	public function isTextMessageCommand(string $command){
 	  		return array_key_exists($command, $this->textMessageCommands);
 	  	}
 
-	  	public function addTextButtonCommand($command, $callback, $ignore_db = false){
-	  		if(!$this->isTextButtonCommand($command) && is_callable($callback)){
+	  	public function addTextButtonCommand(string $command, callable $callback, bool $ignore_db = false){
+	  		if(!$this->isTextButtonCommand($command)){
 	  			$this->textButtonCommands[$command] = (object) array(
 	  				'callback' => $callback,
 	  				'ignore_db' => $ignore_db
@@ -104,12 +104,12 @@ namespace Bot{
 	  			return false;
 	  	}
 
-	  	public function isTextButtonCommand($command){
+	  	public function isTextButtonCommand(string $command){
 	  		return array_key_exists($command, $this->textButtonCommands);
 	  	}
 
-	  	public function addCallbackButtonCommand($command, $callback, $ignore_db = false){
-	  		if(!$this->isCallbackButtonCommand($command) && is_callable($callback)){
+	  	public function addCallbackButtonCommand(string $command, callable $callback, bool $ignore_db = false){
+	  		if(!$this->isCallbackButtonCommand($command)){
 	  			$this->callbackButtonCommands[$command] = (object) array(
 	  				'callback' => $callback,
 	  				'ignore_db' => $ignore_db
@@ -120,7 +120,7 @@ namespace Bot{
 	  			return false;
 	  	}
 
-	  	public function isCallbackButtonCommand($command){
+	  	public function isCallbackButtonCommand(string $command){
 	  		return array_key_exists($command, $this->callbackButtonCommands);
 	  	}
 
@@ -136,7 +136,7 @@ namespace Bot{
 	  		unset($this);
 	  	}
 
-	  	public function runTextMessageCommand($data){
+	  	public function runTextMessageCommand(\stdClass $data){
 	  		if(gettype($data) == "object"){
 	  			$argv = bot_parse_argv($data->object->text); // Извлекаем аргументы из сообщения
 				$command = mb_strtolower(bot_get_array_value($argv, 0, "")); // Переводим команду в нижний регистр
@@ -165,7 +165,7 @@ namespace Bot{
 	  		return (object) ['code' => ChatEvent::COMMAND_RESULT_INVALID_DATA];
 	  	}
 
-	  	public function runTextButtonCommand($data){
+	  	public function runTextButtonCommand(\stdClass $data){
 	  		if(gettype($data) == "object"){
 	  			if(property_exists($data->object, "payload")){
 					$payload = (object) json_decode($data->object->payload);
@@ -197,7 +197,7 @@ namespace Bot{
 	  		return (object) ['code' => ChatEvent::COMMAND_RESULT_INVALID_DATA];
 	  	}
 
-	  	public function runCallbackButtonCommand($data){
+	  	public function runCallbackButtonCommand(\stdClass $data){
 	  		if(gettype($data) == "object"){
 	  			if(property_exists($data->object, "payload") && gettype($data->object->payload) == 'array'){
 					$payload = $data->object->payload;
@@ -338,7 +338,7 @@ namespace Bot{
 
 		public function buildVKSciptAppealByID($user_id, $varname = "appeal"){ // Создание переменной appeal с обращением к пользователю, посредством VKScript и vk_execute()
 			if($this->db !== false)
-				$user_nick = $this->db->getValueLegacy(array("chat_settings", "user_nicknames", "id{$user_id}"), false);
+				$user_nick = $this->db->executeQuery(new \MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ['_id' => 0, "chat_settings.user_nicknames.id{$user_id}" => 1]]))->getValue([0, "chat_settings", "user_nicknames", "id{$user_id}"], false);
 			else
 				$user_nick = false;
 
@@ -472,6 +472,45 @@ namespace Bot{
 				return self::$data[$name];
 			else
 				return null;
+		}
+	}
+
+	class MultiCommand{
+		private $parent_command;
+		private $sub_commands;
+
+		function __construct(string $parent_command){
+			$this->parent_command = mb_strtolower($parent_command);
+			$this->sub_commands = [];
+		}
+
+		public function addSubCommand(string $command, callable $callback, string $description){
+			$command_lower = mb_strtolower($command);
+			if(!array_key_exists($command_lower, $this->sub_commands)){
+				$this->sub_commands[$command_lower] = (object) [
+					'callback' => $callback,
+					'description' => $description
+				];
+				return true;
+			}
+			return false;
+		}
+
+		public function handle(\stdClass $finput, int $sub_index){
+			$sub_command = mb_strtolower(bot_get_array_value($finput->argv, $sub_index, ''));
+			if(array_key_exists($sub_command, $this->sub_commands)){
+				$callback = $this->sub_commands[$sub_command]->callback;
+				call_user_func_array($callback, [$finput]);
+			}
+			else{
+				$messagesModule = new Messages($finput->db);
+				$messagesModule->setAppealID($finput->data->object->from_id);
+				$description_array = [];
+				foreach ($this->sub_commands as $command => $data) {
+					$description_array[] = "{$this->parent_command} {$command} - {$data->description}";
+				}
+				$messagesModule->sendSilentMessageWithListFromArray($finput->data->object->peer_id, "%appeal%, Используйте:", $description_array);
+			}
 		}
 	}
 }
@@ -818,7 +857,7 @@ namespace{
 	}
 
 	function bot_get_userid_by_nick($db, $nick, &$id){
-		$nicknames = $db->getValueLegacy(array("chat_settings", "user_nicknames"), []);
+		$nicknames = (array) $db->executeQuery(new \MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, "chat_settings.user_nicknames" => 1]]))->getValue([0, "chat_settings", "user_nicknames"], []);
 		foreach ($nicknames as $key => $value) {
 			$nicknames[$key] = mb_strtolower($value);
 		}

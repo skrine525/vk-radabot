@@ -8,12 +8,10 @@ namespace Database{
 		private $id;
 
 		private $exists;
-		private $writing_force;
 
 		function __construct($mongodb_uri, $db_name, $peer_id){
 			$this->mongodb = new \MongoDB\Driver\Manager($mongodb_uri);
 			$this->db_name = $db_name;
-			$this->writing_force = null;
 
 			// Создание идентификатора
 			if($peer_id > 2000000000){
@@ -58,10 +56,6 @@ namespace Database{
 			return $this->type;
 		}
 
-		public function setWritingForce($value){
-			$this->writing_force = $value;
-		}
-
 		public function executeQuery(\MongoDB\Driver\Query $query, string $collection = ''){
 			if($collection == ''){
 				if($this->type == 'chat')
@@ -92,40 +86,6 @@ namespace Database{
 			catch(Exception $e){
 				die("Database Error: {$e->getMessage()}");
 			}
-		}
-
-		public function getValueLegacy($keys, $default = null){
-			if(is_null($keys) || !$this->exists || !$this->document_id)
-				return $default;
-
-			if(count($keys) > 0)
-				$query = new \MongoDB\Driver\Query(['_id' => $this->document_id], ['projection' => ["_id" => 0, implode(".", $keys) => 1]]);
-			else
-				$query = new \MongoDB\Driver\Query(['_id' => $this->document_id]);
-			$extractor = $this->executeQuery($query);
-
-			$path = [0];
-			$path = array_merge($path, $keys);
-			$value = $extractor->getValue($path, $default);
-			return CursorValueExtractor::objectToArray($value);
-		}
-
-		public function setValueLegacy($keys, $value = null){
-			if(is_null($keys) || (!$this->exists && !$this->writing_force) || !$this->document_id)
-				return false;
-			$keys_count = count($keys);
-			if($keys_count > 0)
-				$arr = [implode(".", $keys) => $value];
-			else{
-				if(gettype($value) == 'array')
-					$arr = $value;
-				else
-					return false;
-			}
-			$bulk = new \MongoDB\Driver\BulkWrite;
-			$bulk->update(['_id' => $this->document_id], ['$set' => $arr], ['upsert' => true]);
-			$result = $this->executeBulkWrite($bulk);
-			return $result;
 		}
 	}
 

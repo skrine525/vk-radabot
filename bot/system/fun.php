@@ -142,7 +142,8 @@ function fun_memes_control_panel($finput){
 			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Имя не может быть больше 8 знаков!", $data->object->from_id);
 			return;
 		}
-		if($db->getValueLegacy(array("fun", "memes", $meme_name), false) !== false){
+		$existing_meme = $db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, "fun.memes.{$meme_name}" => 1]]))->getValue("0.fun.memes.{$meme_name}", false);
+		if($existing_meme !== false){
 			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Мем с таким именем уже существует!", $data->object->from_id);
 			return;
 		}
@@ -213,14 +214,9 @@ function fun_memes_control_panel($finput){
 		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Мем сохранен!", $data->object->from_id);
 	}
 	elseif($command == "del"){
-		$meme_name = mb_strtolower(bot_gettext_by_argv($argv, 1));
-		$memes = $db->getValueLegacy(array("fun", "memes"), array());
+		$meme_name = mb_strtolower(bot_gettext_by_argv($argv, 2));
 		if($meme_name == ""){
 			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Не найдено название!", $data->object->from_id);
-			return;
-		}
-		if(!array_key_exists($meme_name, $memes) && $meme_name != "-all"){
-			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Мема с именем \"{$meme_name}\" не существует.", $data->object->from_id);
 			return;
 		}
 
@@ -238,30 +234,38 @@ function fun_memes_control_panel($finput){
 			$db->executeBulkWrite($bulk);
 		}
 		else{
-			if($memes[$meme_name]["owner_id"] == $data->object->from_id){
-				$botModule->sendSilentMessage($data->object->peer_id, ", ✅Мем \"{$meme_name}\" удален!", $data->object->from_id);
-
+			$meme_owner = $db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, "fun.memes.{$meme_name}.owner_id" => 1]]))->getValue("0.fun.memes.{$meme_name}.owner_id", 0);
+			if($meme_owner == $data->object->from_id){
 				$bulk = new MongoDB\Driver\BulkWrite;
 				$bulk->update(['_id' => $db->getDocumentID()], ['$unset' => ["fun.memes.{$meme_name}" => 0]]);
-				$db->executeBulkWrite($bulk);
+				$writeResult = $db->executeBulkWrite($bulk);
+
+				if($writeResult->getModifiedCount() > 0)
+					$botModule->sendSilentMessage($data->object->peer_id, ", ✅Мем \"{$meme_name}\" удален!", $data->object->from_id);
+				else
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Мема с именем \"{$meme_name}\" не существует.", $data->object->from_id);
 			}
-			else {
+			else{
 				$permissionSystem = $finput->event->getPermissionSystem();
 				if(!$permissionSystem->checkUserPermission($data->object->from_id, 'customize_chat')){ // Проверка разрешения
 					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Вы не можете удалять мемы других пользователей.", $data->object->from_id);
 					return;
 				}
 
-				json_decode(vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+', ✅Мем \"{$meme_name}\" удален!','disable_mentions':true});"))->response;
-
 				$bulk = new MongoDB\Driver\BulkWrite;
 				$bulk->update(['_id' => $db->getDocumentID()], ['$unset' => ["fun.memes.{$meme_name}" => 0]]);
-				$db->executeBulkWrite($bulk);
+				$writeResult = $db->executeBulkWrite($bulk);
+
+				if($writeResult->getModifiedCount() > 0)
+					$botModule->sendSilentMessage($data->object->peer_id, ", ✅Мем \"{$meme_name}\" удален!", $data->object->from_id);
+				else
+					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Мема с именем \"{$meme_name}\" не существует.", $data->object->from_id);
 			}
 		}
 	}
 	elseif($command == "list"){
-		$meme_names = array_keys($db->getValueLegacy(array("fun", "memes")));
+		$meme_names = (array) $db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, "fun.memes" => 1]]))->getValue("0.fun.memes");
+		$meme_names = array_keys($meme_names);
 		if(count($meme_names) == 0){
 			$botModule->sendSilentMessage($data->object->peer_id, ", в беседе нет мемов.", $data->object->from_id);
 			return;
@@ -283,7 +287,8 @@ function fun_memes_control_panel($finput){
 			return;
 		}
 
-		$memes = $db->getValueLegacy(array("fun", "memes"), array());
+		$memes = $db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, "fun.memes" => 1]]))->getValue("0.fun.memes", []);
+		$memes = Database\CursorValueExtractor::objectToArray($memes);
 
 		if(array_key_exists($meme_name, $memes)){
 			$added_time = gmdate("d.m.Y", $memes[$meme_name]["date"]+10800);
@@ -356,7 +361,8 @@ function fun_memes_control_panel_cb($finput){
 		return;
 	}
 
-	$memes = $db->getValueLegacy(array("fun", "memes"), array());
+	$memes = $db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, "fun.memes" => 1]]))->getValue("0.fun.memes", []);
+	$memes = Database\CursorValueExtractor::objectToArray($memes);
 	$meme_names = array_keys($memes);
 	$meme_values = array_values($memes);
 
@@ -831,10 +837,12 @@ function fun_marriage($finput){
 
 	$botModule = new BotModule($db);
 
-	$marriages_db = $db->getValueLegacy(array("fun", "marriages"), array(
-		'user_info' => array(),
-		'list' => array()
-	));
+	$marriages_db = $db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, 'fun.marriages' => 1]]))->getValue("0.fun.marriages", [
+		'user_info' => [],
+		'list_count' => 0,
+		'list' => []
+	]);
+	$marriages_db = Database\CursorValueExtractor::objectToArray($marriages_db);
 
 	$member_id = 0;
 
@@ -867,7 +875,8 @@ function fun_marriage($finput){
 						'end_time' => 0,
 						'terminated' => false
 					);
-					$marriage_id = count($marriages_db["list"]) - 1; // Получение ID брака
+					$marriage_id = $marriages_db["list_count"]; // Получение ID брака
+					$marriages_db["list_count"]++;
 					$marriages_db["user_info"]["id{$partner_id}"] = array(
 						'type' => 1,
 						'marriage_id' => $marriage_id
@@ -955,7 +964,8 @@ function fun_marriage($finput){
 				}
 				break;
 		}
-		$db->setValueLegacy(array("fun", "marriages"), $marriages_db);
+		$bulk = new MongoDB\Driver\BulkWrite; $bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["fun.marriages" => $marriages_db]]);
+		$db->executeBulkWrite($bulk);
 		return;
 	}
 
@@ -996,7 +1006,8 @@ function fun_marriage($finput){
 				'type' => 0,
 				'partner_id' => $data->object->from_id
 			);
-			$db->setValueLegacy(array("fun", "marriages"), $marriages_db);
+			$bulk = new MongoDB\Driver\BulkWrite; $bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["fun.marriages" => $marriages_db]]);
+			$db->executeBulkWrite($bulk);
 		}
 	}
 	else{
@@ -1010,10 +1021,12 @@ function fun_show_marriage_list($finput){
 	$argv = $finput->argv;
 	$db = $finput->db;
 
-	$marriages_db = $db->getValueLegacy(array("fun", "marriages"), array(
-		'user_info' => array(),
-		'list' => array()
-	));
+	$marriages_db = $db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, 'fun.marriages' => 1]]))->getValue("0.fun.marriages", [
+		'user_info' => [],
+		'list_count' => 0,
+		'list' => []
+	]);
+	$marriages_db = Database\CursorValueExtractor::objectToArray($marriages_db);
 
 	$botModule = new BotModule($db);
 

@@ -73,7 +73,9 @@ function wordgame_cmd($finput){
 			$messagesModule->sendMessage($data->object->peer_id, "[Слова] Игра не запущена.");
 		}
 	} elseif (mb_strtolower($argv[1]) == 'рейтинг') {
-		$array = $db->getValueLegacy(array("games", "word_game_rating"), array());
+		$query = new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, 'games.word_game_rating' => 1]]);
+		$extractor = $db->executeQuery($query);
+		$array = $extractor->getValue('0.games.word_game_rating', []);
 
 		if(count($array) > 0){
 			$stats = array();

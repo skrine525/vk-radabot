@@ -853,7 +853,7 @@ function government_election_start($finput){
 
 	$gov = government_api_getdata($db);
 
-	$owner_id = $db->getValueLegacy(['owner_id']);
+	$owner_id = $db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, 'owner_id' => 1]]))->getValue("0.owner_id");
 	if((is_null($gov['ruling_batch']['id']) && $data->object->from_id == $owner_id) || $gov['ruling_batch']['id'] == "batch{$data->object->from_id}"){
 		if($gov["election"] === false){
 			$time = time(); // Переменная времени

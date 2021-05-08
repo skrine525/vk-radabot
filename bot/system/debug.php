@@ -285,7 +285,8 @@ function debug_dbedit_tc($finput){
 			return;
 		}
 
-		$db_data = $db->getValueLegacy($path, null);
+		$imploded_path = implode('.', $path);
+		$db_data = $db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, $imploded_path => 1]]))->getValue("0.{$imploded_path}");
 		if(is_null($db_data)){
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Заданного ключа не существует.");
 			return;
@@ -331,7 +332,15 @@ function debug_dbedit_cb($finput){
 		$list_number = bot_get_array_value($payload, 2, 1);
 		$path = bot_get_array_value($payload, 3, []);
 
-		$db_data = $db->getValueLegacy($path, null);
+		$projection = ['_id' => 0];
+		$getvalue_path = "0";
+		if(count($path) > 0){
+			$imploded_path = implode('.', $path);
+			$projection[$imploded_path] = 1;
+			$getvalue_path = "0.{$imploded_path}";
+		}
+		$db_data = $db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => $projection]))->getValue($getvalue_path);
+		$db_data = Database\CursorValueExtractor::objectToArray($db_data);
 		if(array_key_exists("_id", $db_data))
 			unset($db_data["_id"]);
 		if(is_null($db_data)){
@@ -398,7 +407,8 @@ function debug_dbedit_cb($finput){
 			return;
 		}
 
-		$db_data = $db->getValueLegacy($path, null);
+		$imploded_path = implode('.', $path);
+		$db_data = $db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, $imploded_path => 1]]))->getValue("0.{$imploded_path}");
 
 		$data_type = gettype($db_data);
 		if($data_type == "array"){
@@ -469,11 +479,13 @@ function debug_dbedit_cb($finput){
 			return;
 		}
 
-		$db_data = $db->getValueLegacy($path, null);
+		$imploded_path = implode('.', $path);
+		$db_data = $db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, $imploded_path => 1]]))->getValue("0.{$imploded_path}");
 		if(is_null($db_data))
 			$message = "%appeal%, ⛔Заданного ключа не существует.";
 		else{
-			$db->setValueLegacy($path, $value);
+			$bulk = new MongoDB\Driver\BulkWrite; $bulk->update(['_id' => $db->getDocumentID()], ['$set' => [$imploded_path => $value]]);
+			$db->executeBulkWrite($bulk);
 			$message = "%appeal%, ✅Значение установлено.";
 		}
 

@@ -17,7 +17,7 @@ namespace Legacy{
 	}
 
 	function fun_pet_dbget($db){
-		$pet_database = $db->getValueLegacy(['fun', 'pet'], []);
+		$pet_database = (array) $db->executeQuery(new \MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, 'fun.pet' => 1]]))->getValue('0.fun.pet', []);
 		$pet = array();
 
 		$time = time(); // Переменная времени
@@ -456,7 +456,7 @@ namespace Legacy{
 				break;
 
 				case 'чай':
-				$tea_count = $db->getValueLegacy(['fun', 'tea_count', "id{$data->object->from_id}"], 0);
+				$tea_count = $db->executeQuery(new \MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ['_id' => 0, "fun.tea_count.id{$data->object->from_id}" => 1]]))->getValue("0.fun.tea_count.id{$data->object->from_id}", 0);
 				$botModule->sendSilentMessage($data->object->peer_id, ", ☕Вы попили чай {$tea_count} раз(а).", $data->object->from_id);
 				break;
 			}
