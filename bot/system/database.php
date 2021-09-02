@@ -30,7 +30,8 @@ namespace Database{
 				$cursor = $this->mongodb->executeQuery("{$this->db_name}.chats", $query);
 			}
 			catch(Exception $e){
-				die("Database Error: {$e->getMessage()}");
+				error_log("Database Error: {$e->getMessage()}");
+				exit;
 			}
 
 			$documents = $cursor->toArray();
@@ -68,7 +69,8 @@ namespace Database{
 				return new CursorValueExtractor($cursor);
 			}
 			catch(Exception $e){
-				die("Database Error: {$e->getMessage()}");
+				error_log("Database Error: {$e->getMessage()}");
+				exit;
 			}
 		}
 
@@ -84,7 +86,8 @@ namespace Database{
 				return $result;
 			}
 			catch(Exception $e){
-				die("Database Error: {$e->getMessage()}");
+				error_log("Database Error: {$e->getMessage()}");
+				exit;
 			}
 		}
 	}

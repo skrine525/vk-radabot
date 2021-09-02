@@ -110,9 +110,50 @@
 				"hidden": false
 			}
 		},
+		"dailyprize":{
+			"item1":{
+				"name": "Карта Premium-банка",
+				"price": 50000,
+				"max_count": 65536,
+				"can_sell": true,
+				"can_buy": false,
+				"hidden": false,
+				"action": [
+					{
+						"label": "Использовать",
+						"callback": "dailyprize",
+						"payload": "deposit"
+					}
+				]
+			},
+			"item2":{
+				"name": "Доп. Дневной приз",
+				"price": 30000,
+				"max_count": 65536,
+				"can_sell": true,
+				"can_buy": false,
+				"hidden": false
+			},
+			"item3":{
+				"name": "Энергетик",
+				"price": 1000,
+				"max_count": 65536,
+				"can_sell": true,
+				"can_buy": false,
+				"hidden": false
+			},
+			"item4":{
+				"name": "Сертификат З/П",
+				"price": 5000,
+				"max_count": 65536,
+				"can_sell": true,
+				"can_buy": false,
+				"hidden": false
+			}
+		},
 		"car":{
 			"level_1": {
-				"name": "Лада-2106",
+				"name": "Шестерка",
 				"price": 50000,
 				"max_count": 1,
 				"can_sell": true,
@@ -120,7 +161,7 @@
 				"hidden": false
 			},
 			"level_2": {
-				"name": "УАЗ-452 \"Буханка\"",
+				"name": "Буханка",
 				"price": 75000,
 				"max_count": 1,
 				"can_sell": true,
@@ -128,7 +169,7 @@
 				"hidden": false
 			},
 			"level_3": {
-				"name": "ЗАЗ-968 \"Запорожец\"",
+				"name": "Запорожец",
 				"price": 100000,
 				"max_count": 1,
 				"can_sell": true,
@@ -152,7 +193,7 @@
 				"hidden": false
 			},
 			"level_6": {
-				"name": "Isuzu Bighorn",
+				"name": "BMW X6",
 				"price": 650000,
 				"max_count": 1,
 				"can_sell": true,
@@ -160,7 +201,7 @@
 				"hidden": false
 			},
 			"level_7": {
-				"name": "BMW X6",
+				"name": "Mercedes-Benz SLR McLaren",
 				"price": 800000,
 				"max_count": 1,
 				"can_sell": true,
@@ -168,60 +209,12 @@
 				"hidden": false
 			},
 			"level_8": {
-				"name": "Toyota Supra",
+				"name": "Lamborghini Aventador",
 				"price": 1500000,
 				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
 				"hidden": false
-			},
-			"level_9": {
-				"name": "Infiniti M37",
-				"price": 2000000,
-				"max_count": 1,
-				"can_sell": true,
-				"can_buy": true,
-				"hidden": false
-			},
-			"level_10": {
-				"name": "Aston Martin Vantage",
-				"price": 5600000,
-				"max_count": 1,
-				"can_sell": true,
-				"can_buy": true,
-				"hidden": false
-			},
-			"level_11": {
-				"name": "Mercedes-Benz SLR McLaren",
-				"price": 7000000,
-				"max_count": 1,
-				"can_sell": true,
-				"can_buy": true,
-				"hidden": false
-			},
-			"level_12": {
-				"name": "Nissan Primera",
-				"price": 780000,
-				"max_count": 1,
-				"can_sell": true,
-				"can_buy": false,
-				"hidden": true
-			},
-			"level_13": {
-				"name": "Subaru Impreza WRX",
-				"price": 965000,
-				"max_count": 1,
-				"can_sell": true,
-				"can_buy": false,
-				"hidden": true
-			},
-			"level_14": {
-				"name": "Infinity G35",
-				"price": 1247000,
-				"max_count": 1,
-				"can_sell": true,
-				"can_buy": false,
-				"hidden": true
 			}
 		},
 		"immovables": {
@@ -242,7 +235,7 @@
 				"hidden": false
 			},
 			"level_3": {
-				"name": "Двухкомнатная квартира в городе",
+				"name": "Двухкомнатная квартира",
 				"price": 175000,
 				"max_count": 1,
 				"can_sell": true,
@@ -250,7 +243,7 @@
 				"hidden": false
 			},
 			"level_4": {
-				"name": "Трёхкомнатная квартира в столице",
+				"name": "Трёхкомнатная квартира",
 				"price": 900000,
 				"max_count": 1,
 				"can_sell": true,
@@ -258,7 +251,7 @@
 				"hidden": false
 			},
 			"level_5": {
-				"name": "Шестикомнатная квартира в столице",
+				"name": "Пятикомнатная квартира",
 				"price": 3500000,
 				"max_count": 1,
 				"can_sell": true,
@@ -282,16 +275,8 @@
 				"hidden": false
 			},
 			"level_8": {
-				"name": "Жилой комплекс в Лос Анжелесе",
+				"name": "Жилой комплекс в Лос-Анжелесе",
 				"price": 436000000,
-				"max_count": 1,
-				"can_sell": true,
-				"can_buy": true,
-				"hidden": false
-			},
-			"level_80": {
-				"name": "Дом Олега",
-				"price": 10000000000,
 				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
@@ -300,7 +285,7 @@
 		},
 		"phone": {
 			"level_1": {
-				"name": "Nokia 3310",
+				"name": "Кнопочная Nokia",
 				"price": 2500,
 				"max_count": 1,
 				"can_sell": true,
@@ -308,7 +293,7 @@
 				"hidden": false
 			},
 			"level_2": {
-				"name": "Samsung X510",
+				"name": "Кнопочный Samsung",
 				"price": 5000,
 				"max_count": 1,
 				"can_sell": true,
@@ -316,7 +301,7 @@
 				"hidden": false
 			},
 			"level_3": {
-				"name": "Sony Ericsson K750i",
+				"name": "Кнопочный Sony",
 				"price": 8500,
 				"max_count": 1,
 				"can_sell": true,
@@ -324,7 +309,7 @@
 				"hidden": false
 			},
 			"level_4": {
-				"name": "Apple iPhone 2G",
+				"name": "iPhone 2G",
 				"price": 14999,
 				"max_count": 1,
 				"can_sell": true,
@@ -332,7 +317,7 @@
 				"hidden": false
 			},
 			"level_5": {
-				"name": "Apple iPhone 5s",
+				"name": "iPhone 5S",
 				"price": 24999,
 				"max_count": 1,
 				"can_sell": true,
@@ -340,7 +325,7 @@
 				"hidden": false
 			},
 			"level_6": {
-				"name": "Apple iPhone 6s",
+				"name": "iPhone 8 Plus",
 				"price": 39999,
 				"max_count": 1,
 				"can_sell": true,
@@ -348,7 +333,7 @@
 				"hidden": false
 			},
 			"level_7": {
-				"name": "Apple iPhone 8 Plus",
+				"name": "iPhone 10 XS Max",
 				"price": 74999,
 				"max_count": 1,
 				"can_sell": true,
@@ -356,32 +341,8 @@
 				"hidden": false
 			},
 			"level_8": {
-				"name": "Apple iPhone 10 XS Max",
+				"name": "iPhone 12 Pro Max",
 				"price": 119999,
-				"max_count": 1,
-				"can_sell": true,
-				"can_buy": true,
-				"hidden": false
-			},
-			"level_9": {
-				"name": "Apple iPhone 11 Pro Max",
-				"price": 239999,
-				"max_count": 1,
-				"can_sell": true,
-				"can_buy": true,
-				"hidden": false
-			},
-			"level_10": {
-				"name": "Apple iPhone 12 XS Ultra Pro Max Edition",
-				"price": 889999,
-				"max_count": 1,
-				"can_sell": true,
-				"can_buy": true,
-				"hidden": false
-			},
-			"level_11": {
-				"name": "Apple iPhone 13 Pro Mega",
-				"price": 5000000,
 				"max_count": 1,
 				"can_sell": true,
 				"can_buy": true,
@@ -466,6 +427,48 @@
 		{
 			"name": "Бизнес",
 			"type": "enterprise"
+		}
+	],
+	"dailyprize_list":[
+		{
+			"type": "money",
+			"amount": 10000
+		},
+		{
+			"type": "item",
+			"item": "dailyprize:item1:1"
+		},
+		{
+			"type": "item",
+			"item": "dailyprize:item2:1"
+		},
+		{
+			"type": "item",
+			"item": "dailyprize:item3:2"
+		},
+		{
+			"type": "money",
+			"amount": 50000
+		},
+		{
+			"type": "item",
+			"item": "dailyprize:item4:1"
+		},
+		{
+			"type": "item",
+			"item": "dailyprize:item1:2"
+		},
+		{
+			"type": "money",
+			"amount": 100000
+		},
+		{
+			"type": "item",
+			"item": "dailyprize:item3:1"
+		},
+		{
+			"type": "item",
+			"item": "dailyprize:item2:2"
 		}
 	],
 	"enterprise_types": {

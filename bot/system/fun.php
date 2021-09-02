@@ -132,6 +132,10 @@ function fun_memes_control_panel($finput){
 			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Не найдено название!", $data->object->from_id);
 			return;
 		}
+		if(mb_substr_count($meme_name, '$') > 0){
+			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Знак '\$' нельзя использовать.", $data->object->from_id);
+				return;
+		}
 		for($i = 0; $i < count($forbidden_names); $i++){ // Массив проверки имя на запрет
 			if($meme_name == $forbidden_names[$i]){
 				$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Данное имя нельзя использовать!", $data->object->from_id);
@@ -410,6 +414,8 @@ function fun_memes_handler($data, $db, $finput){
 		return false;
 
 	$meme_name = mb_strtolower($data->object->text);
+	if(mb_substr_count($meme_name, '$') > 0)
+		return false;
 	$query = new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["fun.memes.{$meme_name}.content" => 1]]);
 	$extractor = $db->executeQuery($query);
 	$meme = $extractor->getValue([0, "fun", "memes", $meme_name, "content"], false);

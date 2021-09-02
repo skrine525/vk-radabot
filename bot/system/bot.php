@@ -39,7 +39,8 @@ namespace Bot{
 				$this->permissionSystem = new \PermissionSystem($this->db);		// Систима прав
 			}
 			else{
-				die("Error: {$data->object->peer_id} is not chat peer_id.");
+				error_log("Error: {$data->object->peer_id} is not chat peer_id.");
+				exit;
 			}
 		}
 
@@ -463,8 +464,10 @@ namespace Bot{
 		public static function get($name){
 			if(self::$loaded !== true){
 				$data = json_decode(file_get_contents(BOTPATH_CONFIGFILE), true);
-			    if($data === false)
-			    	die('Unable to read config.json file. File not exists or invalid.');
+			    if($data === false){
+			    	error_log('Unable to read config.json file. File not exists or invalid.');
+			    	exit;
+			    }
 			    self::$data = $data;
 			}
 
@@ -1723,7 +1726,6 @@ namespace{
 
 		// Переменная команды меню
 		$code = bot_get_array_value($payload, 2, 1);
-
 		switch ($code) {
 			case 0:
 			$text = bot_get_array_value($payload, 3, false);
