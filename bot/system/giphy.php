@@ -29,7 +29,7 @@ function giphy_handler($finput){
 	$argv = $finput->argv;
 	$db = $finput->db;
 
-	$name = bot_gettext_by_argv($argv, 1);
+	$name = bot_get_text_by_argv($argv, 1);
 	$gif = json_decode(giphy_translate(array('s' => $name)));
 	$botModule = new BotModule($db);
 	if (sizeof($gif->data) > 0){

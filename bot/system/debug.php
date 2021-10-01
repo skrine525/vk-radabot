@@ -54,13 +54,13 @@ function debug_docmd($finput){
 		return;
 	}
 
-	$command = bot_gettext_by_argv($argv, 2);
+	$command = bot_get_text_by_argv($argv, 2);
 
 	if($command == ""){
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте !docmd <пользователь> <команда>");
 		return;
 	}
-	$modified_data = $data;
+	$modified_data = clone $data;
 	$modified_data->object->from_id = $member_id;
 	$modified_data->object->text = $command;
 	$result = $finput->event->runTextMessageCommand($modified_data);
@@ -77,7 +77,7 @@ function debug_testcmd($finput){
 	$messagesModule  = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
 
-	$command = bot_gettext_by_argv($argv, 1);
+	$command = bot_get_text_by_argv($argv, 1);
 
 	if($command == ""){
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте !test-cmd <команда>");
@@ -136,7 +136,7 @@ function debug_runcb_tc($finput){
 	$messagesModule  = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
 
-	$command = bot_gettext_by_argv($argv, 1);
+	$command = bot_get_text_by_argv($argv, 1);
 
 	if($command == ""){
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте !runcb <команда>");
@@ -702,7 +702,7 @@ function debug_cmdsearch($finput){
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
 
-	$command = bot_gettext_by_argv($argv, 1);
+	$command = bot_get_text_by_argv($argv, 1);
 
 	if($command == ""){
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте !test-cmd <команда>");
@@ -732,7 +732,7 @@ function debug_parser($finput){
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
 
-	$text = bot_gettext_by_argv($argv, 1);
+	$text = bot_get_text_by_argv($argv, 1);
 	$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, Полученные аргументы: {$text}");
 }
 

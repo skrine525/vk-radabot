@@ -223,7 +223,7 @@ function government_laws_cpanel($finput){
 	if($command == "добавить"){
 		if($data->object->from_id == $president_id){
 			$time = time();
-			$content = bot_gettext_by_argv($argv, 2);
+			$content = bot_get_text_by_argv($argv, 2);
 
 			$gov["laws"][] = array(
 				'time' => $time,
@@ -396,7 +396,7 @@ function government_batch($finput){
 
 	$user_batch = bot_get_array_value($gov["batches"], "batch{$data->object->from_id}", null);
 	if(is_null($user_batch)){
-		$name = bot_gettext_by_argv($argv, 1); 
+		$name = bot_get_text_by_argv($argv, 1); 
 		if($name == '')
 			$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, '%appeal%, У вас нет партии. Создайте, используя:', ['!партия <название>']);
 		else{

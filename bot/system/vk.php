@@ -1,13 +1,11 @@
 <?php
 
-//// Медоты для работы с VK API
+// Медоты для работы с VK API
 
-define("VK_API_VERSION", 5.84); // Константа версии VK API
-
-function vk_call($method, $parametres){
+function vk_call($method, $parametres, $version = 5.84){
 	// Устанавливаем системные параметры
 	$parametres['access_token'] = bot_getconfig('VK_GROUP_TOKEN');
-	$parametres['v'] = VK_API_VERSION;
+	$parametres['v'] = $version;
 
 	$options = [
    		'http' => [
@@ -27,17 +25,18 @@ function vk_longpoll($data, $ts, $wait = 25){
 	return file_get_contents("{$data->server}?act=a_check&key={$data->key}&ts={$ts}&wait={$wait}");
 }
 
-function vk_userexecute($code){
-	$sys = [
+function vk_userexecute($code, $version = 5.84){
+	$parametres = [
+		'code' => $code,
 		'access_token' => bot_getconfig("VK_USER_TOKEN"),
-		'v' => VK_API_VERSION
+		'v' => $version
 	];
 
 	$options = [
    		'http' => [
             'method'  => 'POST',
             'header'  => 'Content-type: application/x-www-form-urlencoded', 
-            'content' => http_build_query(['code' => $code]).'&'.http_build_query($sys)
+            'content' => http_build_query($parametres)
         ]
 	];
 	return file_get_contents('https://api.vk.com/method/execute', false, stream_context_create($options));

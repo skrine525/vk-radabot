@@ -133,24 +133,24 @@ namespace Roleplay{
 			$member_id = 0;
 			if(array_key_exists(0, $this->data->object->fwd_messages)){
 				$member_id = $this->data->object->fwd_messages[0]->from_id;
-				$descriptionMessage = str_ireplace("\n", " ", bot_gettext_by_argv($argv, 0));
+				$descriptionMessage = str_ireplace("\n", " ", bot_get_text_by_argv($argv, 0));
 				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($descriptionMessage);
 			}
 			elseif(bot_get_userid_by_mention($argv[0], $member_id)){
-				$descriptionMessage = str_ireplace("\n", " ", bot_gettext_by_argv($argv, 1));
+				$descriptionMessage = str_ireplace("\n", " ", bot_get_text_by_argv($argv, 1));
 				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($descriptionMessage);
 			}
 			elseif(bot_get_userid_by_nick($this->db, $argv[0], $member_id)){
-				$descriptionMessage = str_ireplace("\n", " ", bot_gettext_by_argv($argv, 1));
+				$descriptionMessage = str_ireplace("\n", " ", bot_get_text_by_argv($argv, 1));
 				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($descriptionMessage);
 			}
 			elseif(is_numeric($argv[0])){
 				$member_id = intval($argv[0]);
-				$descriptionMessage = str_ireplace("\n", " ", bot_gettext_by_argv($argv, 1));
+				$descriptionMessage = str_ireplace("\n", " ", bot_get_text_by_argv($argv, 1));
 				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($descriptionMessage);
 			}
 			else{
-				$descriptionMessage = str_ireplace("\n", " ", bot_gettext_by_argv($argv, 1));
+				$descriptionMessage = str_ireplace("\n", " ", bot_get_text_by_argv($argv, 1));
 				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($descriptionMessage);
 			}
 
@@ -284,7 +284,7 @@ namespace{
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
 		} else {
-			$act = bot_gettext_by_argv($argv, 1);
+			$act = bot_get_text_by_argv($argv, 1);
 			if(mb_substr($act, mb_strlen($act)-1, mb_strlen($act)-1) != "."){
 				$act = $act . ".";
 			}
@@ -309,7 +309,7 @@ namespace{
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
 		} else {
-			$act = bot_gettext_by_argv($argv, 1);
+			$act = bot_get_text_by_argv($argv, 1);
 			if(mb_substr($act, mb_strlen($act)-1, mb_strlen($act)-1) != "."){
 				$act = $act . ".";
 			}
@@ -340,7 +340,7 @@ namespace{
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
 		} else {
-			$act = bot_gettext_by_argv($argv, 1);
+			$act = bot_get_text_by_argv($argv, 1);
 			$act = mb_strtoupper(mb_substr($act, 0, 1)) . mb_substr($act, 1, mb_strlen($act)-1);
 			if(mb_substr($act, mb_strlen($act)-1, mb_strlen($act)-1) != "."){
 				$act = $act . ".";
@@ -366,7 +366,7 @@ namespace{
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
 		} else {
-			$text = bot_gettext_by_argv($argv, 1);
+			$text = bot_get_text_by_argv($argv, 1);
 			$vowels_letters = array('а', 'о', 'и', 'е', 'ё', 'э', 'ы', 'у', 'ю', 'я'/*, 'a', 'e', 'i', 'o', 'u'*/);
 			$new_text = "";
 			$symbols = preg_split('//u', $text, null, PREG_SPLIT_NO_EMPTY);

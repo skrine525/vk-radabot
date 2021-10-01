@@ -69,6 +69,13 @@ namespace Bot{
 				return false;
 		}
 
+		private static function getArrayParam($array, $name, $type, $default){
+			if(array_key_exists($name, $array) && gettype($array[$name]) == $type)
+				return $array[$name];
+			else
+				return $default;
+		}
+
 	  	public function addNonCommandTextMessageHandler($callback){
 	  		if(array_search($callback, $this->nonCommandTextMessageHandlers) === false && is_callable($callback)){
 	  			$this->nonCommandTextMessageHandlers[] = $callback;
@@ -77,11 +84,12 @@ namespace Bot{
 	  		return false;
 	  	}
 
-	  	public function addTextMessageCommand(string $command, callable $callback, bool $ignore_db = false){
+	  	public function addTextMessageCommand(string $command, callable $callback, array $other_params = []){
 	  		if(!$this->isTextMessageCommand($command)){
 	  			$this->textMessageCommands[$command] = (object) array(
-	  				'callback' => $callback,
-	  				'ignore_db' => $ignore_db
+					'callback' => $callback,
+					'callback_argv' => self::getArrayParam($other_params, 'callback_argv', 'array', []),
+					'ignore_db' => self::getArrayParam($other_params, 'ignore_db', 'boolean', false)
 	  			);
 	  			return true;
 	  		}
@@ -93,11 +101,12 @@ namespace Bot{
 	  		return array_key_exists($command, $this->textMessageCommands);
 	  	}
 
-	  	public function addTextButtonCommand(string $command, callable $callback, bool $ignore_db = false){
+	  	public function addTextButtonCommand(string $command, callable $callback, array $other_params = []){
 	  		if(!$this->isTextButtonCommand($command)){
 	  			$this->textButtonCommands[$command] = (object) array(
-	  				'callback' => $callback,
-	  				'ignore_db' => $ignore_db
+					'callback' => $callback,
+					'callback_argv' => self::getArrayParam($other_params, 'callback_argv', 'array', []),
+					'ignore_db' => self::getArrayParam($other_params, 'ignore_db', 'boolean', false)
 	  			);
 	  			return true;
 	  		}
@@ -109,11 +118,12 @@ namespace Bot{
 	  		return array_key_exists($command, $this->textButtonCommands);
 	  	}
 
-	  	public function addCallbackButtonCommand(string $command, callable $callback, bool $ignore_db = false){
+	  	public function addCallbackButtonCommand(string $command, callable $callback, array $other_params = []){
 	  		if(!$this->isCallbackButtonCommand($command)){
 	  			$this->callbackButtonCommands[$command] = (object) array(
-	  				'callback' => $callback,
-	  				'ignore_db' => $ignore_db
+					'callback' => $callback,
+					'callback_argv' => self::getArrayParam($other_params, 'callback_argv', 'array', []),
+					'ignore_db' => self::getArrayParam($other_params, 'ignore_db', 'boolean', false)
 	  			);
 	  			return true;
 	  		}
@@ -155,10 +165,11 @@ namespace Bot{
 						'db' => $this->db,
 						'event' => $this
 					);
-					$callback = $command_data->callback; 						// Получение Callback'а
-					$execution_time = microtime(true);							// Начало подсчета времени исполнения Callback'а
-					call_user_func_array($callback, array($finput)); 			// Выполнение Callback'а
-					$execution_time = microtime(true) - $execution_time;		// Конец подсчета времени исполнения Callback'а
+					$callback = $command_data->callback; 										// Получение Callback'а
+					$execution_time = microtime(true);											// Начало подсчета времени исполнения Callback'а
+					$callback_argv = array_merge([$finput], $command_data->callback_argv);		// Сливание аргументов Callback'а
+					call_user_func_array($callback, $callback_argv); 							// Выполнение Callback'а
+					$execution_time = microtime(true) - $execution_time;						// Конец подсчета времени исполнения Callback'а
 					return (object) ['code' => ChatEvent::COMMAND_RESULT_OK, 'command' => $command, 'finput' => $finput, 'execution_time' => $execution_time];
 				}
 				return (object) ['code' => ChatEvent::COMMAND_RESULT_UNKNOWN, 'command' => $command];
@@ -185,10 +196,11 @@ namespace Bot{
 								'event' => $this
 							);
 
-							$callback = $command_data->callback; 						// Получение Callback'а
-							$execution_time = microtime(true);							// Начало подсчета времени исполнения Callback'а
-							call_user_func_array($callback, array($finput)); 			// Выполнение Callback'а
-							$execution_time = microtime(true) - $execution_time;		// Конец подсчета времени исполнения Callback'а
+							$callback = $command_data->callback; 										// Получение Callback'а
+							$execution_time = microtime(true);											// Начало подсчета времени исполнения Callback'а
+							$callback_argv = array_merge([$finput], $command_data->callback_argv);		// Сливание аргументов Callback'а
+							call_user_func_array($callback, $callback_argv); 							// Выполнение Callback'а
+							$execution_time = microtime(true) - $execution_time;						// Конец подсчета времени исполнения Callback'а
 							return (object) ['code' => ChatEvent::COMMAND_RESULT_OK, 'command' => $payload->command, 'finput' => $finput, 'execution_time' => $execution_time];
 						}
 						return (object) ['code' => ChatEvent::COMMAND_RESULT_UNKNOWN, 'command' => $payload->command];
@@ -217,10 +229,11 @@ namespace Bot{
 								'event' => $this
 							);
 
-							$callback = $command_data->callback; 						// Получение Callback'а
-							$execution_time = microtime(true);							// Начало подсчета времени исполнения Callback'а
-							call_user_func_array($callback, array($finput)); 			// Выполнение Callback'а
-							$execution_time = microtime(true) - $execution_time;		// Конец подсчета времени исполнения Callback'а
+							$callback = $command_data->callback; 										// Получение Callback'а
+							$execution_time = microtime(true);											// Начало подсчета времени исполнения Callback'а
+							$callback_argv = array_merge([$finput], $command_data->callback_argv);		// Сливание аргументов Callback'а
+							call_user_func_array($callback, $callback_argv); 							// Выполнение Callback'а
+							$execution_time = microtime(true) - $execution_time;						// Конец подсчета времени исполнения Callback'а
 							return (object) ['code' => ChatEvent::COMMAND_RESULT_OK, 'command' => $payload[0], 'finput' => $finput, 'execution_time' => $execution_time];
 						}
 						return (object) ['code' => ChatEvent::COMMAND_RESULT_UNKNOWN, 'command' => $payload[0]];
@@ -571,13 +584,14 @@ namespace{
 			$GLOBALS['cmd_initime_start'] = microtime(true);							// Время инициализации команд: Начало
 
 			bot_initcmd($event);														// Инициализация команд модуля bot
-			government_initcmd($event);													// Инициализация команд Гос. устройства
+			bot_initcustomcmd($event);													// Инициализация команд из БД
+			//government_initcmd($event);												// Инициализация команд Гос. устройства
 			manager_initcmd($event);													// Инициализация команд модуля manager
 			stats_initcmd($event);														// Инициализация команд модуля stats
 			roleplay_initcmd($event);													// RP-команды
 			fun_initcmd($event);														// Fun-команды
-			giphy_initcmd($event);														// Инициализация команд модуля giphy
-			wordgame_initcmd($event);													// Игра Слова
+			//giphy_initcmd($event);													// Инициализация команд модуля giphy
+			//wordgame_initcmd($event);													// Игра Слова
 			economy_initcmd($event);													// Economy
 
 			$GLOBALS['cmd_initime_end'] = microtime(true);								// Время инициализации команд: Конец
@@ -586,7 +600,7 @@ namespace{
 			$event->addNonCommandTextMessageHandler('bot_message_action_handler');		// Обработчик событий в сообщениях
 			$event->addNonCommandTextMessageHandler('government_election_system');		// Обработчик выборов
 			$event->addNonCommandTextMessageHandler('fun_handler');						// Обработчик фанового модуля
-			$event->addNonCommandTextMessageHandler('wordgame_gameplay');				// Обработчик игры Слова
+			//$event->addNonCommandTextMessageHandler('wordgame_gameplay');				// Обработчик игры Слова
 
 			bot_pre_handle($event);														// Функция предварительной обработки
 			$event->handle(); 															// Обработка события бота
@@ -728,7 +742,7 @@ namespace{
 
 		// Основное
 		$event->addTextMessageCommand("!cmdlist", 'bot_cmdlist');
-		$event->addTextMessageCommand("!reg", 'bot_register', true);
+		$event->addTextMessageCommand("!reg", 'bot_register', ['ignore_db' => true]);
 		$event->addTextMessageCommand("!помощь", 'bot_help');
 		$event->addTextMessageCommand("!чат", 'bot_chatinfo');
 
@@ -742,6 +756,9 @@ namespace{
 		$event->addTextMessageCommand("!base64", 'bot_base64');
 		$event->addTextMessageCommand("!крестики-нолики", 'bot_tictactoe');
 		$event->addTextMessageCommand("!сообщение", 'bot_chatmessage');
+		$event->addTextMessageCommand("!addcustom", 'bot_addcustomcmd');
+		$event->addTextMessageCommand("!delcustom", 'bot_delcustomcmd');
+		$event->addTextMessageCommand("!listcustom", 'bot_listcustomcmd');
 
 		// Многословные команды
 		$event->addTextMessageCommand("пожать", "bot_shakecmd");
@@ -754,7 +771,8 @@ namespace{
 		$event->addCallbackButtonCommand("bot_menu", 'bot_menu_cb');
 		$event->addCallbackButtonCommand("bot_cmdlist", 'bot_cmdlist_cb');
 		$event->addCallbackButtonCommand('bot_tictactoe', 'bot_tictactoe_cb');
-		$event->addCallbackButtonCommand('bot_reg', 'bot_register_cb', true);
+		$event->addCallbackButtonCommand('bot_reg', 'bot_register_cb', ['ignore_db' => true]);
+		$event->addCallbackButtonCommand('bot_listcustomcmd', 'bot_listcustomcmd_cb');
 	}
 
 	function bot_register($finput){ // Регистрация чата
@@ -814,7 +832,7 @@ namespace{
 		return $argv;
 	}
 
-	function bot_gettext_by_argv(array $argv, int $start, int $end = 0){
+	function bot_get_text_by_argv(array $argv, int $start, int $end = 0){
 		$argv_end = count($argv) - 1;
 		if($end <= 0 || $end > $argv_end)
 			$end = $argv_end;
@@ -1032,7 +1050,7 @@ namespace{
 			return;
 		}
 
-		$message = bot_gettext_by_argv($argv, 2);
+		$message = bot_get_text_by_argv($argv, 2);
 		if($message == ''){
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте !сообщение <ID беседы> <сообщение>.");
 			return;
@@ -1133,7 +1151,7 @@ namespace{
 		$argv = $finput->argv;
 		$db = $finput->db;
 
-		$str_data = bot_gettext_by_argv($argv, 1);
+		$str_data = bot_get_text_by_argv($argv, 1);
 		$messagesModule = new Bot\Messages($db);
 		$messagesModule->setAppealID($data->object->from_id);
 
@@ -1441,6 +1459,259 @@ namespace{
 		));
 
 		$messagesModule->sendSilentMessage($data->object->peer_id, "Крестик-нолики. Чтобы присоединиться, нажмите кнопку \"Играть.\"\n\nИгрок 1: Отсутствует\nИгрок 2: Отсутствует", array('keyboard' => $keyboard));
+	}
+
+	function bot_initcustomcmd($event){
+		$chatModes = $event->getChatModes();
+		$db = $event->getDatabase();
+		if(!$chatModes->getModeValue("custom_cmd")){ // Отключаем, если в беседе запрещены кастомные команды
+			return;
+		}
+
+		$query = new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.custom_cmds" => 1]]);
+		$extractor = $db->executeQuery($query);
+		$custom_cmds = $extractor->getValue("0.chat_settings.custom_cmds", []);
+
+		foreach ($custom_cmds as $key => $value) {
+			$event->addTextMessageCommand($key, 'bot_docustomcmd', ['callback_argv' => [$value]]);
+		}
+	}
+
+	function bot_docustomcmd($finput, $cmd_data){
+		// Инициализация базовых переменных
+		$data = $finput->data; 
+		$argv = $finput->argv;
+		$db = $finput->db;
+
+		$messagesModule = new Bot\Messages($db);
+		$messagesModule->setAppealID($data->object->from_id);
+		
+		$modified_data = clone $data;
+		$modified_data->object->text = $cmd_data->cmd_line;
+		$result = $finput->event->runTextMessageCommand($modified_data);
+		if($result->code == Bot\ChatEvent::COMMAND_RESULT_UNKNOWN)
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Ошибка. Команды [{$argv[0]}] не существует!"); // Вывод ошибки
+	}
+
+	function bot_listcustomcmd($finput){
+		// Инициализация базовых переменных
+		$data = $finput->data; 
+		$argv = $finput->argv;
+		$db = $finput->db;
+
+		$messagesModule = new Bot\Messages($db);
+		$messagesModule->setAppealID($data->object->from_id);
+
+		$chatModes = $finput->event->getChatModes();
+		if(!$chatModes->getModeValue("custom_cmd")){ // Отключаем, если в беседе запрещены кастомные команды
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔В чате отключены кастомные команды!");
+			return;
+		}
+
+		$query = new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.custom_cmds" => 1]]);
+		$extractor = $db->executeQuery($query);
+		$extracted_data = $extractor->getValue("0.chat_settings.custom_cmds", []);
+		$custom_cmds = [];
+		foreach($extracted_data as $key => $value)
+			$custom_cmds[] = $key;
+
+		$list_number = intval(bot_get_array_value($argv, 1, 1));
+
+		$listBuiler = new Bot\ListBuilder($custom_cmds, 10);
+		$list = $listBuiler->build($list_number);
+		if($list->result){
+			$buttons = array();
+			if($list->list->max_number > 1){
+				if($list_number != 1){
+					$previous_list = $list_number - 1;
+					$emoji_str = bot_int_to_emoji_str($previous_list);
+					$buttons[] = vk_callback_button("{$emoji_str} ⬅", array('bot_listcustomcmd', $data->object->from_id, $previous_list), 'secondary');
+				}
+				if($list_number != $list->list->max_number){
+					$next_list = $list_number + 1;
+					$emoji_str = bot_int_to_emoji_str($next_list);
+					$buttons[] = vk_callback_button("➡ {$emoji_str}", array('bot_listcustomcmd', $data->object->from_id, $next_list), 'secondary');
+				}
+			}
+			$control_buttons = [
+				vk_callback_button("Меню", array('bot_menu', $data->object->from_id), "secondary"),
+				vk_callback_button("Закрыть", array('bot_menu', $data->object->from_id, 0), "negative")
+			];
+			if(count($buttons) > 0)
+				$keyboard_buttons = [$buttons, $control_buttons];
+			else
+				$keyboard_buttons = [$control_buttons];
+			$keyboard = vk_keyboard_inline($keyboard_buttons);
+
+			$msg = "%appeal%, Список команд [{$list_number}/{$list->list->max_number}]:";
+			for($i = 0; $i < count($list->list->out); $i++){
+				$msg = $msg . "\n• " . $list->list->out[$i];
+			}
+
+			$messagesModule->sendSilentMessage($data->object->peer_id, $msg, array('keyboard' => $keyboard));
+		}
+		else
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔указан неверный номер списка!");
+	}
+
+	function bot_listcustomcmd_cb($finput){
+		// Инициализация базовых переменных
+		$data = $finput->data; 
+		$payload = $finput->payload;
+		$db = $finput->db;
+		$event = $finput->event;
+
+		// Функция тестирования пользователя
+		$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
+		if($testing_user_id !== $data->object->user_id){
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
+			return;
+		}
+
+		$messagesModule = new Bot\Messages($db);
+		$messagesModule->setAppealID($data->object->user_id);
+
+		$query = new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.custom_cmds" => 1]]);
+		$extractor = $db->executeQuery($query);
+		$extracted_data = $extractor->getValue("0.chat_settings.custom_cmds", []);
+		$custom_cmds = [];
+		foreach($extracted_data as $key => $value)
+			$custom_cmds[] = $key;
+
+		$list_number = bot_get_array_value($payload, 2, 1);
+
+		$listBuiler = new Bot\ListBuilder($custom_cmds, 10);
+		$list = $listBuiler->build($list_number);
+		if($list->result){
+			$buttons = array();
+			if($list->list->max_number > 1){
+				if($list_number != 1){
+					$previous_list = $list_number - 1;
+					$emoji_str = bot_int_to_emoji_str($previous_list);
+					$buttons[] = vk_callback_button("{$emoji_str} ⬅", array('bot_listcustomcmd', $data->object->user_id, $previous_list), 'secondary');
+				}
+				if($list_number != $list->list->max_number){
+					$next_list = $list_number + 1;
+					$emoji_str = bot_int_to_emoji_str($next_list);
+					$buttons[] = vk_callback_button("➡ {$emoji_str}", array('bot_listcustomcmd', $data->object->user_id, $next_list), 'secondary');
+				}
+			}
+			$control_buttons = [
+				vk_callback_button("Меню", array('bot_menu', $data->object->user_id), "secondary"),
+				vk_callback_button("Закрыть", array('bot_menu', $data->object->user_id, 0), "negative")
+			];
+			if(count($buttons) > 0)
+				$keyboard_buttons = [$buttons, $control_buttons];
+			else
+				$keyboard_buttons = [$control_buttons];
+			$keyboard = vk_keyboard_inline($keyboard_buttons);
+
+			$msg = "%appeal%, Список команд [{$list_number}/{$list->list->max_number}]:";
+			for($i = 0; $i < count($list->list->out); $i++){
+				$msg = $msg . "\n• " . $list->list->out[$i];
+			}
+
+			$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $msg, array('keyboard' => $keyboard));
+		}
+		else
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Указан неверный номер списка!');
+	}
+
+	function bot_addcustomcmd($finput){
+		// Инициализация базовых переменных
+		$data = $finput->data; 
+		$argv = $finput->argv;
+		$db = $finput->db;
+
+		$permissionSystem = $finput->event->getPermissionSystem();
+		$messagesModule = new Bot\Messages($db);
+		$messagesModule->setAppealID($data->object->from_id);
+
+		$chatModes = $finput->event->getChatModes();
+		if(!$chatModes->getModeValue("custom_cmd")){ // Отключаем, если в беседе запрещены кастомные команды
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔В чате отключены кастомные команды!");
+			return;
+		}
+
+		if(!$permissionSystem->checkUserPermission($data->object->from_id, 'manage_cmd')){
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔У вас нет прав управлять кастомными командами!");
+			return;
+		}
+
+		$cmd = bot_get_array_value($argv, 1, "");
+		$cmd_line = bot_get_text_by_argv($argv, 2);
+
+		if($cmd == "" || $cmd_line == ""){
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте !addcustom <команда> <строка исполнения>.");
+			return;
+		}
+
+		if($finput->event->isTextMessageCommand($cmd)){
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Команда {$cmd} уже зарезевирована!");
+			return;
+		}
+		$cmd_data = (object) [
+			'date' => time(),
+			'user_id' => $data->object->from_id,
+			'cmd_line' => $cmd_line
+		];
+
+		$bulk = new \MongoDB\Driver\BulkWrite;
+		$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["chat_settings.custom_cmds.{$cmd}" => $cmd_data]]);
+		$db->executeBulkWrite($bulk);
+
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Команда {$cmd} успешно добавлена!");
+	}
+
+	function bot_delcustomcmd($finput){
+		// Инициализация базовых переменных
+		$data = $finput->data; 
+		$argv = $finput->argv;
+		$db = $finput->db;
+
+		$permissionSystem = $finput->event->getPermissionSystem();
+		$messagesModule = new Bot\Messages($db);
+		$messagesModule->setAppealID($data->object->from_id);
+
+		$chatModes = $finput->event->getChatModes();
+		if(!$chatModes->getModeValue("custom_cmd")){ // Отключаем, если в беседе запрещены кастомные команды
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔В чате отключены кастомные команды!");
+			return;
+		}
+
+		$cmd = bot_get_array_value($argv, 1, "");
+
+		if($cmd == ""){
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте !delcustom <команда>.");
+			return;
+		}
+
+		if(!$finput->event->isTextMessageCommand($cmd)){
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Команда {$cmd} не существует!");
+			return;
+		}
+
+		$query = new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.custom_cmds.{$cmd}" => 1]]);
+		$extractor = $db->executeQuery($query);
+		$cmd_data = $extractor->getValue("0.chat_settings.custom_cmds.{$cmd}", false);
+
+		if($cmd_data === false){
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Команда {$cmd} не является кастомной!");
+			return;
+		}
+
+		if(!$permissionSystem->checkUserPermission($data->object->from_id, 'manage_cmd')){
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔У вас нет прав управлять кастомными командами!");
+			return;
+		}
+
+		$bulk = new \MongoDB\Driver\BulkWrite;
+		$bulk->update(['_id' => $db->getDocumentID()], ['$unset' => ["chat_settings.custom_cmds.{$cmd}" => 1]]);
+		$writeResult = $db->executeBulkWrite($bulk);
+		if($writeResult->getModifiedCount() > 0)
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Команда {$cmd} успешно удалена!");
+		else
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Команда {$cmd} не удалена!");
 	}
 
 	function bot_tictactoe_cb($finput){

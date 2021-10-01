@@ -127,7 +127,7 @@ function fun_memes_control_panel($finput){
 		$command = "";
 	if($command == "add"){
 		$forbidden_names = array("%__appeal__%", "%__ownername__%", "-all", "%appeal%"); // Массив запрещенных наименований мемов
-		$meme_name = mb_strtolower(bot_gettext_by_argv($argv, 2));
+		$meme_name = mb_strtolower(bot_get_text_by_argv($argv, 2));
 		if($meme_name == ""){
 			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Не найдено название!", $data->object->from_id);
 			return;
@@ -218,7 +218,7 @@ function fun_memes_control_panel($finput){
 		$botModule->sendSilentMessage($data->object->peer_id, ", ✅Мем сохранен!", $data->object->from_id);
 	}
 	elseif($command == "del"){
-		$meme_name = mb_strtolower(bot_gettext_by_argv($argv, 2));
+		$meme_name = mb_strtolower(bot_get_text_by_argv($argv, 2));
 		if($meme_name == ""){
 			$botModule->sendSilentMessage($data->object->peer_id, ", &#9940;Не найдено название!", $data->object->from_id);
 			return;
@@ -284,7 +284,7 @@ function fun_memes_control_panel($finput){
 		$botModule->sendSilentMessage($data->object->peer_id, ", 📝список мемов в беседе:\n".$meme_str_list, $data->object->from_id);
 	}
 	elseif($command == "info"){
-		$meme_name = mb_strtolower(bot_gettext_by_argv($argv, 2));
+		$meme_name = mb_strtolower(bot_get_text_by_argv($argv, 2));
 
 		if($meme_name == ""){
 			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔введите имя мема.", $data->object->from_id);
@@ -590,7 +590,7 @@ function fun_howmuch($finput){
 		$unitname = $argv[1];
 	else
 		$unitname = "";
-	$add = bot_gettext_by_argv($argv, 2);
+	$add = bot_get_text_by_argv($argv, 2);
 
 	if($unitname == "" || $add == ""){
 		$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, "%appeal%, используйте:", array("Сколько <ед. измерения> <дополнение>"));
@@ -662,7 +662,7 @@ function fun_whois_nom($finput){
 
 	$botModule = new BotModule($db);
 
-	$text = bot_gettext_by_argv($argv, 1);
+	$text = bot_get_text_by_argv($argv, 1);
 	if($text == ""){
 		$botModule->sendCommandListFromArray($data, ", используйте:", array(
 			'!Кто <текст>'
@@ -684,7 +684,7 @@ function fun_whois_acc($finput){
 
 	$botModule = new BotModule($db);
 
-	$text = bot_gettext_by_argv($argv, 1);
+	$text = bot_get_text_by_argv($argv, 1);
 	if($text == ""){
 		$botModule->sendCommandListFromArray($data, ", используйте:", array(
 			'!Кого <текст>'
@@ -706,7 +706,7 @@ function fun_whois_dat($finput){
 
 	$botModule = new BotModule($db);
 
-	$text = bot_gettext_by_argv($argv, 1);
+	$text = bot_get_text_by_argv($argv, 1);
 	if($text == ""){
 		$botModule->sendCommandListFromArray($data, ", используйте:", array(
 			'!Кому <текст>'
@@ -726,7 +726,7 @@ function fun_tts($finput){
 	$argv = $finput->argv;
 	$db = $finput->db;
 
-	$message = bot_gettext_by_argv($argv, 1);
+	$message = bot_get_text_by_argv($argv, 1);
 	$botModule = new BotModule($db);
 
 	if($message == ""){
@@ -798,7 +798,7 @@ function fun_info($finput){
 
 	$botModule = new BotModule($db);
 
-	$expression = bot_gettext_by_argv($argv, 1);
+	$expression = bot_get_text_by_argv($argv, 1);
 
 	if($expression == ""){
 		$botModule->sendSilentMessage($data->object->peer_id, ", ⛔используйте \"Инфа <выражение>\".", $data->object->from_id);
@@ -818,7 +818,7 @@ function fun_say($finput){
 
 	$botModule = new BotModule($db);
 
-	$params = bot_gettext_by_argv($argv, 1);
+	$params = bot_get_text_by_argv($argv, 1);
 
 	parse_str($params, $vars);
 

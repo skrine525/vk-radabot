@@ -385,7 +385,7 @@ namespace Economy{
 	}
 
 	class ItemActions{
-		public static dailyprize($interface, $item, $payload){
+		public static function dailyprize($interface, $item, $payload){
 			switch ($payload) {
 				case 'deposit':
 				# code...
@@ -646,7 +646,7 @@ namespace{
 		$event->addTextMessageCommand("!подарить", "economy_give");
 		$event->addTextMessageCommand("!казино", "CasinoRouletteGame::main");
 		$event->addTextMessageCommand("!ставка", "CasinoRouletteGame::bet");
-		$event->addTextMessageCommand("!приз", 'economy_dailyprize');
+		//$event->addTextMessageCommand("!приз", 'economy_dailyprize');
 
 		$event->addCallbackButtonCommand('economy_company', 'economy_company_cb');
 		$event->addCallbackButtonCommand('economy_work', 'economy_work_cb');
@@ -2816,7 +2816,7 @@ namespace{
 			if($index > 0 && $user_enterprises_count >= $index){
 				$enterprise = $enterpriseSystem->getEnterprise($user_enterprises[$index-1]);
 
-				$name = bot_gettext_by_argv($argv, 2);
+				$name = bot_get_text_by_argv($argv, 2);
 				if($name == ""){
 					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Укажите название.", $data->object->from_id);
 					return;

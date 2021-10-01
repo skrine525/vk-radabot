@@ -15,7 +15,8 @@ class PermissionSystem{
 		'prohibit_antiflood' => ['label' => 'Игнорировать антифлуд', 'type' => 0],
 		'set_permits' => ['label' => 'Управлять правами', 'type' => 0],
 		'drink_tea' => ['label' => 'Пить чай', 'type' => 2],
-		'use_chat_messanger' => ['label' => 'Использовать Чат-мессенджер', 'type' => 0]
+		'use_chat_messanger' => ['label' => 'Использовать Чат-мессенджер', 'type' => 0],
+		'manage_cmd' => ['label' => 'Редактировать команды', 'type' => 0]
 	];
 
 	private $db;
@@ -137,7 +138,8 @@ class ChatModes{
 		'roleplay_enabled' => ['label' => 'РП', 'default_state' => true],
 		'games_enabled' => ['label' => 'Игры', 'default_state' => true],
 		'legacy_enabled' => ['label' => 'Legacy', 'default_state' => false],
-		'chat_messanger' => ['label' => 'Чат-мессенджер', 'default_state' => true]
+		'chat_messanger' => ['label' => 'Чат-мессенджер', 'default_state' => true],
+		'custom_cmd' => ['label' => 'Кастомные команды', 'default_state' => true]
 	];
 
 	private $db;
@@ -151,7 +153,7 @@ class ChatModes{
 
 			$query = new MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.chat_modes" => 1]]);
 			$extractor = $this->db->executeQuery($query);
-			$db_modes = $extractor->getValue("chat_settings.chat_modes", []);
+			$db_modes = $extractor->getValue("0.chat_settings.chat_modes", []);
 
 			$this->modes = array();
 			foreach(self::MODE_LIST as $key => $value) {
@@ -515,14 +517,14 @@ function manager_ban_user($finput){
 
 	if(array_key_exists(0, $data->object->fwd_messages)){
 		$member_id = $data->object->fwd_messages[0]->from_id;
-		$reason = bot_gettext_by_argv($argv, 1);
+		$reason = bot_get_text_by_argv($argv, 1);
 	} elseif(array_key_exists(1, $argv) && bot_get_userid_by_mention($argv[1], $member_id)){
-		$reason = bot_gettext_by_argv($argv, 2);
+		$reason = bot_get_text_by_argv($argv, 2);
 	} elseif(array_key_exists(1, $argv) && bot_get_userid_by_nick($db, $argv[1], $member_id)){
-		$reason = bot_gettext_by_argv($argv, 2);
+		$reason = bot_get_text_by_argv($argv, 2);
 	} elseif(array_key_exists(1, $argv) && is_numeric($argv[1])) {
 		$member_id = intval($argv[1]);
-		$reason = bot_gettext_by_argv($argv, 2);
+		$reason = bot_get_text_by_argv($argv, 2);
 	} else $member_id = 0;
 
 	if($member_id == 0){
@@ -932,7 +934,7 @@ function manager_nick($finput){
 	$messagesModule = new Bot\Messages($db);
 	$messagesModule->setAppealID($data->object->from_id);
 
-	$nick = bot_gettext_by_argv($argv, 1);
+	$nick = bot_get_text_by_argv($argv, 1);
 	if($nick !== false){
 		$nick = str_ireplace("\n", "", $nick);
 		if($nick == ''){
@@ -1117,7 +1119,7 @@ function manager_greeting($finput){
 	else
 		$command = "";
 	if($command == 'установить'){
-		$invited_greeting = bot_gettext_by_argv($argv, 2);
+		$invited_greeting = bot_get_text_by_argv($argv, 2);
 
 		$bulk = new MongoDB\Driver\BulkWrite;
 		$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["chat_settings.invited_greeting" => $invited_greeting]]);
@@ -1336,7 +1338,7 @@ function manager_panel_control($finput){
 	$command = mb_strtolower(bot_get_array_value($argv, 1, ""));
 
 	if($command == "создать"){
-		$text_command = bot_gettext_by_argv($argv, 2);
+		$text_command = bot_get_text_by_argv($argv, 2);
 		if($text_command == ""){
 			$botModule->sendSilentMessage($data->object->peer_id, ", ⛔Используйте [!панель создать <команда>], чтобы создать новый элемент.", $data->object->from_id);
 			return;
@@ -1382,7 +1384,7 @@ function manager_panel_control($finput){
 	elseif($command == "название"){
 		$user_panel = Database\CursorValueExtractor::objectToArray($db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.user_panels.id{$data->object->from_id}" => 1]]))->getValue([0, 'chat_settings', 'user_panels', "id{$data->object->from_id}"], []));
 		$argvt = bot_get_array_value($argv, 2, 0);
-		$name = bot_gettext_by_argv($argv, 3);
+		$name = bot_get_text_by_argv($argv, 3);
 		if($argvt == "" || !is_numeric($argvt) || $name == ""){
 			$botModule->sendSilentMessage($data->object->peer_id, ", Используйте [!панель название <номер> <название>], чтобы изменить название элемента.", $data->object->from_id);
 			return;
@@ -1405,7 +1407,7 @@ function manager_panel_control($finput){
 	elseif($command == "команда"){
 		$user_panel = Database\CursorValueExtractor::objectToArray($db->executeQuery(new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.user_panels.id{$data->object->from_id}" => 1]]))->getValue([0, 'chat_settings', 'user_panels', "id{$data->object->from_id}"], []));
 		$argvt = bot_get_array_value($argv, 2, 0);
-		$text_command = bot_gettext_by_argv($argv, 2);
+		$text_command = bot_get_text_by_argv($argv, 2);
 		if($argvt == "" || !is_numeric($argvt) || $text_command == ""){
 			$botModule->sendSilentMessage($data->object->peer_id, ", Используйте [!панель команда <номер> <команда>], чтобы изменить команду элемента.", $data->object->from_id);
 			return;

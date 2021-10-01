@@ -572,5 +572,3 @@ function wordgame_gameplay($finput){
 	}
 	return false;
 }
-
-?>
