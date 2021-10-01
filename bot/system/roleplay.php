@@ -3,8 +3,9 @@
 ///////////////////////////////////////////////////////////
 /// API
 
-namespace Roleplay{
-	class ActWithHandler{
+namespace Roleplay {
+	class ActWithHandler
+	{
 		// Константы
 		const GENDER_FEMALE = 1;
 		const GENDER_MALE = 2;
@@ -30,7 +31,8 @@ namespace Roleplay{
 		// Описание
 		private $allowDescription;
 
-		function __construct($db, $data, $argv, $text_command){
+		function __construct($db, $data, $argv, $text_command)
+		{
 			$this->db = $db;
 			$this->data = $data;
 			$this->argv = $argv;
@@ -49,17 +51,19 @@ namespace Roleplay{
 			$this->allowDescription = false;
 		}
 
-		private function getArgv(){
+		private function getArgv()
+		{
 			$text_command_argv_count = count(bot_parse_argv($this->text_command));					// Количество аргументов РП-команды
 			$argv_count = count($this->argv);														// Количество аргументов полученного события
 			$processed_argv = array();
-			for($i = $text_command_argv_count; $i < $argv_count; $i++)
+			for ($i = $text_command_argv_count; $i < $argv_count; $i++)
 				$processed_argv[] = $this->argv[$i];
 			return $processed_argv;
 		}
 
-		public function setPermittedMemberGender($gender, $message){
-			if($gender != ActWithHandler::GENDER_FEMALE && $gender != ActWithHandler::GENDER_MALE){
+		public function setPermittedMemberGender($gender, $message)
+		{
+			if ($gender != ActWithHandler::GENDER_FEMALE && $gender != ActWithHandler::GENDER_MALE) {
 				$debug_backtrace = debug_backtrace();
 				error_log("Parameter gender is invalid in function {$debug_backtrace[0]["function"]} in {$debug_backtrace[0]["file"]} on line {$debug_backtrace[0]["line"]}");
 				return false;
@@ -68,51 +72,49 @@ namespace Roleplay{
 			$this->memberGenderErrorMessage = $message;
 		}
 
-		public function allowDescription($state){
+		public function allowDescription($state)
+		{
 			$this->allowDescription = $state;
 		}
 
-		private function generateDescriptionMessageVKScriptCode($message){
-			if($this->allowDescription){
-				if($message != ''){
+		private function generateDescriptionMessageVKScriptCode($message)
+		{
+			if ($this->allowDescription) {
+				if ($message != '') {
 					$formated_message = addslashes($message);
 					return "var DESCRIPTION_MSG=\" {$formated_message}\";";
-				}
-				else
+				} else
 					return "var DESCRIPTION_MSG=\"\";";
-			}
-			else
+			} else
 				return "";
 		}
 
-		public function handle(){
+		public function handle()
+		{
 			// Проверка главных переменных
-			if(is_null($this->maleMessage)){
+			if (is_null($this->maleMessage)) {
 				$debug_backtrace = debug_backtrace();
 				error_log("Invalid parameter maleMessage while handling in {$debug_backtrace[0]["file"]} on line {$debug_backtrace[0]["line"]}");
 				return false;
-			}
-			elseif(is_null($this->femaleMessage)){
+			} elseif (is_null($this->femaleMessage)) {
 				$debug_backtrace = debug_backtrace();
 				error_log("Invalid parameter femaleMessage while handling in {$debug_backtrace[0]["file"]} on line {$debug_backtrace[0]["line"]}");
 				return false;
-			}
-			elseif(is_null($this->maleMessageToMyself)){
+			} elseif (is_null($this->maleMessageToMyself)) {
 				$debug_backtrace = debug_backtrace();
 				error_log("Invalid parameter maleMessageToMyself while handling in {$debug_backtrace[0]["file"]} on line {$debug_backtrace[0]["line"]}");
 				return false;
-			}
-			elseif(is_null($this->femaleMessageToMyself)){
+			} elseif (is_null($this->femaleMessageToMyself)) {
 				$debug_backtrace = debug_backtrace();
 				error_log("Invalid parameter femaleMessageToMyself while handling in {$debug_backtrace[0]["file"]} on line {$debug_backtrace[0]["line"]}");
 				return false;
 			}
 			$argv = $this->getArgv(); // Получаем аргументы текущего запроса из сообщения
 			$messagesModule = new \Bot\Messages($this->db);
-			if(gettype($argv[0]) != "string" && !array_key_exists(0, $this->data->object->fwd_messages)){
+			if (gettype($argv[0]) != "string" && !array_key_exists(0, $this->data->object->fwd_messages)) {
 				$messagesModule->setAppealID($this->data->object->from_id);
 
-				if($this->allowDescription)
+				if ($this->allowDescription)
 					$help_message_desc = " <описание>";
 				else
 					$help_message_desc = '';
@@ -131,31 +133,27 @@ namespace Roleplay{
 			}
 
 			$member_id = 0;
-			if(array_key_exists(0, $this->data->object->fwd_messages)){
+			if (array_key_exists(0, $this->data->object->fwd_messages)) {
 				$member_id = $this->data->object->fwd_messages[0]->from_id;
 				$descriptionMessage = str_ireplace("\n", " ", bot_get_text_by_argv($argv, 0));
 				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($descriptionMessage);
-			}
-			elseif(bot_get_userid_by_mention($argv[0], $member_id)){
+			} elseif (bot_get_userid_by_mention($argv[0], $member_id)) {
 				$descriptionMessage = str_ireplace("\n", " ", bot_get_text_by_argv($argv, 1));
 				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($descriptionMessage);
-			}
-			elseif(bot_get_userid_by_nick($this->db, $argv[0], $member_id)){
+			} elseif (bot_get_userid_by_nick($this->db, $argv[0], $member_id)) {
 				$descriptionMessage = str_ireplace("\n", " ", bot_get_text_by_argv($argv, 1));
 				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($descriptionMessage);
-			}
-			elseif(is_numeric($argv[0])){
+			} elseif (is_numeric($argv[0])) {
 				$member_id = intval($argv[0]);
 				$descriptionMessage = str_ireplace("\n", " ", bot_get_text_by_argv($argv, 1));
 				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($descriptionMessage);
-			}
-			else{
+			} else {
 				$descriptionMessage = str_ireplace("\n", " ", bot_get_text_by_argv($argv, 1));
 				$descriptionMessage_VKScript = $this->generateDescriptionMessageVKScriptCode($descriptionMessage);
 			}
 
 
-			if($member_id > 0){
+			if ($member_id > 0) {
 				$messagesJson = json_encode(
 					array(
 						'male' => $this->maleMessage,
@@ -163,38 +161,39 @@ namespace Roleplay{
 						'maleToMyself' => $this->maleMessageToMyself,
 						'femaleToMyself' => $this->femaleMessageToMyself,
 						'memberGenderErrorMessage' => $this->memberGenderErrorMessage
-					), JSON_UNESCAPED_UNICODE);
+					),
+					JSON_UNESCAPED_UNICODE
+				);
 
 				// Парсинг переменных
 				$parsing_vars = array("FROM_USERNAME", "MEMBER_USERNAME", "MEMBER_USERNAME_GEN", "MEMBER_USERNAME_DAT", "MEMBER_USERNAME_ACC", "MEMBER_USERNAME_INS", "MEMBER_USERNAME_ABL");
-				if($this->allowDescription)
+				if ($this->allowDescription)
 					$parsing_vars[] = "DESCRIPTION_MSG";
 				$messagesJson = vk_parse_vars($messagesJson, $parsing_vars);
 
-				if($this->permittedMemberGender != 0)
+				if ($this->permittedMemberGender != 0)
 					$permittedMemberGender_VKScript = "if(member.sex != {$this->permittedMemberGender}){API.messages.send({'peer_id':{$this->data->object->peer_id},'message':messages.memberGenderErrorMessage});return{'result':false};}";
 				else
 					$permittedMemberGender_VKScript = "";
 
-				$res = (object) json_decode(vk_execute($messagesModule->buildVKSciptAppealByID($this->data->object->from_id)."var users=API.users.get({'user_ids':[{$member_id},{$this->data->object->from_id}],'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});var members=API.messages.getConversationMembers({'peer_id':{$this->data->object->peer_id}});var from_user=users[1];var member=users[0];if({$member_id}=={$this->data->object->from_id}){from_user=users[0];}var isContinue=false;var i=0;while(i<members.profiles.length){if(members.profiles[i].id=={$member_id}){isContinue=true;}i=i+1;}if(!isContinue){API.messages.send({'peer_id':{$this->data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});return{'result':false};}var FROM_USERNAME='@'+from_user.screen_name+' ('+from_user.first_name.substr(0,2)+'. '+from_user.last_name+')';var MEMBER_USERNAME='@'+member.screen_name+' ('+member.first_name.substr(0,2)+'. '+member.last_name+')';var MEMBER_USERNAME_GEN='@'+member.screen_name+' ('+member.first_name_gen.substr(0,2)+'. '+member.last_name_gen+')';var MEMBER_USERNAME_DAT='@'+member.screen_name+' ('+member.first_name_dat.substr(0,2)+'. '+member.last_name_dat+')';var MEMBER_USERNAME_ACC='@'+member.screen_name+' ('+member.first_name_acc.substr(0,2)+'. '+member.last_name_acc+')';var MEMBER_USERNAME_INS='@'+member.screen_name+' ('+member.first_name_ins.substr(0,2)+'. '+member.last_name_ins+')';var MEMBER_USERNAME_ABL='@'+member.screen_name+' ('+member.first_name_abl.substr(0,2)+'. '+member.last_name_abl+')';{$descriptionMessage_VKScript}var messages={$messagesJson};{$permittedMemberGender_VKScript}var msg='';if({$member_id}=={$this->data->object->from_id}){if(member.sex==1){msg=messages.femaleToMyself;}else{msg=messages.maleToMyself;}}else{if(from_user.sex==1){msg=messages.female;}else{msg=messages.male;};};API.messages.send({'peer_id':{$this->data->object->peer_id},'message':msg});return{'result':true,'member_id':member.id};"))->response;
-				if($res->result)
+				$res = (object) json_decode(vk_execute($messagesModule->buildVKSciptAppealByID($this->data->object->from_id) . "var users=API.users.get({'user_ids':[{$member_id},{$this->data->object->from_id}],'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});var members=API.messages.getConversationMembers({'peer_id':{$this->data->object->peer_id}});var from_user=users[1];var member=users[0];if({$member_id}=={$this->data->object->from_id}){from_user=users[0];}var isContinue=false;var i=0;while(i<members.profiles.length){if(members.profiles[i].id=={$member_id}){isContinue=true;}i=i+1;}if(!isContinue){API.messages.send({'peer_id':{$this->data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});return{'result':false};}var FROM_USERNAME='@'+from_user.screen_name+' ('+from_user.first_name.substr(0,2)+'. '+from_user.last_name+')';var MEMBER_USERNAME='@'+member.screen_name+' ('+member.first_name.substr(0,2)+'. '+member.last_name+')';var MEMBER_USERNAME_GEN='@'+member.screen_name+' ('+member.first_name_gen.substr(0,2)+'. '+member.last_name_gen+')';var MEMBER_USERNAME_DAT='@'+member.screen_name+' ('+member.first_name_dat.substr(0,2)+'. '+member.last_name_dat+')';var MEMBER_USERNAME_ACC='@'+member.screen_name+' ('+member.first_name_acc.substr(0,2)+'. '+member.last_name_acc+')';var MEMBER_USERNAME_INS='@'+member.screen_name+' ('+member.first_name_ins.substr(0,2)+'. '+member.last_name_ins+')';var MEMBER_USERNAME_ABL='@'+member.screen_name+' ('+member.first_name_abl.substr(0,2)+'. '+member.last_name_abl+')';{$descriptionMessage_VKScript}var messages={$messagesJson};{$permittedMemberGender_VKScript}var msg='';if({$member_id}=={$this->data->object->from_id}){if(member.sex==1){msg=messages.femaleToMyself;}else{msg=messages.maleToMyself;}}else{if(from_user.sex==1){msg=messages.female;}else{msg=messages.male;};};API.messages.send({'peer_id':{$this->data->object->peer_id},'message':msg});return{'result':true,'member_id':member.id};"))->response;
+				if ($res->result)
 					return $res->member_id;
 				else
 					return false;
-			}
-			else{
-				if(isset($this->maleMessageToAll, $this->femaleMessageToAll) && array_search(mb_strtolower($argv[0]), array('все', 'всех', 'всем', 'всеми')) !== false){ 
+			} else {
+				if (isset($this->maleMessageToAll, $this->femaleMessageToAll) && array_search(mb_strtolower($argv[0]), array('все', 'всех', 'всем', 'всеми')) !== false) {
 					// Выполнение действия над всеми
 					$messagesJson = json_encode(array(
 						'male' => $this->maleMessageToAll,
 						'female' => $this->femaleMessageToAll
 					), JSON_UNESCAPED_UNICODE);
 					$parsing_vars = array("FROM_USERNAME", "DESCRIPTION_MSG");
-					if($this->allowDescription)
+					if ($this->allowDescription)
 						$parsing_vars[] = "DESCRIPTION_MSG";
 					$messagesJson = vk_parse_vars($messagesJson, $parsing_vars);
-					$res = json_decode(vk_execute($messagesModule->buildVKSciptAppealByID($this->data->object->from_id)."var from_user=API.users.get({'user_ids':[{$this->data->object->from_id}],'fields':'sex,screen_name'})[0];var FROM_USERNAME='@'+from_user.screen_name+' ('+from_user.first_name.substr(0,2)+'. '+from_user.last_name+')';{$descriptionMessage_VKScript}var messages={$messagesJson};var msg='';if(from_user.sex==1){msg=messages.female;}else{msg=messages.male;};API.messages.send({'peer_id':{$this->data->object->peer_id},'message':msg});return {'result':true,'member_id':0};"))->response;
-					if($res->result)
+					$res = json_decode(vk_execute($messagesModule->buildVKSciptAppealByID($this->data->object->from_id) . "var from_user=API.users.get({'user_ids':[{$this->data->object->from_id}],'fields':'sex,screen_name'})[0];var FROM_USERNAME='@'+from_user.screen_name+' ('+from_user.first_name.substr(0,2)+'. '+from_user.last_name+')';{$descriptionMessage_VKScript}var messages={$messagesJson};var msg='';if(from_user.sex==1){msg=messages.female;}else{msg=messages.male;};API.messages.send({'peer_id':{$this->data->object->peer_id},'message':msg});return {'result':true,'member_id':0};"))->response;
+					if ($res->result)
 						return $res->member_id;
 					else
 						return false;
@@ -207,33 +206,34 @@ namespace Roleplay{
 						'maleToMyself' => $this->maleMessageToMyself,
 						'femaleToMyself' => $this->femaleMessageToMyself,
 						'memberGenderErrorMessage' => $this->memberGenderErrorMessage
-					), JSON_UNESCAPED_UNICODE);
+					),
+					JSON_UNESCAPED_UNICODE
+				);
 
 				// Парсинг переменных
 				$parsing_vars = array("FROM_USERNAME", "MEMBER_USERNAME", "MEMBER_USERNAME_GEN", "MEMBER_USERNAME_DAT", "MEMBER_USERNAME_ACC", "MEMBER_USERNAME_INS", "MEMBER_USERNAME_ABL");
-				if($this->allowDescription)
+				if ($this->allowDescription)
 					$parsing_vars[] = "DESCRIPTION_MSG";
 				$messagesJson = vk_parse_vars($messagesJson, $parsing_vars);
 
-				if($this->permittedMemberGender != 0)
+				if ($this->permittedMemberGender != 0)
 					$permittedMemberGender_VKScript = "if(member.sex != {$this->permittedMemberGender}){API.messages.send({'peer_id':{$this->data->object->peer_id},'message':messages.memberGenderErrorMessage});return {'result':false};}";
 				else
 					$permittedMemberGender_VKScript = "";
 
 				$user_info_words = explode(" ", $argv[0]);
 				$word = array();
-				for($i = 0; $i < 2; $i++){
-					if(array_key_exists($i, $user_info_words)){
+				for ($i = 0; $i < 2; $i++) {
+					if (array_key_exists($i, $user_info_words)) {
 						$first_letter = mb_strtoupper(mb_substr($user_info_words[$i], 0, 1));
 						$other_letters = mb_strtolower(mb_substr($user_info_words[$i], 1));
 						$word[$i] = "{$first_letter}{$other_letters}";
-					}
-					else
+					} else
 						$word[$i] = "";
 				}
 
-				$res = json_decode(vk_execute($messagesModule->buildVKSciptAppealByID($this->data->object->from_id)."var members=API.messages.getConversationMembers({'peer_id':{$this->data->object->peer_id},'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});var from_user= API.users.get({'user_ids':[{$this->data->object->from_id}],'fields':'sex,screen_name'})[0];var word1='{$word[0]}';var word2='{$word[1]}';var member_index=-1;var i=0;while(i<members.profiles.length){if(members.profiles[i].first_name==word1){if(word2==''){member_index=i;i=members.profiles.length;}else if(members.profiles[i].last_name==word2){member_index=i;i=members.profiles.length;}}else if(members.profiles[i].last_name==word1){member_index=i;i=members.profiles.length;}i=i+1;};if(member_index==-1){API.messages.send({'peer_id':{$this->data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});return{'result':false};}var member = members.profiles[member_index];var FROM_USERNAME='@'+from_user.screen_name+' ('+from_user.first_name.substr(0, 2)+'. '+from_user.last_name+')';var MEMBER_USERNAME='@'+member.screen_name+' ('+member.first_name.substr(0,2)+'. '+member.last_name+')';var MEMBER_USERNAME_GEN='@'+member.screen_name+' ('+member.first_name_gen.substr(0,2)+'. '+member.last_name_gen+')';var MEMBER_USERNAME_DAT='@'+member.screen_name+' ('+member.first_name_dat.substr(0,2)+'. '+member.last_name_dat+')';var MEMBER_USERNAME_ACC='@'+member.screen_name+' ('+member.first_name_acc.substr(0,2)+'. '+member.last_name_acc+')';var MEMBER_USERNAME_INS='@'+member.screen_name+' ('+member.first_name_ins.substr(0,2)+'. '+member.last_name_ins+')';var MEMBER_USERNAME_ABL='@'+member.screen_name+' ('+member.first_name_abl.substr(0,2)+'. '+member.last_name_abl+')';{$descriptionMessage_VKScript}var messages={$messagesJson};{$permittedMemberGender_VKScript}var msg='';if(member.id=={$this->data->object->from_id}){if(member.sex==1){msg=messages.femaleToMyself;}else{msg=messages.maleToMyself;}}else{if(from_user.sex==1){msg=messages.female;}else{msg=messages.male;};};API.messages.send({'peer_id':{$this->data->object->peer_id},'message':msg});return{'result':true,'member_id':member.id};"))->response;
-				if($res->result)
+				$res = json_decode(vk_execute($messagesModule->buildVKSciptAppealByID($this->data->object->from_id) . "var members=API.messages.getConversationMembers({'peer_id':{$this->data->object->peer_id},'fields':'sex,screen_name,first_name_gen,first_name_dat,first_name_acc,first_name_ins,first_name_abl,last_name_gen,last_name_dat,last_name_acc,last_name_ins,last_name_abl'});var from_user= API.users.get({'user_ids':[{$this->data->object->from_id}],'fields':'sex,screen_name'})[0];var word1='{$word[0]}';var word2='{$word[1]}';var member_index=-1;var i=0;while(i<members.profiles.length){if(members.profiles[i].first_name==word1){if(word2==''){member_index=i;i=members.profiles.length;}else if(members.profiles[i].last_name==word2){member_index=i;i=members.profiles.length;}}else if(members.profiles[i].last_name==word1){member_index=i;i=members.profiles.length;}i=i+1;};if(member_index==-1){API.messages.send({'peer_id':{$this->data->object->peer_id},'message':appeal+', ❗указанного человека нет в беседе!'});return{'result':false};}var member = members.profiles[member_index];var FROM_USERNAME='@'+from_user.screen_name+' ('+from_user.first_name.substr(0, 2)+'. '+from_user.last_name+')';var MEMBER_USERNAME='@'+member.screen_name+' ('+member.first_name.substr(0,2)+'. '+member.last_name+')';var MEMBER_USERNAME_GEN='@'+member.screen_name+' ('+member.first_name_gen.substr(0,2)+'. '+member.last_name_gen+')';var MEMBER_USERNAME_DAT='@'+member.screen_name+' ('+member.first_name_dat.substr(0,2)+'. '+member.last_name_dat+')';var MEMBER_USERNAME_ACC='@'+member.screen_name+' ('+member.first_name_acc.substr(0,2)+'. '+member.last_name_acc+')';var MEMBER_USERNAME_INS='@'+member.screen_name+' ('+member.first_name_ins.substr(0,2)+'. '+member.last_name_ins+')';var MEMBER_USERNAME_ABL='@'+member.screen_name+' ('+member.first_name_abl.substr(0,2)+'. '+member.last_name_abl+')';{$descriptionMessage_VKScript}var messages={$messagesJson};{$permittedMemberGender_VKScript}var msg='';if(member.id=={$this->data->object->from_id}){if(member.sex==1){msg=messages.femaleToMyself;}else{msg=messages.maleToMyself;}}else{if(from_user.sex==1){msg=messages.female;}else{msg=messages.male;};};API.messages.send({'peer_id':{$this->data->object->peer_id},'message':msg});return{'result':true,'member_id':member.id};"))->response;
+				if ($res->result)
 					return $res->member_id;
 				else
 					return false;
@@ -242,9 +242,10 @@ namespace Roleplay{
 	}
 }
 
-namespace{
+namespace {
 	// Инициализация команд
-	function roleplay_initcmd(&$event){
+	function roleplay_initcmd(&$event)
+	{
 		$event->addTextMessageCommand("!me", 'roleplay_me');
 		$event->addTextMessageCommand("!do", 'roleplay_do');
 		$event->addTextMessageCommand("!try", 'roleplay_try');
@@ -271,21 +272,22 @@ namespace{
 	///////////////////////////////////////////////////////////
 	/// Handlers
 
-	function roleplay_me($finput){
+	function roleplay_me($finput)
+	{
 		// Инициализация базовых переменных
-		$data = $finput->data; 
+		$data = $finput->data;
 		$argv = $finput->argv;
 		$db = $finput->db;
 
-		if(is_null($argv[1])){
+		if (is_null($argv[1])) {
 			$botModule = new botModule($db);
 			$msg = ", используйте \\\"!me <действие>\\\".";
-			vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
+			vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id) . "
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
 		} else {
 			$act = bot_get_text_by_argv($argv, 1);
-			if(mb_substr($act, mb_strlen($act)-1, mb_strlen($act)-1) != "."){
+			if (mb_substr($act, mb_strlen($act) - 1, mb_strlen($act) - 1) != ".") {
 				$act = $act . ".";
 			}
 			vk_execute("
@@ -296,25 +298,26 @@ namespace{
 		}
 	}
 
-	function roleplay_try($finput){
+	function roleplay_try($finput)
+	{
 		// Инициализация базовых переменных
-		$data = $finput->data; 
+		$data = $finput->data;
 		$argv = $finput->argv;
 		$db = $finput->db;
 
-		if(is_null($argv[1])){
+		if (is_null($argv[1])) {
 			$botModule = new botModule($db);
 			$msg = ", используйте \\\"!try <действие>\\\".";
-			vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
+			vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id) . "
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
 		} else {
 			$act = bot_get_text_by_argv($argv, 1);
-			if(mb_substr($act, mb_strlen($act)-1, mb_strlen($act)-1) != "."){
+			if (mb_substr($act, mb_strlen($act) - 1, mb_strlen($act) - 1) != ".") {
 				$act = $act . ".";
 			}
 			$random_number = mt_rand(0, 65535);
-			if($random_number % 2 == 1){
+			if ($random_number % 2 == 1) {
 				$act = $act . " (Неудачно)";
 			} else {
 				$act = $act . " (Удачно)";
@@ -327,22 +330,23 @@ namespace{
 		}
 	}
 
-	function roleplay_do($finput){
+	function roleplay_do($finput)
+	{
 		// Инициализация базовых переменных
-		$data = $finput->data; 
+		$data = $finput->data;
 		$argv = $finput->argv;
 		$db = $finput->db;
 
-		if(is_null($argv[1])){
+		if (is_null($argv[1])) {
 			$botModule = new botModule($db);
 			$msg = ", используйте \\\"!do <действие>\\\".";
-			vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
+			vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id) . "
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
 		} else {
 			$act = bot_get_text_by_argv($argv, 1);
-			$act = mb_strtoupper(mb_substr($act, 0, 1)) . mb_substr($act, 1, mb_strlen($act)-1);
-			if(mb_substr($act, mb_strlen($act)-1, mb_strlen($act)-1) != "."){
+			$act = mb_strtoupper(mb_substr($act, 0, 1)) . mb_substr($act, 1, mb_strlen($act) - 1);
+			if (mb_substr($act, mb_strlen($act) - 1, mb_strlen($act) - 1) != ".") {
 				$act = $act . ".";
 			}
 			vk_execute("
@@ -353,16 +357,17 @@ namespace{
 		}
 	}
 
-	function roleplay_shout($finput){
+	function roleplay_shout($finput)
+	{
 		// Инициализация базовых переменных
-		$data = $finput->data; 
+		$data = $finput->data;
 		$argv = $finput->argv;
 		$db = $finput->db;
 
-		if(is_null($argv[1])){
+		if (is_null($argv[1])) {
 			$botModule = new botModule($db);
 			$msg = ", используйте \\\"!s <текст>\\\".";
-			vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id)."
+			vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id) . "
 				return API.messages.send({'peer_id':{$data->object->peer_id},'message':appeal+'{$msg}'});
 				");
 		} else {
@@ -370,17 +375,17 @@ namespace{
 			$vowels_letters = array('а', 'о', 'и', 'е', 'ё', 'э', 'ы', 'у', 'ю', 'я'/*, 'a', 'e', 'i', 'o', 'u'*/);
 			$new_text = "";
 			$symbols = preg_split('//u', $text, null, PREG_SPLIT_NO_EMPTY);
-			for($i = 0; $i < sizeof($symbols); $i++){
+			for ($i = 0; $i < sizeof($symbols); $i++) {
 				$letter = "";
-				for($j = 0; $j < sizeof($vowels_letters); $j++){
-					if(mb_strtolower($symbols[$i]) == $vowels_letters[$j]){
+				for ($j = 0; $j < sizeof($vowels_letters); $j++) {
+					if (mb_strtolower($symbols[$i]) == $vowels_letters[$j]) {
 						$letter = $symbols[$i];
 						break;
 					}
 				}
-				if($letter != ""){
+				if ($letter != "") {
 					$random_number = mt_rand(3, 10);
-					for($j = 0; $j < $random_number; $j++){
+					for ($j = 0; $j < $random_number; $j++) {
 						$new_text = $new_text . $letter;
 					}
 				} else {
@@ -388,7 +393,7 @@ namespace{
 				}
 			}
 			$text = $new_text;
-			if(mb_substr($text, mb_strlen($text)-1, mb_strlen($text)-1) != "."){
+			if (mb_substr($text, mb_strlen($text) - 1, mb_strlen($text) - 1) != ".") {
 				$text = $text . ".";
 			}
 			vk_execute("
@@ -403,15 +408,16 @@ namespace{
 		}
 	}
 
-	function roleplay_sex($finput){
+	function roleplay_sex($finput)
+	{
 		// Инициализация базовых переменных
-		$data = $finput->data; 
+		$data = $finput->data;
 		$argv = $finput->argv;
 		$db = $finput->db;
 
 		// Проверка режима
 		$chatModes = $finput->event->getChatModes();
-		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+		if (!$chatModes->getModeValue("roleplay_enabled")) { // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
@@ -429,15 +435,16 @@ namespace{
 		$handler->handle();
 	}
 
-	function roleplay_hug($finput){
+	function roleplay_hug($finput)
+	{
 		// Инициализация базовых переменных
-		$data = $finput->data; 
+		$data = $finput->data;
 		$argv = $finput->argv;
 		$db = $finput->db;
 
 		// Проверка режима
 		$chatModes = $finput->event->getChatModes();
-		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+		if (!$chatModes->getModeValue("roleplay_enabled")) { // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
@@ -455,15 +462,16 @@ namespace{
 		$handler->handle();
 	}
 
-	function roleplay_bump($finput){
+	function roleplay_bump($finput)
+	{
 		// Инициализация базовых переменных
-		$data = $finput->data; 
+		$data = $finput->data;
 		$argv = $finput->argv;
 		$db = $finput->db;
 
 		// Проверка режима
 		$chatModes = $finput->event->getChatModes();
-		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+		if (!$chatModes->getModeValue("roleplay_enabled")) { // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
@@ -480,22 +488,23 @@ namespace{
 		$handler->femaleMessageToAll = "%FROM_USERNAME% уебала всем%DESCRIPTION_MSG%.👊🏻";
 
 		$member_id = $handler->handle();
-		if($member_id !== false && $data->object->from_id != $member_id){
+		if ($member_id !== false && $data->object->from_id != $member_id) {
 			$statsManager = new StatsManager($db);
 			$statsManager->update("bump_count", 1);
 			$statsManager->commit($member_id);
 		}
 	}
 
-	function roleplay_pissof($finput){
+	function roleplay_pissof($finput)
+	{
 		// Инициализация базовых переменных
-		$data = $finput->data; 
+		$data = $finput->data;
 		$argv = $finput->argv;
 		$db = $finput->db;
 
 		// Проверка режима
 		$chatModes = $finput->event->getChatModes();
-		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+		if (!$chatModes->getModeValue("roleplay_enabled")) { // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
@@ -513,15 +522,16 @@ namespace{
 		$handler->handle();
 	}
 
-	function roleplay_kiss($finput){
+	function roleplay_kiss($finput)
+	{
 		// Инициализация базовых переменных
-		$data = $finput->data; 
+		$data = $finput->data;
 		$argv = $finput->argv;
 		$db = $finput->db;
 
 		// Проверка режима
 		$chatModes = $finput->event->getChatModes();
-		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+		if (!$chatModes->getModeValue("roleplay_enabled")) { // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
@@ -539,15 +549,16 @@ namespace{
 		$handler->handle();
 	}
 
-	function roleplay_hark($finput){
+	function roleplay_hark($finput)
+	{
 		// Инициализация базовых переменных
-		$data = $finput->data; 
+		$data = $finput->data;
 		$argv = $finput->argv;
 		$db = $finput->db;
 
 		// Проверка режима
 		$chatModes = $finput->event->getChatModes();
-		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+		if (!$chatModes->getModeValue("roleplay_enabled")) { // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
@@ -565,15 +576,16 @@ namespace{
 		$handler->handle();
 	}
 
-	function roleplay_suck($finput){
+	function roleplay_suck($finput)
+	{
 		// Инициализация базовых переменных
-		$data = $finput->data; 
+		$data = $finput->data;
 		$argv = $finput->argv;
 		$db = $finput->db;
 
 		// Проверка режима
 		$chatModes = $finput->event->getChatModes();
-		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+		if (!$chatModes->getModeValue("roleplay_enabled")) { // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
@@ -592,15 +604,16 @@ namespace{
 		$handler->handle();
 	}
 
-	function roleplay_pussylick($finput){
+	function roleplay_pussylick($finput)
+	{
 		// Инициализация базовых переменных
-		$data = $finput->data; 
+		$data = $finput->data;
 		$argv = $finput->argv;
 		$db = $finput->db;
 
 		// Проверка режима
 		$chatModes = $finput->event->getChatModes();
-		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+		if (!$chatModes->getModeValue("roleplay_enabled")) { // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
@@ -619,15 +632,16 @@ namespace{
 		$handler->handle();
 	}
 
-	function roleplay_gofuck($finput){
+	function roleplay_gofuck($finput)
+	{
 		// Инициализация базовых переменных
-		$data = $finput->data; 
+		$data = $finput->data;
 		$argv = $finput->argv;
 		$db = $finput->db;
 
 		// Проверка режима
 		$chatModes = $finput->event->getChatModes();
-		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+		if (!$chatModes->getModeValue("roleplay_enabled")) { // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
@@ -645,15 +659,16 @@ namespace{
 		$handler->handle();
 	}
 
-	function roleplay_castrate($finput){
+	function roleplay_castrate($finput)
+	{
 		// Инициализация базовых переменных
-		$data = $finput->data; 
+		$data = $finput->data;
 		$argv = $finput->argv;
 		$db = $finput->db;
 
 		// Проверка режима
 		$chatModes = $finput->event->getChatModes();
-		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+		if (!$chatModes->getModeValue("roleplay_enabled")) { // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
@@ -671,15 +686,16 @@ namespace{
 		$handler->handle();
 	}
 
-	function roleplay_sit($finput){
+	function roleplay_sit($finput)
+	{
 		// Инициализация базовых переменных
-		$data = $finput->data; 
+		$data = $finput->data;
 		$argv = $finput->argv;
 		$db = $finput->db;
 
 		// Проверка режима
 		$chatModes = $finput->event->getChatModes();
-		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+		if (!$chatModes->getModeValue("roleplay_enabled")) { // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
@@ -697,15 +713,16 @@ namespace{
 		$handler->handle();
 	}
 
-	function roleplay_shakehand($finput){
+	function roleplay_shakehand($finput)
+	{
 		// Инициализация базовых переменных
-		$data = $finput->data; 
+		$data = $finput->data;
 		$argv = $finput->argv;
 		$db = $finput->db;
 
 		// Проверка режима
 		$chatModes = $finput->event->getChatModes();
-		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+		if (!$chatModes->getModeValue("roleplay_enabled")) { // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
@@ -723,15 +740,16 @@ namespace{
 		$handler->handle();
 	}
 
-	function roleplay_lick($finput){
+	function roleplay_lick($finput)
+	{
 		// Инициализация базовых переменных
-		$data = $finput->data; 
+		$data = $finput->data;
 		$argv = $finput->argv;
 		$db = $finput->db;
 
 		// Проверка режима
 		$chatModes = $finput->event->getChatModes();
-		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+		if (!$chatModes->getModeValue("roleplay_enabled")) { // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
@@ -749,15 +767,16 @@ namespace{
 		$handler->handle();
 	}
 
-	function roleplay_shit($finput){
+	function roleplay_shit($finput)
+	{
 		// Инициализация базовых переменных
-		$data = $finput->data; 
+		$data = $finput->data;
 		$argv = $finput->argv;
 		$db = $finput->db;
 
 		// Проверка режима
 		$chatModes = $finput->event->getChatModes();
-		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+		if (!$chatModes->getModeValue("roleplay_enabled")) { // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
@@ -775,7 +794,8 @@ namespace{
 		$handler->handle();
 	}
 
-	function roleplay_puckingup($finput){
+	function roleplay_puckingup($finput)
+	{
 		// Инициализация базовых переменных
 		$data = $finput->data;
 		$argv = $finput->argv;
@@ -783,7 +803,7 @@ namespace{
 
 		// Проверка режима
 		$chatModes = $finput->event->getChatModes();
-		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+		if (!$chatModes->getModeValue("roleplay_enabled")) { // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
@@ -801,7 +821,8 @@ namespace{
 		$handler->handle();
 	}
 
-	function roleplay_spank($finput){
+	function roleplay_spank($finput)
+	{
 		// Инициализация базовых переменных
 		$data = $finput->data;
 		$argv = $finput->argv;
@@ -809,7 +830,7 @@ namespace{
 
 		// Проверка режима
 		$chatModes = $finput->event->getChatModes();
-		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+		if (!$chatModes->getModeValue("roleplay_enabled")) { // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
@@ -827,7 +848,8 @@ namespace{
 		$handler->handle();
 	}
 
-	function roleplay_cough($finput){
+	function roleplay_cough($finput)
+	{
 		// Инициализация базовых переменных
 		$data = $finput->data;
 		$argv = $finput->argv;
@@ -835,7 +857,7 @@ namespace{
 
 		// Проверка режима
 		$chatModes = $finput->event->getChatModes();
-		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+		if (!$chatModes->getModeValue("roleplay_enabled")) { // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
@@ -853,7 +875,8 @@ namespace{
 		$handler->handle();
 	}
 
-	function roleplay_highfive($finput){
+	function roleplay_highfive($finput)
+	{
 		// Инициализация базовых переменных
 		$data = $finput->data;
 		$argv = $finput->argv;
@@ -861,7 +884,7 @@ namespace{
 
 		// Проверка режима
 		$chatModes = $finput->event->getChatModes();
-		if(!$chatModes->getModeValue("roleplay_enabled")){ // Проверка режима
+		if (!$chatModes->getModeValue("roleplay_enabled")) { // Проверка режима
 			$messagesModule = new Bot\Messages($db);
 			$messagesModule->setAppealID($data->object->from_id);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Roleplay-команды отключены в беседе.");
@@ -879,5 +902,3 @@ namespace{
 		$handler->handle();
 	}
 }
-
-?>
