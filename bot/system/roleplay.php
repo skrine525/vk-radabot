@@ -374,7 +374,7 @@ namespace {
 			$text = bot_get_text_by_argv($argv, 1);
 			$vowels_letters = array('а', 'о', 'и', 'е', 'ё', 'э', 'ы', 'у', 'ю', 'я'/*, 'a', 'e', 'i', 'o', 'u'*/);
 			$new_text = "";
-			$symbols = preg_split('//u', $text, null, PREG_SPLIT_NO_EMPTY);
+			$symbols = preg_split('//u', $text, -1, PREG_SPLIT_NO_EMPTY);
 			for ($i = 0; $i < sizeof($symbols); $i++) {
 				$letter = "";
 				for ($j = 0; $j < sizeof($vowels_letters); $j++) {

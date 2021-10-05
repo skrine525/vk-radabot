@@ -1,16 +1,16 @@
 <?php
 
 // Инициализация команд
+
+use Bot\Messages;
+
 function fun_initcmd($event)
 {
 	$event->addTextMessageCommand("!выбери", 'fun_choose');
 	$event->addTextMessageCommand("!сколько", 'fun_howmuch');
 	$event->addTextMessageCommand("!инфа", "fun_info");
-	$event->addTextMessageCommand("!бузова", 'fun_buzova');
-	$event->addTextMessageCommand("!карина", 'fun_karina_cmd');
-	$event->addTextMessageCommand("!амина", 'fun_amina_cmd');
+	$event->addTextMessageCommand("!rndwall", "fun_rndwall");
 	$event->addTextMessageCommand("!memes", 'fun_memes_control_panel');
-	$event->addTextMessageCommand("!чулки", 'fun_stockings_cmd');
 	$event->addTextMessageCommand("!бутылочка", 'fun_bottle');
 	$event->addTextMessageCommand("!tts", 'fun_tts');
 	$event->addTextMessageCommand("!say", "fun_say");
@@ -443,69 +443,27 @@ function fun_handler($finput)
 	return false;
 }
 
-function fun_stockings_cmd($finput)
-{
-	fun_stockings($finput->data, $finput->db);
-}
-
-function fun_stockings($data, $db)
-{ // Чулки
-	$botModule = new BotModule($db);
-	$messages_array = array("дрочи😈", "держи😛", "ух какая сосочка🔥", "что, уже кончил?💦🤣", "какие ножки👌🏻👈🏻");
-
-	$random_number = mt_rand(0, 65535);
-	$owner_id = -102853758;
-	$album_id = "wall";
-	$msg = $messages_array[$random_number % sizeof($messages_array)];
-	$photo = json_decode(vk_userexecute("var random_number={$random_number};var owner_id={$owner_id};var album_id=\"{$album_id}\";var a=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':0});var photos_count=a.count;var photos_offset=(random_number%photos_count);var photo=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':1,'offset':photos_offset});return photo;"));
-	vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id) . "return API.messages.send({'peer_id':{$data->object->peer_id},'attachment':'photo{$photo->response->items[0]->owner_id}_{$photo->response->items[0]->id}','message':appeal+', {$msg}','disable_mentions':true});");
-}
-
-function fun_buzova($finput)
+function fun_rndwall($finput)
 {
 	// Инициализация базовых переменных
 	$data = $finput->data;
 	$argv = $finput->argv;
 	$db = $finput->db;
 
-	$botModule = new BotModule($db);
+	$messagesModule = new Bot\Messages($db);
+	$messagesModule->setAppealID($data->object->from_id);
+
+	$owner_id = intval(bot_get_array_value($argv, 1, 0));
+
+	if($owner_id == 0){
+		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, Используйте: !rndwall <id>");
+		return;
+	}
 
 	$random_number = mt_rand(0, 65535);
-	$owner_id = 32707600;
 	$album_id = "wall";
 	$photo = json_decode(vk_userexecute("var random_number={$random_number};var owner_id={$owner_id};var album_id=\"{$album_id}\";var a=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':0});var photos_count=a.count;var photos_offset=(random_number%photos_count);var photo=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':1,'offset':photos_offset});return photo;"));
-	vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id) . "return API.messages.send({'peer_id':{$data->object->peer_id},'attachment':'photo{$photo->response->items[0]->owner_id}_{$photo->response->items[0]->id}'});");
-}
-
-function fun_karina_cmd($finput)
-{
-	fun_karina($finput->data, $finput->db);
-}
-
-function fun_karina($data, $db)
-{
-	$botModule = new BotModule($db);
-
-	$random_number = mt_rand(0, 65535);
-	$owner_id = 153162173;
-	$album_id = "wall";
-	$photo = json_decode(vk_userexecute("var random_number={$random_number};var owner_id={$owner_id};var album_id=\"{$album_id}\";var a=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':0});var photos_count=a.count;var photos_offset=(random_number%photos_count);var photo=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':1,'offset':photos_offset});return photo;"));
-	vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id) . "return API.messages.send({'peer_id':{$data->object->peer_id},'attachment':'photo{$photo->response->items[0]->owner_id}_{$photo->response->items[0]->id}'});");
-}
-
-function fun_amina_cmd($finput)
-{
-	fun_amina($finput->data, $finput->db);
-}
-
-function fun_amina($data, $db)
-{
-	$botModule = new BotModule($db);
-	$random_number = mt_rand(0, 65535);
-	$owner_id = 363887574;
-	$album_id = "wall";
-	$photo = json_decode(vk_userexecute("var random_number={$random_number};var owner_id={$owner_id};var album_id=\"{$album_id}\";var a=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':0});var photos_count=a.count;var photos_offset=(random_number%photos_count);var photo=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':1,'offset':photos_offset});return photo;"));
-	vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id) . "return API.messages.send({'peer_id':{$data->object->peer_id},'attachment':'photo{$photo->response->items[0]->owner_id}_{$photo->response->items[0]->id}'});");
+	vk_execute($messagesModule->buildVKSciptAppealByID($data->object->from_id) . "return API.messages.send({'peer_id':{$data->object->peer_id},'attachment':'photo{$photo->response->items[0]->owner_id}_{$photo->response->items[0]->id}'});");
 }
 
 function fun_like_avatar($data, $db)
@@ -516,31 +474,6 @@ function fun_like_avatar($data, $db)
 		$botModule->sendSilentMessage($data->object->peer_id, ", Теперь у тебя {$response->likes} ❤.", $data->object->from_id);
 	else
 		$botModule->sendSilentMessage($data->object->peer_id, ", Лайк уже стоит.", $data->object->from_id);
-}
-
-function fun_like_wallpost($data, $db)
-{
-	$botModule = new BotModule($db);
-	if ($data->object->attachments[0]->type == "wall") {
-		$wall_post = $data->object->attachments[0]->wall;
-		$response = json_decode(vk_userexecute("
-		var user = API.users.get()[0];
-		if(API.likes.isLiked({'user_id':user.id,'type':'post','owner_id':{$wall_post->to_id},'item_id':{$wall_post->id}}).liked == 0){
-			var like = API.likes.add({'type':'post','owner_id':{$wall_post->to_id},'item_id':{$wall_post->id}});
-			return {'result':1,'likes':like.likes};
-		}
-		else
-		{
-			return {'result':0};
-		}
-		"))->response;
-		if ($response->result == 1)
-			$botModule->sendSilentMessage($data->object->peer_id, ", Теперь у тебя {$response->likes} ❤.", $data->object->from_id);
-		else
-			$botModule->sendSilentMessage($data->object->peer_id, ", Лайк уже стоит.", $data->object->from_id);
-	} else {
-		$botModule->sendSilentMessage($data->object->peer_id, ", Не могу найти пост.", $data->object->from_id);
-	}
 }
 
 function fun_choose($finput)

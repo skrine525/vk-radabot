@@ -489,22 +489,6 @@ namespace Economy {
 			return $randomString;
 		}
 
-		public static function getNextIncomeStrTime($last_update_time)
-		{
-			$current_time = time();
-			if ($current_time - $last_update_time >= self::TIME_UPDATE) {
-				return "сейчас";
-			} else {
-				$time = self::TIME_UPDATE - ($current_time - $last_update_time);
-				$minutes = intdiv($time, 60);
-				$seconds = $time % 60;
-				$left_time_text = "";
-				if ($minutes != 0)
-					$left_time_text = "{$minutes} мин. ";
-				$left_time_text = $left_time_text . "{$seconds} сек.";
-				return "через " . $left_time_text;
-			}
-		}
 
 		function __construct($db, &$writeArray)
 		{
@@ -1280,7 +1264,7 @@ namespace {
 
 		$botModule = new BotModule($db);
 
-		$job_index = intval(bot_get_array_value($argv, 1, 0));
+		$job_index = intval(bot_get_array_value($payload, 1, 0));
 
 		if ($job_index > 0) {
 			$jobs = Economy\Job::getJobArray();
@@ -2090,7 +2074,7 @@ namespace {
 				$can_buy = ($item->can_buy ? "Да ✅" : "Нет ⛔");
 				$can_sell = ($item->can_sell ? "Да ✅" : "Нет ⛔");
 				$msg = ", информация о имуществе:\n📝Название: {$item->name}\n🛒Можно купить: {$can_buy}\n💳Можно продать: {$can_sell}\n💰Цена: \${$buying_price}\n📈Цена продажи: \${$selling_price}";
-				$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id, array("keyboard" => $keyboard));
+				$botModule->sendSilentMessage($data->object->peer_id, $msg, $data->object->from_id);
 			}
 		} else {
 			$keyboard = vk_keyboard_inline(array(array(vk_text_button("Купить", array("command" => "bot_runtc", "text_command" => "!купить"), "positive")), array(vk_text_button("Продать", array("command" => "bot_runtc", "text_command" => "!продать"), "negative")), array(vk_text_button("Подарить", array("command" => "bot_runtc", "text_command" => "Подарить"), "primary"))));
@@ -3266,7 +3250,7 @@ namespace {
 				}
 
 				if (count($user_enterprises) == 0) {
-					$botModule->sendSilentMessage($data->object->peer_id, ", ⛔У вас нет ни одного бизнеса.", $data->object->from_id);
+					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ У вас нет ни одного бизнеса.");
 					return;
 				}
 

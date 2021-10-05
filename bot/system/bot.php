@@ -800,7 +800,7 @@ namespace {
 		$event->addTextMessageCommand("!сообщение", 'bot_chatmessage');
 		$event->addTextMessageCommand("!addcustom", 'bot_addcustomcmd');
 		$event->addTextMessageCommand("!delcustom", 'bot_delcustomcmd');
-		$event->addTextMessageCommand("!listcustom", 'bot_listcustomcmd');
+		$event->addTextMessageCommand("!customlist", 'bot_listcustomcmd');
 
 		// Многословные команды
 		$event->addTextMessageCommand("пожать", "bot_shakecmd");

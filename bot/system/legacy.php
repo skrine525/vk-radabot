@@ -585,17 +585,7 @@ namespace Legacy {
 							break;
 
 						case 6:
-							fun_stockings($data, $db);
-							return true;
-							break;
-
-						case 7:
-							fun_karina($data, $db);
-							return true;
-							break;
-
-						case 8:
-							fun_amina($data, $db);
+							legacy_fun_stockings($data, $db);
 							return true;
 							break;
 
@@ -651,5 +641,42 @@ namespace Legacy {
 			return true;
 		}
 		return false;
+	}
+}
+
+namespace {
+	function legacy_fun_stockings($data, $db)
+	{
+		// Чулки
+		$botModule = new BotModule($db);
+		$messages_array = array("дрочи😈", "держи😛", "ух какая сосочка🔥", "что, уже кончил?💦🤣", "какие ножки👌🏻👈🏻");
+
+		$random_number = mt_rand(0, 65535);
+		$owner_id = -102853758;
+		$album_id = "wall";
+		$msg = $messages_array[$random_number % sizeof($messages_array)];
+		$photo = json_decode(vk_userexecute("var random_number={$random_number};var owner_id={$owner_id};var album_id=\"{$album_id}\";var a=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':0});var photos_count=a.count;var photos_offset=(random_number%photos_count);var photo=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':1,'offset':photos_offset});return photo;"));
+		vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id) . "return API.messages.send({'peer_id':{$data->object->peer_id},'attachment':'photo{$photo->response->items[0]->owner_id}_{$photo->response->items[0]->id}','message':appeal+', {$msg}','disable_mentions':true});");
+	}
+
+	function legacy_fun_karina($data, $db)
+	{
+		$botModule = new BotModule($db);
+
+		$random_number = mt_rand(0, 65535);
+		$owner_id = 153162173;
+		$album_id = "wall";
+		$photo = json_decode(vk_userexecute("var random_number={$random_number};var owner_id={$owner_id};var album_id=\"{$album_id}\";var a=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':0});var photos_count=a.count;var photos_offset=(random_number%photos_count);var photo=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':1,'offset':photos_offset});return photo;"));
+		vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id) . "return API.messages.send({'peer_id':{$data->object->peer_id},'attachment':'photo{$photo->response->items[0]->owner_id}_{$photo->response->items[0]->id}'});");
+	}
+
+	function legacy_fun_amina($data, $db)
+	{
+		$botModule = new BotModule($db);
+		$random_number = mt_rand(0, 65535);
+		$owner_id = 363887574;
+		$album_id = "wall";
+		$photo = json_decode(vk_userexecute("var random_number={$random_number};var owner_id={$owner_id};var album_id=\"{$album_id}\";var a=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':0});var photos_count=a.count;var photos_offset=(random_number%photos_count);var photo=API.photos.get({'owner_id':owner_id,'album_id':album_id,'count':1,'offset':photos_offset});return photo;"));
+		vk_execute($botModule->buildVKSciptAppealByID($data->object->from_id) . "return API.messages.send({'peer_id':{$data->object->peer_id},'attachment':'photo{$photo->response->items[0]->owner_id}_{$photo->response->items[0]->id}'});");
 	}
 }

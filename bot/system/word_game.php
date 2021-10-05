@@ -145,7 +145,7 @@ function wordgame_del_session($peer_id)
 
 function wordgame_get_encoded_word($session)
 {
-	$word = preg_split('//u', $session["word_game"]["current_word"]["word"], null, PREG_SPLIT_NO_EMPTY);
+	$word = preg_split('//u', $session["word_game"]["current_word"]["word"], -1, PREG_SPLIT_NO_EMPTY);
 	$en_word = "";
 	for ($i = 0; $i < sizeof($word); $i++) {
 		$is_symbol_encrypted = true;
