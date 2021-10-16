@@ -1545,8 +1545,10 @@ namespace {
 		$modified_data = clone $data;
 		$modified_data->object->text = $cmd_data->cmd_line;
 		$result = $finput->event->runTextMessageCommand($modified_data);
-		if ($result->code == Bot\ChatEvent::COMMAND_RESULT_UNKNOWN)
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Ошибка. Команды [{$argv[0]}] не существует!"); // Вывод ошибки
+		if ($result->code == Bot\ChatEvent::COMMAND_RESULT_UNKNOWN) {
+			$cmd_line_argv = bot_parse_argv($cmd_data->cmd_line);
+			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Ошибка. Команда [{$argv[0]}], содержащая в себе [{$cmd_line_argv[0]}] не может быть выполнена!"); // Вывод ошибки
+		}
 	}
 
 	function bot_listcustomcmd($finput)
