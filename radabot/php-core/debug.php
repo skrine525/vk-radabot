@@ -1,6 +1,11 @@
 <?php
 
 // Инициализация команд
+
+use Bot\MessageOutputObject;
+use Bot\NoticeOutputObject;
+use Bot\OutputSystem;
+
 function debug_cmdinit($event)
 {
 	// Добавление DEBUG-команд специальному пользователю
@@ -27,10 +32,43 @@ function debug_cmdinit($event)
 		$event->addTextMessageCommand('!test-cmd', 'debug_testcmd');
 		$event->addTextMessageCommand('!cmd-search', 'debug_cmdsearch');
 		$event->addTextMessageCommand('!test-parser', 'debug_parser');
+		$event->addTextMessageCommand('!testout', 'debug_testout', ['output_system' => true]);
 
 		$event->addCallbackButtonCommand('bot_runcb', 'debug_runcb_cb');
 		$event->addCallbackButtonCommand('debug_dbedit', 'debug_dbedit_cb');
 		$event->addCallbackButtonCommand('debug_spermits', 'debug_specialpermissions_menu_cb');
+	}
+}
+
+function debug_testout($finput)
+{
+	// Инициализация базовых переменных
+	$data = $finput->data;
+	$argv = $finput->argv;
+	$db = $finput->db;
+	$output = $finput->output;
+
+	$vk_vars = new VKVariable();
+	$a = bot_get_array_value($argv, 1, 1);
+	$vk_vars->var('var a', ['str', 'сука ', 'int', $a], true);
+	if ($a >= 10) {
+		$output->addCode($vk_vars->getCode());
+		$noticeOutput = new NoticeOutputObject();
+		$noticeOutput->setUserSettings($db, $data->object->from_id);
+		$noticeOutput->message_for_edit(['var', 'appeal', 'str', 'К сожалению ', 'var', 'a', 'str', ' недоступно!'], true);
+		$noticeOutput->text_for_snackbar(['var', 'appeal', 'str', 'К сожалению ', 'var', 'a', 'str', ' недоступно!'], true);
+		//$noticeOutput->text_for_snackbar("хуй на рыло не хотел?");
+		$output->handleNotice($noticeOutput);
+		
+	} else {
+		$output->addCode($vk_vars->getCode());
+
+		$messageOutput = new MessageOutputObject();
+		$messageOutput->setUserSettings($db, $data->object->from_id);
+		$messageOutput->message_for_both(['var', 'appeal', 'str', 'ты - ', 'var', 'a', 'str', ', понял?'], true);
+		$a++;
+		$messageOutput->keyboard_for_both(vk_keyboard_inline([[vk_callback_button('Тест', ['bot_run', "!testout {$a}"], 'positive')]]));
+		$output->handleMessage($messageOutput);
 	}
 }
 
@@ -64,7 +102,8 @@ function debug_docmd($finput)
 	$modified_data = clone $data;
 	$modified_data->object->from_id = $member_id;
 	$modified_data->object->text = $command;
-	$result = $finput->event->runTextMessageCommand($modified_data);
+	$output = new OutputSystem(OutputSystem::TYPE_MSG_NEW, $modified_data);
+	$result = $finput->event->runTextCommand($modified_data, $output);
 	if ($result->code == Bot\ChatEvent::COMMAND_RESULT_UNKNOWN)
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Ошибка. Данной команды не существует."); // Вывод ошибки
 }
@@ -87,7 +126,7 @@ function debug_testcmd($finput)
 	}
 	$modified_data = $data;
 	$modified_data->object->text = $command;
-	$result = $finput->event->runTextMessageCommand($modified_data);
+	$result = $finput->event->runTextCommand($modified_data);
 	if ($result->code == Bot\ChatEvent::COMMAND_RESULT_OK) {
 		$execution_time = round($result->execution_time, 2);
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, 📊Данные тестирования:\n📝Команда: {$result->command}\n🕒Время: {$execution_time} мс.");
@@ -173,7 +212,7 @@ function debug_runcb_cb($finput)
 	$modified_data = $data;
 	$modified_data->object->payload = array($command);
 
-	$result = $event->runCallbackButtonCommand($modified_data);
+	$result = $event->runCallbackCommand($modified_data);
 	if ($result->code != Bot\ChatEvent::COMMAND_RESULT_OK) {
 		bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "⛔ [bot_runcb]: Команды [$command] не существует.");
 	}

@@ -1,13 +1,20 @@
 <?php
 
+namespace Output {
+}
+
 namespace Bot {
+
+	use stdClass;
+	use VKVariable;
+
 	class ChatEvent
 	{
 		// Переменные
 		private $data;								// Объект события ВК
-		private $textMessageCommands;				// Массив текстовых команд
-		private $textButtonCommands;				// Массив команд Text-кнопок
-		private $callbackButtonCommands;			// Массив команд Callback-кнопок
+		private $textCommands;				// Массив текстовых команд
+		private $buttonCommands;				// Массив команд Text-кнопок
+		private $callbackCommands;			// Массив команд Callback-кнопок
 		private $nonCommandTextMessageHandlers;		// Массив не командных обработчиков события message_new
 		private $hint_char;							// Переменная знака, отвещающий за подсказски
 
@@ -27,9 +34,9 @@ namespace Bot {
 			if ($data->object->peer_id > 2000000000) {
 				// Базовые переменные
 				$this->data = $data;
-				$this->textMessageCommands = [];
-				$this->textButtonCommands = [];
-				$this->callbackButtonCommands = [];
+				$this->textCommands = [];
+				$this->buttonCommands = [];
+				$this->callbackCommands = [];
 				$this->nonCommandTextMessageHandlers = [];
 
 				// Подгрузка базы данных
@@ -94,10 +101,12 @@ namespace Bot {
 		public function addTextMessageCommand(string $command, callable $callback, array $other_params = [])
 		{
 			if (!$this->isTextMessageCommand($command)) {
-				$this->textMessageCommands[$command] = (object) array(
+				$this->textCommands[$command] = (object) array(
 					'callback' => $callback,
 					'callback_argv' => self::getArrayParam($other_params, 'callback_argv', 'array', []),
-					'ignore_db' => self::getArrayParam($other_params, 'ignore_db', 'boolean', false)
+					'ignore_db' => self::getArrayParam($other_params, 'ignore_db', 'boolean', false),
+					'output_system' => self::getArrayParam($other_params, 'output_system', 'boolean', false),
+					'only_text_input' => self::getArrayParam($other_params, 'only_text_input', 'boolean', false)
 				);
 				return true;
 			} else
@@ -106,13 +115,16 @@ namespace Bot {
 
 		public function isTextMessageCommand(string $command)
 		{
-			return array_key_exists($command, $this->textMessageCommands);
+			if (array_key_exists($command, $this->textCommands))
+				return $this->textCommands[$command];
+			else
+				return false;
 		}
 
 		public function addTextButtonCommand(string $command, callable $callback, array $other_params = [])
 		{
 			if (!$this->isTextButtonCommand($command)) {
-				$this->textButtonCommands[$command] = (object) array(
+				$this->buttonCommands[$command] = (object) array(
 					'callback' => $callback,
 					'callback_argv' => self::getArrayParam($other_params, 'callback_argv', 'array', []),
 					'ignore_db' => self::getArrayParam($other_params, 'ignore_db', 'boolean', false)
@@ -124,13 +136,16 @@ namespace Bot {
 
 		public function isTextButtonCommand(string $command)
 		{
-			return array_key_exists($command, $this->textButtonCommands);
+			if (array_key_exists($command, $this->buttonCommands))
+				return $this->buttonCommands[$command];
+			else
+				return false;
 		}
 
 		public function addCallbackButtonCommand(string $command, callable $callback, array $other_params = [])
 		{
 			if (!$this->isCallbackButtonCommand($command)) {
-				$this->callbackButtonCommands[$command] = (object) array(
+				$this->callbackCommands[$command] = (object) array(
 					'callback' => $callback,
 					'callback_argv' => self::getArrayParam($other_params, 'callback_argv', 'array', []),
 					'ignore_db' => self::getArrayParam($other_params, 'ignore_db', 'boolean', false)
@@ -142,13 +157,16 @@ namespace Bot {
 
 		public function isCallbackButtonCommand(string $command)
 		{
-			return array_key_exists($command, $this->callbackButtonCommands);
+			if (array_key_exists($command, $this->callbackCommands))
+				return $this->callbackCommands[$command];
+			else
+				return false;
 		}
 
 		public function getTextMessageCommandList()
 		{
 			$list = array();
-			foreach ($this->textMessageCommands as $key => $value) {
+			foreach ($this->textCommands as $key => $value) {
 				$list[] = $key;
 			}
 			return $list;
@@ -159,25 +177,35 @@ namespace Bot {
 			unset($this);
 		}
 
-		public function runTextMessageCommand(\stdClass $data)
+		public function runTextCommand(\stdClass $data, OutputSystem $output)
 		{
 			if (gettype($data) == "object") {
 				$argv = bot_parse_argv($data->object->text); // Извлекаем аргументы из сообщения
 				$command = mb_strtolower(bot_get_array_value($argv, 0, "")); // Переводим команду в нижний регистр
 
 				if ($this->isTextMessageCommand($command)) {
-					$command_data = $this->textMessageCommands[$command];
+					$command_data = $this->textCommands[$command];
 
 					// Проверка на существование беседы в Базе данных, если команда не способна игнорировать это
 					if (!$command_data->ignore_db && !$this->db->isExists())
 						return (object) ['code' => ChatEvent::COMMAND_RESULT_NO_DB];
 
-					$finput = (object) array(
-						'data' => $data,
-						'argv' => $argv,
-						'db' => $this->db,
-						'event' => $this
-					);
+					if ($command_data->output_system) {
+						$finput = (object) array(
+							'data' => $data,
+							'argv' => $argv,
+							'db' => $this->db,
+							'event' => $this,
+							'output' => $output
+						);
+					} else {
+						$finput = (object) array(
+							'data' => $data,
+							'argv' => $argv,
+							'db' => $this->db,
+							'event' => $this
+						);
+					}
 					$callback = $command_data->callback; 										// Получение Callback'а
 					$execution_time = microtime(true);											// Начало подсчета времени исполнения Callback'а
 					$callback_argv = array_merge([$finput], $command_data->callback_argv);		// Сливание аргументов Callback'а
@@ -190,14 +218,14 @@ namespace Bot {
 			return (object) ['code' => ChatEvent::COMMAND_RESULT_INVALID_DATA];
 		}
 
-		public function runTextButtonCommand(\stdClass $data)
+		public function runButtonCommand(\stdClass $data)
 		{
 			if (gettype($data) == "object") {
 				if (property_exists($data->object, "payload")) {
 					$payload = (object) json_decode($data->object->payload);
 					if (!is_null($payload) && property_exists($payload, "command")) {
 						if ($this->isTextButtonCommand($payload->command)) {
-							$command_data = $this->textButtonCommands[$payload->command];
+							$command_data = $this->buttonCommands[$payload->command];
 
 							// Проверка на существование беседы в Базе данных, если команда не способна игнорировать это
 							if (!$command_data->ignore_db && !$this->db->isExists())
@@ -224,14 +252,14 @@ namespace Bot {
 			return (object) ['code' => ChatEvent::COMMAND_RESULT_INVALID_DATA];
 		}
 
-		public function runCallbackButtonCommand(\stdClass $data)
+		public function runCallbackCommand(\stdClass $data)
 		{
 			if (gettype($data) == "object") {
 				if (property_exists($data->object, "payload") && gettype($data->object->payload) == 'array') {
 					$payload = $data->object->payload;
 					if (array_key_exists(0, $payload)) {
 						if ($this->isCallbackButtonCommand($payload[0])) {
-							$command_data = $this->callbackButtonCommands[$payload[0]];
+							$command_data = $this->callbackCommands[$payload[0]];
 
 							// Проверка на существование беседы в Базе данных, если команда не способна игнорировать это
 							if (!$command_data->ignore_db && !$this->db->isExists())
@@ -267,7 +295,7 @@ namespace Bot {
 					}
 
 					// Обработка клавиатурных команд
-					$result = $this->runTextButtonCommand($this->data);
+					$result = $this->runButtonCommand($this->data);
 					if ($result->code == ChatEvent::COMMAND_RESULT_OK)
 						return true;
 					elseif ($result->code == ChatEvent::COMMAND_RESULT_NO_DB) {
@@ -276,7 +304,8 @@ namespace Bot {
 					}
 
 					// Обработка тектовых команд
-					$result = $this->runTextMessageCommand($this->data);
+					$output = new OutputSystem(OutputSystem::TYPE_MSG_NEW, $this->data);
+					$result = $this->runTextCommand($this->data, $output);
 					if ($result->code == ChatEvent::COMMAND_RESULT_OK)
 						return true;
 					elseif ($result->code == ChatEvent::COMMAND_RESULT_NO_DB) {
@@ -326,7 +355,7 @@ namespace Bot {
 					}
 
 					// Обработка клавиатурных команд
-					$result = $this->runCallbackButtonCommand($this->data);
+					$result = $this->runCallbackCommand($this->data);
 					if ($result->code == ChatEvent::COMMAND_RESULT_OK)
 						return true;
 					elseif ($result->code == ChatEvent::COMMAND_RESULT_NO_DB) {
@@ -557,6 +586,440 @@ namespace Bot {
 			}
 		}
 	}
+
+	class OutputSnackbar
+	{
+		private $text;
+
+		function __construct($text)
+		{
+			$this->text = $text;
+		}
+
+		public function _get()
+		{
+			return $this->text;
+		}
+	}
+
+	class OutputMessageSend
+	{
+		private $raw;
+		private $parsing;
+
+		private function _setparam($name, $param, $parse_array)
+		{
+			if (!array_key_exists($name, $this->raw) && !array_key_exists($name, $this->parsing)) {
+				if ($parse_array)
+					$this->parsing[$name] = $param;
+				else
+					$this->raw[$name] = $param;
+				return true;
+			} else
+				return false;
+		}
+
+		public function _get()
+		{
+			return (object) ['raw' => $this->raw, 'parsing' => $this->parsing];
+		}
+
+		public function __construct($message = '', $parse_array = false)
+		{
+			$this->raw = [];
+			$this->parsing = [];
+
+			if ($message != '')
+				$this->_setparam('message', $message, $parse_array);
+		}
+
+		public function message($message, $parse_array = false)
+		{
+			return $this->_setparam('message', $message, $parse_array);
+		}
+
+		public function attachment($attachment, $parse_array = false)
+		{
+			return $this->_setparam('attachment', $attachment, $parse_array);
+		}
+
+		public function keyboard($keyboard, $parse_array = false)
+		{
+			return $this->_setparam('keyboard', $keyboard, $parse_array);
+		}
+
+		public function template($template, $parse_array = false)
+		{
+			return $this->_setparam('template', $template, $parse_array);
+		}
+	}
+
+	class OutputMessageEdit
+	{
+		private $raw;
+		private $parsing;
+
+		private function _setparam($name, $param, $parse_array)
+		{
+			if (!array_key_exists($name, $this->raw) && !array_key_exists($name, $this->parsing)) {
+				if ($parse_array)
+					$this->parsing[$name] = $param;
+				else
+					$this->raw[$name] = $param;
+				return true;
+			} else
+				return false;
+		}
+
+		public function _get()
+		{
+			return (object) ['raw' => $this->raw, 'parsing' => $this->parsing];
+		}
+
+		public function __construct($message = '', $parse_array = false)
+		{
+			$this->raw = [];
+			$this->parsing = [];
+
+			if ($message != '')
+				$this->_setparam('message', $message, $parse_array);
+		}
+
+		public function message($message, $parse_array = false)
+		{
+			return $this->_setparam('message', $message, $parse_array);
+		}
+
+		public function attachment($attachment, $parse_array = false)
+		{
+			return $this->_setparam('attachment', $attachment, $parse_array);
+		}
+
+		public function keyboard($keyboard, $parse_array = false)
+		{
+			return $this->_setparam('keyboard', $keyboard, $parse_array);
+		}
+
+		public function template($template, $parse_array = false)
+		{
+			return $this->_setparam('template', $template, $parse_array);
+		}
+	}
+
+	class OutputObject
+	{
+		protected $output_data;
+
+		function __construct()
+		{
+			$this->output_data = [];
+
+			$this->output_data['user_appeal'] = (object) ['user_id' => 0, 'nickname' => false];
+		}
+
+		public function getObject()
+		{
+			return (object) $this->output_data;
+		}
+
+		public function setUserSettings(\Database\Manager $db, int $user_id)
+		{
+			$query_projection = [
+				'_id' => 0,
+				"chat_settings.user_nicknames.id{$user_id}" => 1
+			];
+			$userSettings = $db->executeQuery(new \MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => $query_projection]));
+
+			$this->output_data['user_appeal']->user_id = $user_id;
+			$this->output_data['user_appeal']->nickname = $userSettings->getValue([0, "chat_settings", "user_nicknames", "id{$user_id}"], false);
+		}
+	}
+
+	class MessageOutputObject extends OutputObject
+	{
+		private $send_params;
+		private $edit_params;
+
+		function __construct()
+		{
+			$this->send_params = (object) ['array' => [], 'for_parsing' => []];
+			$this->edit_params = (object) ['array' => [], 'for_parsing' => []];
+		}
+
+		public function getOutputObject()
+		{
+			$object = (object) [
+				'send_params' => $this->send_params,
+				'edit_params' => $this->edit_params,
+				'user_appeal' => $this->user_appeal
+			];
+			return $object;
+		}
+
+		public function edit($param, $value, $parse_array = false)
+		{
+			if ($parse_array)
+				$this->edit_params->for_parsing[$param] = $value;
+			else
+				$this->edit_params->array[$param] = $value;
+		}
+
+		public function send($param, $value, $parse_array = false)
+		{
+			if ($parse_array)
+				$this->send_params->for_parsing[$param] = $value;
+			else
+				$this->send_params->array[$param] = $value;
+		}
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// Общие параметры
+
+		public function message_for_both($message, $parse_array = false)
+		{
+			$this->send('message', $message, $parse_array);
+			$this->edit('message', $message, $parse_array);
+		}
+
+		public function attachment_for_both($attachment, $parse_array = false)
+		{
+			$this->send('attachment', $attachment, $parse_array);
+			$this->edit('attachment', $attachment, $parse_array);
+		}
+
+		public function keyboard_for_both($keyboard, $parse_array = false)
+		{
+			$this->send('keyboard', $keyboard, $parse_array);
+			$this->edit('keyboard', $keyboard, $parse_array);
+		}
+
+		public function template_for_both($template, $parse_array = false)
+		{
+			$this->send('template', $template, $parse_array);
+			$this->edit('template', $template, $parse_array);
+		}
+	}
+
+	class NoticeOutputObject extends OutputObject
+	{
+		private $snackbar;
+		private $edit;
+
+		function __construct()
+		{
+			$this->snackbar = (object) ['text' => '', 'parse_array' => false];
+			$this->edit_params = (object) ['array' => [], 'for_parsing' => []];
+		}
+
+		public function getOutputObject()
+		{
+			$object = (object) [
+				'snackbar' => $this->snackbar,
+				'edit_params' => $this->edit_params,
+				'user_appeal' => $this->user_appeal
+			];
+			return $object;
+		}
+
+		public function edit($param, $value, $parse_array = false)
+		{
+			if ($parse_array)
+				$this->edit_params->for_parsing[$param] = $value;
+			else
+				$this->edit_params->array[$param] = $value;
+		}
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// Общие параметры
+
+		public function text_for_snackbar($text, $parse_array = false)
+		{
+			$this->snackbar->text = $text;
+			$this->snackbar->parse_array = $parse_array;
+		}
+
+		public function message_for_edit($message, $parse_array = false)
+		{
+			$this->edit('message', $message, $parse_array);
+		}
+
+		public function attachment_for_edit($attachment, $parse_array = false)
+		{
+			$this->edit('attachment', $attachment, $parse_array);
+		}
+
+		public function keyboard_for_edit($keyboard, $parse_array = false)
+		{
+			$this->edit('keyboard', $keyboard, $parse_array);
+		}
+
+		public function template_for_edit($template, $parse_array = false)
+		{
+			$this->edit('template', $template, $parse_array);
+		}
+	}
+
+	class OutputSystem
+	{
+		private $type;												// Тип вызова
+		private $event_data;										// Объект события VK
+		private $code;												// Переменная кода vk_execute
+		private $lastHandleResult;									// Результат последней обработки
+
+		const TYPE_NULL = 0;
+		const TYPE_MSG_NEW = 1;
+		const TYPE_MSG_EVENT = 2;
+
+		function __construct(...$params)
+		{
+			$this->code = "";
+			$this->lastHandleResult = "";
+
+			if (array_key_exists(0, $params)) {
+				if ($params[0] === self::TYPE_MSG_NEW && array_key_exists(1, $params)) {
+					$this->type = self::TYPE_MSG_NEW;
+					$this->event_data = $params[1];
+				} elseif ($params[0] === self::TYPE_MSG_EVENT && array_key_exists(1, $params)) {
+					$this->type = self::TYPE_MSG_EVENT;
+					$this->event_data = $params[1];
+				} else {
+					$this->type = self::TYPE_NULL;
+				}
+			} else
+				$this->type = self::TYPE_NULL;
+		}
+
+		function getType()
+		{
+			return $this->type;
+		}
+
+		function getLastHandleResult()
+		{
+			return $this->lastHandleResult;
+		}
+
+		public function addCode(...$code)
+		{
+			foreach ($code as $c)
+				$this->code .= $c;
+		}
+
+		public function clearCode()
+		{
+			$this->code = '';
+		}
+
+		private function handleCode()
+		{
+			error_log($this->code);
+			$result = vk_execute($this->code);
+			error_log($result);
+			$this->clearCode();
+			return $result;
+		}
+
+		public function handleNotice(NoticeOutputObject $noticeOutputObject)
+		{
+			$object = $noticeOutputObject->getOutputObject();
+			$vk_vars = new VKVariable();
+
+			if ($this->type == self::TYPE_MSG_NEW) {
+				$request_array = $object->edit_params->array;
+				$request_array['peer_id'] = $this->event_data->object->peer_id;
+
+				// Создание обращения
+				if ($object->user_appeal->nickname !== false)
+					$vk_vars->var('var appeal', ['str', '@id', 'int', $object->user_appeal->user_id, 'str', " ({$object->user_appeal->nickname}), "], true);
+				elseif ($object->user_appeal->user_id != 0)
+					$this->addCode("var user=API.users.get({'user_id':{$object->user_appeal->user_id},'fields':'screen_name'})[0];var appeal='@'+user.screen_name+' ('+user.first_name.substr(0, 2)+'. '+user.last_name+'), ';user=null;");
+				else
+					$this->addCode("var appeal='';");
+
+				// Создание запрос messages.send
+				$vk_vars->var('var reqm', $request_array);
+				foreach ($object->edit_params->for_parsing as $key => $value) {
+					$vk_vars->var("reqm.{$key}", $value, true);
+				}
+				$this->addCode($vk_vars->getCode(), "API.messages.send(reqm);");
+
+				$this->handleCode();
+			} elseif ($this->type == self::TYPE_MSG_EVENT) {
+				$request_array = ['event_id' => $this->event_data->object->event_id, 'user_id' => $this->event_data->object->user_id, 'peer_id' => $this->event_data->object->peer_id];
+
+				// Создание обращения
+				if ($object->user_appeal->nickname !== false)
+					$vk_vars->var('var appeal', ['str', "{$object->user_appeal->nickname}, "], true);
+				elseif ($object->user_appeal->user_id != 0)
+					$this->addCode("var user=API.users.get({'user_id':{$object->user_appeal->user_id},'fields':'screen_name'})[0];var appeal=user.first_name.substr(0, 2)+'. '+user.last_name+', ';user=null;");
+				else
+					$this->addCode("var appeal='';");
+
+				// Создание запрос snackbar
+				$vk_vars->var('var reqm', $request_array);
+				$vk_vars->var('var stxt', $object->snackbar->text, $object->snackbar->parse_array);
+				$vk_vars->var('reqm.event_data', ['str', '{"type":"show_snackbar","text":"', 'var', 'stxt', 'str', '"}'], true);
+				$this->addCode($vk_vars->getCode(), "API.messages.sendMessageEventAnswer(reqm);");
+
+				$this->handleCode();
+			} else
+				return true;
+			return true;
+		}
+
+		public function handleMessage(MessageOutputObject $messageOutputObject)
+		{
+			$object = $messageOutputObject->getOutputObject();
+			$vk_vars = new VKVariable();
+
+			if ($this->type == self::TYPE_MSG_NEW) {
+				$request_array = $object->send_params->array;
+				$request_array['peer_id'] = $this->event_data->object->peer_id;
+
+				// Создание обращения
+				if ($object->user_appeal->nickname !== false)
+					$vk_vars->var('var appeal', ['str', '@id', 'int', $object->user_appeal->user_id, 'str', " ({$object->user_appeal->nickname}), "], true);
+				elseif ($object->user_appeal->user_id != 0)
+					$this->addCode("var user=API.users.get({'user_id':{$object->user_appeal->user_id},'fields':'screen_name'})[0];var appeal='@'+user.screen_name+' ('+user.first_name.substr(0, 2)+'. '+user.last_name+'), ';user=null;");
+				else
+					$this->addCode("var appeal='';");
+
+				// Создание запрос messages.send
+				$vk_vars->var('var reqm', $request_array);
+				foreach ($object->send_params->for_parsing as $key => $value) {
+					$vk_vars->var("reqm.{$key}", $value, true);
+				}
+				$this->addCode($vk_vars->getCode(), "API.messages.send(reqm);");
+
+				$this->handleCode();
+			} elseif ($this->type == self::TYPE_MSG_EVENT) {
+				$request_array = $object->send_params->array;
+				$request_array['peer_id'] = $this->event_data->object->peer_id;
+				$request_array['conversation_message_id'] = $this->event_data->object->conversation_message_id;
+
+				// Создание обращения
+				if ($object->user_appeal->nickname !== false)
+					$vk_vars->var('var appeal', ['str', '@id', 'int', $object->user_appeal->user_id, 'str', " ({$object->user_appeal->nickname}), "], true);
+				elseif ($object->user_appeal->user_id != 0)
+					$this->addCode("var user=API.users.get({'user_id':{$object->user_appeal->user_id},'fields':'screen_name'})[0];var appeal='@'+user.screen_name+' ('+user.first_name.substr(0, 2)+'. '+user.last_name+'), ';user=null;");
+				else
+					$this->addCode("var appeal='';");
+
+				// Создание запрос messages.edit
+				$vk_vars->var('var reqm', $request_array);
+				foreach ($object->send_params->for_parsing as $key => $value) {
+					$vk_vars->var("reqm.{$key}", $value, true);
+				}
+				$this->addCode($vk_vars->getCode(), "API.messages.edit(reqm);");
+
+				$this->handleCode();
+			} else
+				return true;
+			return true;
+		}
+	}
 }
 
 namespace {
@@ -564,34 +1027,34 @@ namespace {
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	// Константы путей бота
-	define('BOTPATH_SYSTEM', __DIR__);									// Каталог PHP кода бота
-	define('BOTPATH_MAIN', dirname(__DIR__));							// Каталог бота
-	define('BOTPATH_DATA', BOTPATH_MAIN . "/data");						// Каталог данных бота
-	define('BOTPATH_ROOT', dirname(BOTPATH_MAIN));						// Корневой каталог бота
+	define('BOTPATH_SYSTEM', __DIR__);										// Каталог PHP кода бота
+	define('BOTPATH_MAIN', dirname(__DIR__));								// Каталог ядра бота (Вместе с Python модулями)
+	define('BOTPATH_ROOT', dirname(BOTPATH_MAIN));							// Корневой каталог бота
+	define('BOTPATH_DATA', BOTPATH_ROOT . "/data");							// Каталог данных бота
 	define('BOTPATH_TMP', BOTPATH_ROOT . "/tmp");							// Каталог временных файлов бота
 	define('BOTPATH_CONFIGFILE', BOTPATH_DATA . "/config.json");			// Файл настроек бота
 
-	mb_internal_encoding("UTF-8");										// UTF-8 как основная кодировка для mbstring
+	mb_internal_encoding("UTF-8");											// UTF-8 как основная кодировка для mbstring
 
-	$GLOBALS['modules_importtime_start'] = microtime(true);				// Время подключения модулей: Начало
+	$GLOBALS['modules_importtime_start'] = microtime(true);					// Время подключения модулей: Начало
 
 	// Составные модули бота
-	require_once(__DIR__ . "/vk.php"); 									// Модуль, отвечающий за все взаимодействия с VK API
+	require_once(__DIR__ . "/vk.php"); 										// Модуль, отвечающий за все взаимодействия с VK API
 	require_once(__DIR__ . "/database.php"); 								// Модуль, отвечающий за взаимодействие основной базы данных бота
-	require_once(__DIR__ . "/government.php");	 						// Модуль, отвечающий за работу гос. устройства беседы
+	require_once(__DIR__ . "/government.php");	 							// Модуль, отвечающий за работу гос. устройства беседы
 	require_once(__DIR__ . "/economy.php"); 								// Модуль, отвечающий за систему Экономики
 	require_once(__DIR__ . "/fun.php"); 									// Модуль, отвечающий за развлечения
 	require_once(__DIR__ . "/roleplay.php"); 								// Модуль, отвечающий за Roleplay команды
 	require_once(__DIR__ . "/manager.php"); 								// Модуль, отвечающий за управление беседой
-	require_once(__DIR__ . "/giphy.php"); 								// Модуль, отвечающий за функции взаимодействия с GIPHY API
-	require_once(__DIR__ . "/word_game.php"); 							// Модуль, отвечающий за игры Слова и Words
-	require_once(__DIR__ . "/stats.php"); 								// Модуль, отвечающий за ведение статистики в беседах
-	require_once(__DIR__ . "/legacy.php");								// Модуль, отвечающий за Legacy функции
+	require_once(__DIR__ . "/giphy.php"); 									// Модуль, отвечающий за функции взаимодействия с GIPHY API
+	require_once(__DIR__ . "/word_game.php"); 								// Модуль, отвечающий за игры Слова и Words
+	require_once(__DIR__ . "/stats.php"); 									// Модуль, отвечающий за ведение статистики в беседах
+	require_once(__DIR__ . "/legacy.php");									// Модуль, отвечающий за Legacy функции
 	require_once(__DIR__ . "/debug.php");									// Модуля, отвечающий за отладочные функции
 
-	$GLOBALS['modules_importtime_end'] = microtime(true);				// Время подключения модулей: Конец
+	$GLOBALS['modules_importtime_end'] = microtime(true);					// Время подключения модулей: Конец
 
-	function bot_handle_event($data)
+	function bot_handle_event($data, $cmd, $hndl)
 	{
 		if ($data->object->peer_id < 2000000000) { 										// Запрет использование бота в лс
 			///////////////////////////
@@ -605,34 +1068,38 @@ namespace {
 
 			// Инициализируем класс
 			$event = new Bot\ChatEvent($data);
-			$event->setHintChar("!");													// Устанавливаем первый символ для отображения подсказок
+			$event->setHintChar("!");															// Устанавливаем первый символ для отображения подсказок
 
-			debug_cmdinit($event);														// Инициализация команд отладочного режима
+			if ($cmd) {
+				debug_cmdinit($event);															// Инициализация команд отладочного режима
 
-			$GLOBALS['cmd_initime_start'] = microtime(true);							// Время инициализации команд: Начало
+				$GLOBALS['cmd_initime_start'] = microtime(true);								// Время инициализации команд: Начало
 
-			bot_initcmd($event);														// Инициализация команд модуля bot
-			bot_initcustomcmd($event);													// Инициализация команд из БД
-			//government_initcmd($event);												// Инициализация команд Гос. устройства
-			manager_initcmd($event);													// Инициализация команд модуля manager
-			stats_initcmd($event);														// Инициализация команд модуля stats
-			roleplay_initcmd($event);													// RP-команды
-			fun_initcmd($event);														// Fun-команды
-			//giphy_initcmd($event);													// Инициализация команд модуля giphy
-			//wordgame_initcmd($event);													// Игра Слова
-			economy_initcmd($event);													// Economy
+				bot_initcmd($event);															// Инициализация команд модуля bot
+				bot_initcustomcmd($event);														// Инициализация команд из БД
+				//government_initcmd($event);													// Инициализация команд Гос. устройства
+				manager_initcmd($event);														// Инициализация команд модуля manager
+				stats_initcmd($event);															// Инициализация команд модуля stats
+				roleplay_initcmd($event);														// RP-команды
+				fun_initcmd($event);															// Fun-команды
+				//giphy_initcmd($event);														// Инициализация команд модуля giphy
+				//wordgame_initcmd($event);														// Игра Слова
+				economy_initcmd($event);														// Economy
 
-			$GLOBALS['cmd_initime_end'] = microtime(true);								// Время инициализации команд: Конец
+				$GLOBALS['cmd_initime_end'] = microtime(true);									// Время инициализации команд: Конец
+			}
 
-			// Обработчики текстовых сообщений без команд
-			$event->addNonCommandTextMessageHandler('bot_message_action_handler');		// Обработчик событий в сообщениях
-			$event->addNonCommandTextMessageHandler('government_election_system');		// Обработчик выборов
-			$event->addNonCommandTextMessageHandler('fun_handler');						// Обработчик фанового модуля
-			//$event->addNonCommandTextMessageHandler('wordgame_gameplay');				// Обработчик игры Слова
+			if ($hndl) {
+				// Обработчики текстовых сообщений без команд
+				//$event->addNonCommandTextMessageHandler('bot_message_action_handler');		// Обработчик событий в сообщениях
+				//$event->addNonCommandTextMessageHandler('government_election_system');		// Обработчик выборов
+				$event->addNonCommandTextMessageHandler('fun_handler');							// Обработчик фанового модуля
+				//$event->addNonCommandTextMessageHandler('wordgame_gameplay');					// Обработчик игры Слова
+			}
 
-			bot_pre_handle($event);														// Функция предварительной обработки
-			$event->handle(); 															// Обработка события бота
-			$event->exit(); 															// Очищение памяти
+			bot_pre_handle($event);																// Функция предварительной обработки
+			$event->handle(); 																	// Обработка события бота
+			$event->exit(); 																	// Очищение памяти
 		}
 	}
 
@@ -815,6 +1282,7 @@ namespace {
 		$event->addCallbackButtonCommand('bot_tictactoe', 'bot_tictactoe_cb');
 		$event->addCallbackButtonCommand('bot_reg', 'bot_register_cb', ['ignore_db' => true]);
 		$event->addCallbackButtonCommand('bot_listcustomcmd', 'bot_listcustomcmd_cb');
+		$event->addCallbackButtonCommand('bot_run', 'bot_run_cb', ['ignore_db' => true]);
 	}
 
 	function bot_register($finput)
@@ -1410,7 +1878,7 @@ namespace {
 					'is_hidden' => false
 				)
 			);
-			$finput->event->runTextMessageCommand($modified_data);
+			$finput->event->runTextCommand($modified_data);
 		}
 	}
 
@@ -1425,7 +1893,7 @@ namespace {
 			$modified_data = $data;
 			$modified_data->object->text = $payload->text_command;
 			unset($modified_data->object->payload);
-			$finput->event->runTextMessageCommand($modified_data);
+			$finput->event->runTextCommand($modified_data);
 		}
 	}
 
@@ -1544,7 +2012,7 @@ namespace {
 
 		$modified_data = clone $data;
 		$modified_data->object->text = $cmd_data->cmd_line;
-		$result = $finput->event->runTextMessageCommand($modified_data);
+		$result = $finput->event->runTextCommand($modified_data);
 		if ($result->code == Bot\ChatEvent::COMMAND_RESULT_UNKNOWN) {
 			$cmd_line_argv = bot_parse_argv($cmd_data->cmd_line);
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Ошибка. Команда [{$argv[0]}], содержащая в себе [{$cmd_line_argv[0]}] не может быть выполнена!"); // Вывод ошибки
@@ -2018,6 +2486,47 @@ namespace {
 				]);
 				break;
 		}
+	}
+
+	function bot_run_cb($finput)
+	{
+		// Инициализация базовых переменных
+		$data = $finput->data;
+		$payload = $finput->payload;
+
+		// Функция тестирования пользователя
+		$testing_user_id = intval(bot_get_array_value($payload, 2, 0));
+		if ($testing_user_id === 0 || $testing_user_id === $data->object->user_id) {
+			$text_command = bot_get_array_value($payload, 1, '');
+
+			$text_command_argv = bot_parse_argv($text_command);
+			$command_data = $finput->event->isTextMessageCommand($text_command_argv[0]);
+			if ($command_data === false)
+				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Неизвестная команда!');
+			elseif (!$command_data->output_system)
+				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Команда не поддерживает OutputSystem!');
+			elseif ($command_data->only_text_input)
+				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Команда поддерживает только текстовый ввод!');
+			elseif ($text_command != "") {
+				$modified_data = (object) [
+					'type' => 'message_new',
+					'object' => (object) [
+						'date' => time(),
+						'from_id' => $data->object->user_id,
+						'peer_id' => $data->object->peer_id,
+						'text' => $text_command,
+						'conversation_message_id' => $data->object->conversation_message_id
+					]
+				];
+				$output = new Bot\OutputSystem(Bot\OutputSystem::TYPE_MSG_EVENT, $data);
+				$result = $finput->event->runTextCommand($modified_data, $output);
+				if ($result->code == Bot\ChatEvent::COMMAND_RESULT_INVALID_DATA)
+					bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Произошла внутренняя ошибка!');
+			} else {
+				bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Не указана команда!');
+			}
+		} elseif ($testing_user_id !== $data->object->user_id)
+			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
 	}
 
 	function bot_menu_cb($finput)

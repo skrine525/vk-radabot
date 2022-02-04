@@ -1560,7 +1560,7 @@ function manager_panel_keyboard_handler($finput)
 				'is_hidden' => false
 			)
 		);
-		$result = $finput->event->runTextMessageCommand($modified_data);
+		$result = $finput->event->runTextCommand($modified_data);
 		if ($result->code == Bot\ChatEvent::COMMAND_RESULT_OK)
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, "✅ Команда выполнена!");
 		elseif ($result->code == Bot\ChatEvent::COMMAND_RESULT_UNKNOWN)
