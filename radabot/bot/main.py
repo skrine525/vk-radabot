@@ -6,6 +6,7 @@ def handle_event(vk_api, event):
 	manager = ChatEventManager(vk_api, event)
 	manager.addMessageCommand("!тест", test, args=['Сука'])
 	manager.addMessageCommand("!тест2", test2)
+	manager.addMessageCommand('!error', error)
 
 	initcmd_php(manager)
 	manager.handle()
@@ -17,7 +18,8 @@ def message_action_handler(callin: ChatEventManager.CallbackInputObject):
 	vk_api = callin.vk_api
 	output = callin.output
 
-
+def error(callin: ChatEventManager.CallbackInputObject):
+	raise Exception()
 
 MSG_PHP_COMMANDS = ['!docmd', '!test-template', '!runcb', '!kick-all', '!debug-info', '!db-edit', '!special-permits', '!test-cmd', '!cmd-search', '!test-parser', '!testout', '!cmdlist', '!reg', '!помощь', '!чат', '!меню', '!лайк', '!убрать', '!id', '!base64', '!крестики-нолики', '!сообщение', '!addcustom', '!delcustom', '!customlist', 'пожать', 'дать', '!онлайн', '!ban', '!unban', '!baninfo', '!banlist', '!kick', '!ник', '!приветствие', '!modes', '!панель', 'панель', '!права', '!ники', '!стата', '!рейтинг', '!me', '!do', '!try', '!s', 'секс', 'обнять', 'уебать', 'обоссать', 'поцеловать', 'харкнуть', 'отсосать', 'отлизать', 'послать', 'кастрировать', 'посадить', 'лизнуть', 'обосрать', 'облевать', 'отшлёпать', 'отшлепать', 'покашлять', '!выбери', '!сколько', '!инфа', '!rndwall', '!memes', '!бутылочка', '!tts', '!say', '!брак', '!браки', '!shrug', '!tableflip', '!unflip', '!кек', '!кто', '!кого', '!кому', '!счет', '!счет', '!работа', '!работать', '!профессии', '!профессия', '!купить', '!продать', '!имущество', '!награды', '!банк', '!образование', '!forbes', '!бизнес', '!подарить', '!казино', '!ставка']
 CB_PHP_COMMANDS = ['bot_menu', 'bot_cmdlist', 'bot_tictactoe', 'bot_reg', 'bot_listcustomcmd', 'bot_run']
@@ -38,12 +40,12 @@ def initcmd_php(manager: ChatEventManager):
 
 def handle_phpcmd(callin: ChatEventManager.CallbackInputObject):
 	event = callin.event
-	subprocess.Popen(["/usr/bin/php7.0", "radabot-php-core.php", "cmd", json.dumps(event.initial_data)]).communicate()
+	subprocess.Popen(["/usr/bin/php7.0", "radabot-php-core.php", "cmd", json.dumps(event.raw)]).communicate()
 	return True
 
 def handle_phphndl(callin: ChatEventManager.CallbackInputObject):
 	event = callin.event
-	subprocess.Popen(["/usr/bin/php7.0", "radabot-php-core.php", "hndl", json.dumps(event.initial_data)]).communicate()
+	subprocess.Popen(["/usr/bin/php7.0", "radabot-php-core.php", "hndl", json.dumps(event.raw)]).communicate()
 	return True
 
 def test(callin: ChatEventManager.CallbackInputObject, s):
@@ -63,4 +65,4 @@ def test2(callin: ChatEventManager.CallbackInputObject):
 	db = callin.db
 	vk_api = callin.vk_api
 
-	vk_api.call('messages.send', {'peer_id': event.peer_id, 'message': bot.check_chat_in_db(db, int(args[1]))})
+	vk_api.call('messages.send', {'peer_id': event.object.peer_id, 'message': bot.check_chat_in_db(db, int(args[1]))})

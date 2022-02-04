@@ -70,6 +70,7 @@ class StatsManager
 
 	public function commit(int $user_id)
 	{
+		return true;									// Отключение стастики в PHP
 		if ($user_id <= 0)
 			return false;
 

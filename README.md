@@ -21,7 +21,7 @@ $ apt install python3 python3-pip
 ```
 6. Установите библиотеку requests для python:
 ```shell
-$ pip3 install requests
+$ pip3 install requests pymongo bunch
 ```
 7. Скопируйте файл службы в системную директорию:
 ```shell

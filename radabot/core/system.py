@@ -15,6 +15,31 @@ class SYSTEM_PATHS:
     LONGPOLL_LOG_FILE = LOG_DIR + 'longpoll.log'
     ERROR_LOG_FILE = LOG_DIR + 'error.log'
 
+class ArgumentParser:
+    def __init__(self, line: str):
+        self.args = shlex.split(line)
+
+    def count(self):
+        return len(self.args)
+
+    def str(self, index: int, default: str = None) -> str:
+        try:
+            return str(self.args[index])
+        except IndexError:
+            return default
+
+    def int(self, index: int, default: int = None) -> int:
+        try:
+            return int(self.args[index])
+        except IndexError:
+            return default
+
+    def float(self, index: int, default: float = None) -> float:
+        try:
+            return float(self.args[index])
+        except IndexError:
+            return default
+
 def generate_random_string(length, uppercase = True, lowercase = True, numbers = True):
     letters = ''
     if uppercase and lowercase:
@@ -55,6 +80,3 @@ def prestart():
     
     if not os.path.exists(SYSTEM_PATHS.EXEC_LOG_DIR):
         os.mkdir(SYSTEM_PATHS.EXEC_LOG_DIR)
-
-def parse_args(cmdline: str) -> list:
-    return shlex.split(cmdline)

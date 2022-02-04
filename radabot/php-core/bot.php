@@ -1078,7 +1078,7 @@ namespace {
 				bot_initcmd($event);															// Инициализация команд модуля bot
 				bot_initcustomcmd($event);														// Инициализация команд из БД
 				//government_initcmd($event);													// Инициализация команд Гос. устройства
-				manager_initcmd($event);														// Инициализация команд модуля manager
+				manager_initcmd($event);						s								// Инициализация команд модуля manager
 				stats_initcmd($event);															// Инициализация команд модуля stats
 				roleplay_initcmd($event);														// RP-команды
 				fun_initcmd($event);															// Fun-команды
@@ -1372,11 +1372,9 @@ namespace {
 						}
 
 						// Статистика
-						stats_update_messagenew($event, $data, $db); 	// Ведение статистики в беседе
 						break;
 
 					case 'message_event':
-						stats_update_messageevent($event, $data, $db); 	// Ведение статистики в беседе
 						break;
 				}
 			} else
