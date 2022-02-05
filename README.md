@@ -15,7 +15,7 @@ $ cd ~radabot
 ```shell
 $ apt install php7.0 php7.0-mbstring php7.0-curl php7.0-gd php7.0-simplexml php7.0-mongodb
 ```
-5. Установите пакет "python" и "python-pip":
+5. Установите пакет "python" (Python 3.5.2) и "python-pip":
 ```shell
 $ apt install python3 python3-pip
 ```

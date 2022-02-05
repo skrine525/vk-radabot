@@ -125,5 +125,5 @@ def get_chat_db_query(id: int) -> dict:
     return {'_id': 'chat{}'.format(id)}
 
 def reply_to_message_by_event(event) -> str:
-    forward = {'peer_id': event.object.peer_id, 'conversation_message_ids': [event.object.conversation_message_id], 'is_reply': True}
+    forward = {'peer_id': event.bunch.object.peer_id, 'conversation_message_ids': [event.bunch.object.conversation_message_id], 'is_reply': True}
     return json.dumps(forward, ensure_ascii=False, separators=(',', ':'))

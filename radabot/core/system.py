@@ -40,6 +40,31 @@ class ArgumentParser:
         except IndexError:
             return default
 
+class PayloadParser:
+    def __init__(self, payload: list):
+        self.payload = payload
+
+    def count(self):
+        return len(self.payload)
+
+    def str(self, index: int, default: str = None) -> str:
+        try:
+            return str(self.payload[index])
+        except IndexError:
+            return default
+
+    def int(self, index: int, default: int = None) -> int:
+        try:
+            return int(self.payload[index])
+        except IndexError:
+            return default
+
+    def float(self, index: int, default: float = None) -> float:
+        try:
+            return float(self.payload[index])
+        except IndexError:
+            return default
+
 # Класс для работы с Config файлом
 class Config:
     data = {}
