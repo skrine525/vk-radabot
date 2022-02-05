@@ -1,15 +1,27 @@
 import subprocess, json
 import radabot.core.bot as bot
-from radabot.core.io import ChatEventManager
+from radabot.core.io import ChatEventManager, ChatOutput
+from radabot.core.vk import VKVariable
 
 def handle_event(vk_api, event):
 	manager = ChatEventManager(vk_api, event)
+
+	manager.addMessageCommand("!стата", StatsCMD.main)
+
 	manager.addMessageCommand("!тест", test, args=['Сука'])
 	manager.addMessageCommand("!тест2", test2)
 	manager.addMessageCommand('!error', error)
 
 	initcmd_php(manager)
 	manager.handle()
+
+# Команда !стата
+class StatsCMD:
+	@staticmethod
+	def main(callin: ChatEventManager.CallbackInputObject):
+		event = callin.event
+		args = callin.args
+		output = callin.output
 
 def message_action_handler(callin: ChatEventManager.CallbackInputObject):
 	event = callin.event
@@ -53,8 +65,8 @@ def test(callin: ChatEventManager.CallbackInputObject, s):
 	args = callin.args
 	output = callin.output
 
-	message = output.uos_message()
-	message.message('Хуй')
+	message = ChatOutput.UOSMessage(output)
+	message.send(message='Хуй '+args.str(1, ''))
 	message()
 
 	#result = output.messages_send(peer_id=event.peer_id, message=vk.VKVariable.Multi('str', 'Привет, ', 'var', 'appeal', 'str', '!'), script='var appeal=\"хуй\";')

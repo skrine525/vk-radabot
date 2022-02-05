@@ -4,10 +4,11 @@ import json, traceback, time
 from datetime import datetime
 from typing import Callable
 from pymongo import MongoClient
+from pymongo.database import Database
 from bunch import Bunch
 from . import bot
 from .bot import ChatData, ChatStats
-from .system import ArgumentParser, generate_random_string, get_config, write_log
+from .system import ArgumentParser, Config, generate_random_string, write_log
 from .vk import VK_API, VKVariable, keyboard_inline, callback_button
 from .system import SYSTEM_PATHS
 
@@ -93,7 +94,7 @@ class ChatEventManager:
             self.callback_button_command_list = {}
             self.message_handler_list = []
 
-            database_info = get_config('DATABASE')
+            database_info = Config.get('DATABASE')
             self.mongo_client = MongoClient(database_info['HOST'], database_info['PORT'])
             self.db = self.mongo_client[database_info['NAME']]
 
@@ -215,8 +216,8 @@ class ChatEventManager:
     #############################
     # Метод ведения стастики
 
-    def __stats_commit(self):
-        self.chat_stats.commit(self.event.object.from_id)
+    def __stats_commit(self, user_id):
+        self.chat_stats.commit(user_id)
 
     def __stats_command(self):
         self.chat_stats.update('command_used_count', 1)
@@ -278,7 +279,7 @@ class ChatEventManager:
 
                 # Система отслеживания статистики
                 self.__stats_command()
-                self.__stats_commit()
+                self.__stats_commit(self.event.object.from_id)
 
                 return command_result
             except ChatEventManager.DatabaseException:
@@ -300,7 +301,7 @@ class ChatEventManager:
 
                 # Система отслеживания статистики
                 self.__stats_button()
-                self.__stats_commit()
+                self.__stats_commit(self.event.object.from_id)
 
                 return command_result
             except ChatEventManager.DatabaseException:
@@ -310,19 +311,24 @@ class ChatEventManager:
             except:
                 return False
 
-            if((len(self.message_handler_list) > 0) and self.chat_data.exists_in_database):
-                # Подготовка объекта входных данных Callback'а
-                callin = ChatEventManager.CallbackInputObject()
-                callin.event = self.event
-                callin.vk_api = self.vk_api
-                callin.manager = self
-                callin.db = self.db
-                callin.output = output
+            # Обработка сообщений вне командного пространства
+            handler_result = False
+            if(self.chat_data.exists_in_database):
+                if(len(self.message_handler_list) > 0):
+                    # Подготовка объекта входных данных Callback'а
+                    callin = ChatEventManager.CallbackInputObject()
+                    callin.event = self.event
+                    callin.vk_api = self.vk_api
+                    callin.manager = self
+                    callin.db = self.db
+                    callin.output = output
 
-                for handler in self.message_handler_list:
-                    if(handler(callin)):
-                        return True
-            return False
+                    for handler in self.message_handler_list:
+                        if(handler(callin)):
+                            handler_result = True
+                            break
+                self.__stats_commit(self.event.object.from_id)
+            return handler_result
 
         elif self.event.type == 'message_event':
             output = ChatOutput(self.vk_api, self.db, self.event)
@@ -331,7 +337,7 @@ class ChatEventManager:
 
                 # Система отслеживания статистики
                 self.__stats_button()
-                self.__stats_commit()
+                self.__stats_commit(self.event.object.user_id)
 
                 return command_result
             except ChatEventManager.DatabaseException:
@@ -356,28 +362,24 @@ class ChatOutput:
 
     # Класс Единой системы вывода
     class UOSMessage:
-        def __init__(self, output, message_support: bool = True, button_support: bool = True, reply_to_message: bool = True, appeal_to_user: bool = True):
+        def __init__(self, output):
             self.output = output
-            self.data = {
-                'prefs': {
-                    'message_support': message_support,
-                    'button_support': button_support,
-                    'reply_to_message': reply_to_message,
-					'appeal_to_user': appeal_to_user
-                },
-                'object': {
-                    'send': {},
-                    'edit': {}
-                }
+            self.current_prefs = {
+                'message_support': True,
+                'button_support': True,
+                'reply_to_message': True,
+                'appeal_to_user': True
             }
+            self.send_object = {}
+            self.edit_object = {}
 
         def __call__(self):
             if(self.output.event.type == 'message_new'):
-                if(self.data['prefs']['message_support']):
-                    reqm = self.data['object']['send']
+                if(self.current_prefs['message_support']):
+                    reqm = self.send_object
 
                     reqm['peer_id'] = self.output.event.object.peer_id
-                    if(self.data['prefs']['reply_to_message']):
+                    if(self.current_prefs['reply_to_message']):
                         forward = {
                             'peer_id': self.output.event.object.peer_id,
                             'conversation_message_ids': [self.output.event.object.conversation_message_id],
@@ -386,23 +388,30 @@ class ChatOutput:
                         reqm['forward'] = json.dumps(forward, ensure_ascii=False, separators=(',', ':'))
 
                     result = self.output.messages_send(**reqm)
+                else:
+                    return False
             elif(self.output.event.type == 'message_event'):
                 reqm = {}
+                if(self.v['button_support']):
+                    reqm = self.edit_object
 
-        def disable_mentions(self, value):
-            self.data['object']['send']['disable_mentions'] = value
+                    reqm['peer_id'] = self.output.event.object.peer_id
+                    reqm['conversation_message_id'] = self.output.event.object.conversation_message_id
+                    reqm['keep_forward_messages'] = self.current_prefs['reply_to_message']
 
-        def message(self, value):
-            self.data['object']['send']['message'] = value
-            self.data['object']['edit']['message'] = value
+                    result = self.output.messages_edit(**reqm)
+                else:
+                    return False
 
-        def attachment(self, value):
-            self.data['object']['send']['attachment'] = value
-            self.data['object']['edit']['attachment'] = value
+        def prefs(self, **kwargs):
+            for k, v in kwargs.items():
+                self.current_prefs[k] = v
 
-        def keyboard(self, value):
-            self.data['object']['send']['keyboard'] = value
-            self.data['object']['edit']['keyboard'] = value
+        def send(self, **kwargs):
+            self.send_object = kwargs
+
+        def edit(self, **kwargs):
+            self.edit_object = kwargs
 
     # Класс результата выполнения
     class OutputResult:
@@ -421,7 +430,7 @@ class ChatOutput:
     #############################
     # Конструктор
 
-    def __init__(self, vk_api: VK_API, db, event: ChatEventManager.EventObject):
+    def __init__(self, vk_api: VK_API, db: Database, event: ChatEventManager.EventObject):
         self.vk_api = vk_api
         self.event = event
         self.db = db
@@ -465,8 +474,6 @@ class ChatOutput:
                 else:
                     reqm[key] = value
 
-        reqm['random_id'] = 0                                               # Устаналивам random_id
-
         vk_vars1.var('var reqm', reqm)
         req_code += vk_vars1() + vk_vars2() + 'API.messages.edit(reqm);return true;'
 
@@ -476,7 +483,3 @@ class ChatOutput:
         event_data = json.dumps({'type': 'show_snackbar', 'text': text}, ensure_ascii=False, separators=(',', ':'))
         reqm = json.dumps({'event_id': event_id, 'user_id': user_id, 'peer_id': peer_id, 'event_data': event_data},  ensure_ascii=False, separators=(',', ':'))
         return ChatOutput.OutputResult(self.vk_api.execute('{}API.messages.sendMessageEventAnswer({});return true;'.format(script, reqm)))
-
-
-    def uos_message(self, message_support: bool = True, button_support: bool = True, reply_to_message: bool = True, appeal_to_user: bool = True):
-        return ChatOutput.UOSMessage(self, message_support=message_support, button_support=button_support, reply_to_message=reply_to_message, appeal_to_user=appeal_to_user)

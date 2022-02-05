@@ -84,7 +84,7 @@ class ChatStats:
             extractor = ValueExtractor(query)
 
             current_time = time.time()
-            current_day = current_time - (current_time % 86400)
+            current_day = int(current_time - (current_time % 86400))
             last_daily_time = extractor.get('chat_stats.last_daily_time', 0)
             if(current_time - last_daily_time >= 86400):
                 self.update_object['$set']['chat_stats.last_daily_time'] = current_day

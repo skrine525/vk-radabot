@@ -3,11 +3,14 @@ import time, requests, json, threading, traceback
 
 # Части бота
 from radabot.core.vk import VK_API, longpoll
-from radabot.core.system import SYSTEM_PATHS, get_config, prestart, write_log
+from radabot.core.system import SYSTEM_PATHS, Config, prestart, write_log
 from radabot.bot.main import handle_event
 
+# Разовые вызов функций/методов
+Config.readFile() # Считываем Config файл
+
 # Базовые переменные
-vk_api = VK_API(get_config('VK_GROUP_TOKEN'))
+vk_api = VK_API(Config.get('VK_GROUP_TOKEN'))
 
 Processes = {}
 EventQueue = []
@@ -49,7 +52,7 @@ if __name__ == "__main__":
 
 	attempts_count = 1
 	while True:
-		vk_response_dict = json.loads(vk_api.call('groups.getLongPollServer', {'group_id': get_config('VK_GROUP_ID')}))
+		vk_response_dict = json.loads(vk_api.call('groups.getLongPollServer', {'group_id': Config.get('VK_GROUP_ID')}))
 		response_data = vk_response_dict.get('response', None)
 		if response_data != None:
 			lp_server = response_data["server"]
@@ -82,7 +85,7 @@ if __name__ == "__main__":
 				lp_ts = data_dict["ts"]
 				write_log(SYSTEM_PATHS.LONGPOLL_LOG_FILE, "New lp_ts received successfully")
 			elif failed == 2:
-				vk_response_dict = json.loads(vk_api.call('groups.getLongPollServer', {'group_id': get_config('VK_GROUP_ID')}))
+				vk_response_dict = json.loads(vk_api.call('groups.getLongPollServer', {'group_id': Config.get('VK_GROUP_ID')}))
 				response_data = vk_response_dict.get('response', None)
 				if response_data != None:
 					lp_key = response_data['key']
@@ -92,7 +95,7 @@ if __name__ == "__main__":
 				del vk_response_dict
 				del response_data
 			elif failed == 3:
-				vk_response_dict = json.loads(vk_api.call('groups.getLongPollServer', {'group_id': get_config('VK_GROUP_ID')}))
+				vk_response_dict = json.loads(vk_api.call('groups.getLongPollServer', {'group_id': Config.get('VK_GROUP_ID')}))
 				response_data = vk_response_dict.get('response', None)
 				if response_data != None:
 					lp_key = response_data["key"]

@@ -40,6 +40,21 @@ class ArgumentParser:
         except IndexError:
             return default
 
+# Класс для работы с Config файлом
+class Config:
+    data = {}
+
+    @staticmethod
+    def readFile():
+        f = open(SYSTEM_PATHS.CONFIG_FILE)
+        Config.data = json.loads(f.read())
+        f.close()
+
+    @staticmethod
+    def get(name):
+        return Config.data.get(name, None)
+
+# Генерация случайной строки
 def generate_random_string(length, uppercase = True, lowercase = True, numbers = True):
     letters = ''
     if uppercase and lowercase:
@@ -52,15 +67,6 @@ def generate_random_string(length, uppercase = True, lowercase = True, numbers =
         letters += '0123456789'
 
     return ''.join(random.choice(letters) for i in range(length))
-
-# Метод получения config'а
-config_data = None
-def get_config(name):
-    if config_data == None:
-        f = open(SYSTEM_PATHS.CONFIG_FILE)
-        globals()["config_data"] = json.loads(f.read())
-        f.close()
-    return config_data.get(name, None)
 
 # Метод журналирования
 def write_log(filename: str, text: str):
