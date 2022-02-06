@@ -488,11 +488,6 @@ namespace {
 		$handler->femaleMessageToAll = "%FROM_USERNAME% уебала всем%DESCRIPTION_MSG%.👊🏻";
 
 		$member_id = $handler->handle();
-		if ($member_id !== false && $data->object->from_id != $member_id) {
-			$statsManager = new StatsManager($db);
-			$statsManager->update("bump_count", 1);
-			$statsManager->commit($member_id);
-		}
 	}
 
 	function roleplay_pissof($finput)

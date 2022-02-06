@@ -2,40 +2,11 @@
 import json, time
 from pymongo.database import Database
 
-class ValueExtractor:
-    class InvalidArgumentException(Exception):
-        def __init__(self, msg: str):
-            self.msg = msg
+from radabot.core.system import ValueExtractor
 
-    def __init__(self, data):
-        if(isinstance(data, dict) or isinstance(data, list)):
-            self.data = data
-        else:
-            raise ValueExtractor.InvalidArgumentException(r"argument 'data' must be dict or list")
-
-    def get(self, path, default = None):
-        path_list = []
-        if(isinstance(path, str)):
-            path_list = path.split('.')
-        elif(isinstance(path, list)):
-            path_list = path
-        else:
-            raise ValueExtractor.InvalidArgumentException(r"argument 'path' must be list or str")
-
-        value = self.data
-        for key in path_list:
-            if(isinstance(value, dict)):
-                value = value.get(key, None)
-                if(value == None):
-                    return default
-            elif(isinstance(value, list)):
-                try:
-                    value = value[int(key)]
-                except (IndexError, ValueError):
-                    return default
-            else:
-                return default
-        return value
+class DEFAULT_MESSAGES:
+    NO_RIGHTS_TO_USE_THIS_BUTTON = '⛔ У вас нет прав использовать эту кнопку.'
+    MENU_CANCELED = '✅Меню закрыто.'
 
 class ChatData:
     def __init__(self, db: Database, peer_id: int):

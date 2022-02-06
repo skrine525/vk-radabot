@@ -15,6 +15,42 @@ class SYSTEM_PATHS:
     LONGPOLL_LOG_FILE = LOG_DIR + 'longpoll.log'
     ERROR_LOG_FILE = LOG_DIR + 'error.log'
 
+
+class ValueExtractor:
+    class InvalidArgumentException(Exception):
+        def __init__(self, msg: str):
+            self.msg = msg
+
+    def __init__(self, data):
+        if(isinstance(data, dict) or isinstance(data, list)):
+            self.data = data
+        else:
+            raise ValueExtractor.InvalidArgumentException(r"argument 'data' must be dict or list")
+
+    def get(self, path, default = None):
+        path_list = []
+        if(isinstance(path, str)):
+            path_list = path.split('.')
+        elif(isinstance(path, list)):
+            path_list = path
+        else:
+            raise ValueExtractor.InvalidArgumentException(r"argument 'path' must be list or str")
+
+        value = self.data
+        for key in path_list:
+            if(isinstance(value, dict)):
+                value = value.get(key, None)
+                if(value == None):
+                    return default
+            elif(isinstance(value, list)):
+                try:
+                    value = value[int(key)]
+                except (IndexError, ValueError):
+                    return default
+            else:
+                return default
+        return value
+
 class ArgumentParser:
     def __init__(self, line: str):
         self.args = shlex.split(line)
@@ -65,6 +101,36 @@ class PayloadParser:
         except IndexError:
             return default
 
+class PageBuilder:
+    # Исключение
+    class PageNumberException(Exception):
+        def __init__(self, message: str):
+            self.message = message
+
+    def __init__(self, data: list, page_size: int):
+        self.data = data
+        self.size = page_size
+
+        self.max_number = len(self.data) // self.size
+        if((len(self.data) % self.size) != 0):
+            self.max_number += 1
+
+    def __call__(self, number: int):
+        page = []
+
+        min_index = self.size * number - self.size
+        max_index = self.size * number
+        if(self.size * number >= len(self.data)):
+            max_index = len(self.data)
+
+        if(number <= self.max_number and number > 0):
+            for i in range(min_index, max_index):
+                page.append(self.data[i])
+        else:
+            raise PageBuilder.PageNumberException("Page number out of range [1..{}]".format(self.max_number))
+
+        return page
+
 # Класс для работы с Config файлом
 class Config:
     data = {}
@@ -78,6 +144,21 @@ class Config:
     @staticmethod
     def get(name):
         return Config.data.get(name, None)
+
+# Функция конвертирования числа в эмодзи
+def int2emoji(number: int):
+        numbers = []
+        while(number > 0):
+            numbers.append(number % 10)
+            number = number // 10
+        numbers.reverse()
+
+        emoji = ['0&#8419;', '1&#8419;', '2&#8419;', '3&#8419;', '4&#8419;', '5&#8419;', '6&#8419;', '7&#8419;', '8&#8419;', '9&#8419;']
+        emoji_str = ""
+        for i in numbers:
+            emoji_str += emoji[i]
+
+        return emoji_str
 
 # Генерация случайной строки
 def generate_random_string(length, uppercase = True, lowercase = True, numbers = True):

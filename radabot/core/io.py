@@ -1,3 +1,4 @@
+# Module Level 2
 import json, traceback, time
 from datetime import datetime
 from typing import Callable
@@ -5,7 +6,7 @@ from pymongo import MongoClient
 from pymongo.database import Database
 from bunch import Bunch
 from . import bot
-from .bot import ChatData, ChatStats
+from .bot import DEFAULT_MESSAGES, ChatData, ChatStats
 from .system import ArgumentParser, Config, PayloadParser, generate_random_string, write_log
 from .vk import VK_API, VKVariable, keyboard_inline, callback_button
 from .system import SYSTEM_PATHS
@@ -66,8 +67,7 @@ class ChatEventManager:
     # Исключение Неизвестная команда
     class UnknownCommandException(Exception):
         def __init__(self, message: str, command: str):
-            super(ChatEventManager.UnknownCommandException,
-                  self).__init__(message)
+            super(ChatEventManager.UnknownCommandException, self).__init__(message)
             self.command = command
             self.message = message
 
@@ -102,7 +102,7 @@ class ChatEventManager:
             if(output.messages_edit_request_count == 0 and output.show_snackbar_request_count):
                 output.show_snackbar(event.bunch.object.event_id, event.bunch.object.user_id, event.bunch.object.peer_id, '✅ Выполнено!.')
         else:
-            output.show_snackbar(event.bunch.object.event_id, event.bunch.object.user_id, event.bunch.object.peer_id, '⛔ У вас нет прав использовать эту кнопку.')
+            output.show_snackbar(event.bunch.object.event_id, event.bunch.object.user_id, event.bunch.object.peer_id, DEFAULT_MESSAGES.NO_RIGHTS_TO_USE_THIS_BUTTON)
 
     #############################
     #############################
@@ -133,7 +133,7 @@ class ChatEventManager:
     #############################
     # Методы добавления комманд
 
-    def addMessageCommand(self, command: str, callback: Callable, args: list = [], ignore_db: bool = False, uos = False) -> bool:
+    def addMessageCommand(self, command: str, callback: Callable, args: list = [], ignore_db: bool = False) -> bool:
         command = command.lower()
         if(command in self.message_command_list):
             return False
@@ -141,8 +141,7 @@ class ChatEventManager:
             self.message_command_list[command] = {
                 'callback': callback,
                 'args': args,
-                'ignore_db': ignore_db,
-                'uos': uos
+                'ignore_db': ignore_db
             }
             return True
 
@@ -398,13 +397,24 @@ class ChatOutput:
                 'reply_to_message': True,
                 'appeal_to_user': True
             }
+
             self.send_object = {}
             self.edit_object = {}
+            self.appeal_id = 0
 
         def __call__(self):
+            # Код скрипта обращения
+            appeal_code = 'var appeal="";'
+            if(self.appeal_id > 0):
+                pass
+
+            # Обработка события
             if(self.output.event.bunch.type == 'message_new'):
                 if(self.current_prefs['message_support']):
                     reqm = self.send_object
+
+                    # Добавление дополнительного кода
+                    reqm['script'] = appeal_code + reqm.get('script', '')
 
                     reqm['peer_id'] = self.output.event.bunch.object.peer_id
                     if(self.current_prefs['reply_to_message']):
@@ -421,6 +431,9 @@ class ChatOutput:
             elif(self.output.event.bunch.type == 'message_event'):
                 if(self.current_prefs['button_support']):
                     reqm = self.edit_object
+
+                    # Добавление дополнительного кода
+                    reqm['script'] = appeal_code + reqm.get('script', '')
 
                     reqm['peer_id'] = self.output.event.bunch.object.peer_id
                     reqm['conversation_message_id'] = self.output.event.bunch.object.conversation_message_id
@@ -452,11 +465,20 @@ class ChatOutput:
             }
             self.send_object = {}
             self.snackbar_object = {}
+            self.appeal_id = 0
 
         def __call__(self):
+            # Код скрипта обращения
+            appeal_code = 'var appeal="";'
+            if(self.appeal_id > 0):
+                pass
+
             if(self.output.event.bunch.type == 'message_new'):
                 if(self.current_prefs['message_support']):
                     reqm = self.send_object
+
+                    # Добавление дополнительного кода
+                    reqm['script'] = appeal_code + reqm.get('script', '')
 
                     reqm['peer_id'] = self.output.event.bunch.object.peer_id
                     if(self.current_prefs['reply_to_message']):
@@ -473,6 +495,9 @@ class ChatOutput:
             elif(self.output.event.bunch.type == 'message_event'):
                 if(self.current_prefs['button_support']):
                     reqm = self.snackbar_object
+
+                    # Добавление дополнительного кода
+                    reqm['script'] = appeal_code + reqm.get('script', '')
 
                     reqm['peer_id'] = self.output.event.bunch.object.peer_id
                     reqm['user_id'] = self.output.event.bunch.object.user_id

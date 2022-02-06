@@ -1048,7 +1048,6 @@ namespace {
 	require_once(__DIR__ . "/manager.php"); 								// Модуль, отвечающий за управление беседой
 	require_once(__DIR__ . "/giphy.php"); 									// Модуль, отвечающий за функции взаимодействия с GIPHY API
 	require_once(__DIR__ . "/word_game.php"); 								// Модуль, отвечающий за игры Слова и Words
-	require_once(__DIR__ . "/stats.php"); 									// Модуль, отвечающий за ведение статистики в беседах
 	require_once(__DIR__ . "/legacy.php");									// Модуль, отвечающий за Legacy функции
 	require_once(__DIR__ . "/debug.php");									// Модуля, отвечающий за отладочные функции
 
@@ -1078,8 +1077,7 @@ namespace {
 				bot_initcmd($event);															// Инициализация команд модуля bot
 				bot_initcustomcmd($event);														// Инициализация команд из БД
 				//government_initcmd($event);													// Инициализация команд Гос. устройства
-				manager_initcmd($event);						s								// Инициализация команд модуля manager
-				stats_initcmd($event);															// Инициализация команд модуля stats
+				manager_initcmd($event);														// Инициализация команд модуля manager
 				roleplay_initcmd($event);														// RP-команды
 				fun_initcmd($event);															// Fun-команды
 				//giphy_initcmd($event);														// Инициализация команд модуля giphy

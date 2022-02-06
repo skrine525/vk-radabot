@@ -1,22 +1,27 @@
+from email import message
 import subprocess, json, time
 import radabot.core.bot as bot
 from radabot.core.io import ChatEventManager, ChatOutput
+from radabot.core.system import PageBuilder, ValueExtractor, int2emoji
 from radabot.core.vk import VKVariable, callback_button, keyboard, keyboard_inline
 
 def handle_event(vk_api, event):
 	manager = ChatEventManager(vk_api, event)
 
-	manager.addMessageCommand("!стата", StatsCMD.main)
+	manager.addMessageCommand("!стата", StatsMessageCommand.main)
+	manager.addMessageCommand('!cmdlist', ShowCommandListMessageCommand.main)
 
 	manager.addMessageCommand("!тест", test, args=['Сука'])
 	manager.addMessageCommand("!тест2", test2)
 	manager.addMessageCommand('!error', error)
 
+	manager.addCallbackButtonCommand('bot_cancel', CancelCallbackButtonCommand.main)
+
 	initcmd_php(manager)
 	manager.handle()
 
 # Команда !стата
-class StatsCMD:
+class StatsMessageCommand:
 	# Стандартное состояние параметров статистики
 	STATS_DEFAULT = {
 		'msg_count': 0,
@@ -49,7 +54,7 @@ class StatsCMD:
 				pass
 
 		if(member_id <= 0):
-			StatsCMD.print_error_invalid_userid(output)
+			StatsMessageCommand.print_error_invalid_userid(output)
 			return False
 
 		subcommand = args.str(1, '').lower()
@@ -65,15 +70,15 @@ class StatsCMD:
 			chats_collection = db['chats']
 			projection = {'_id': 0, 'chat_stats.users_daily.time{}'.format(current_day): 1}
 			result = chats_collection.find_one(bot.get_chat_db_query(event.bunch.object.peer_id), projection=projection)
-			extractor = bot.ValueExtractor(result)
+			extractor = ValueExtractor(result)
 
 			all_stats = extractor.get('chat_stats.users_daily.time{}'.format(current_day), {})
 			stats = extractor.get('chat_stats.users_daily.time{}.id{}'.format(current_day, member_id).format(member_id), {})
-			stats = {**StatsCMD.STATS_DEFAULT, **stats}
+			stats = {**StatsMessageCommand.STATS_DEFAULT, **stats}
 
 			rating = []
 			for k, v in all_stats.items():
-				u = {**StatsCMD.STATS_DEFAULT, **v}
+				u = {**StatsMessageCommand.STATS_DEFAULT, **v}
 				rating.append({'u': k, 'v': u['msg_count'] - u['msg_count_in_succession']})
 			rating.sort(reverse=True, key=lambda e: e['v'])
 
@@ -97,13 +102,13 @@ class StatsCMD:
 								command_used_count=stats['command_used_count'], button_pressed_count=stats['button_pressed_count'],
 								rating_text=rating_text)
 
-			StatsCMD.print_info(output, info, event.bunch.object.from_id, member_id, True)
+			StatsMessageCommand.print_info(output, info, event.bunch.object.from_id, member_id, True)
 			return True
 		elif(subcommand == ''):
 			chats_collection = db['chats']
 			projection = {'_id': 0, 'chat_stats.users': 1}
 			result = chats_collection.find_one(bot.get_chat_db_query(event.bunch.object.peer_id), projection=projection)
-			extractor = bot.ValueExtractor(result)
+			extractor = ValueExtractor(result)
 
 			if(member_id == event.bunch.object.from_id):
 				pre_msg = "Cтатистика:"
@@ -112,11 +117,11 @@ class StatsCMD:
 
 			all_stats = extractor.get('chat_stats.users', {})
 			stats = extractor.get('chat_stats.users.id{}'.format(member_id), {})
-			stats = {**StatsCMD.STATS_DEFAULT, **stats}
+			stats = {**StatsMessageCommand.STATS_DEFAULT, **stats}
 
 			rating = []
 			for k, v in all_stats.items():
-				u = {**StatsCMD.STATS_DEFAULT, **v}
+				u = {**StatsMessageCommand.STATS_DEFAULT, **v}
 				rating.append({'u': k, 'v': u['msg_count'] - u['msg_count_in_succession']})
 			rating.sort(reverse=True, key=lambda e: e['v'])
 
@@ -140,10 +145,10 @@ class StatsCMD:
 								command_used_count=stats['command_used_count'], button_pressed_count=stats['button_pressed_count'],
 								rating_text=rating_text)
 
-			StatsCMD.print_info(output, info, event.bunch.object.from_id, member_id, False)
+			StatsMessageCommand.print_info(output, info, event.bunch.object.from_id, member_id, False)
 			return True
 		else:
-			StatsCMD.print_error_unknow_subcommand(output, event.bunch.object.from_id)
+			StatsMessageCommand.print_error_unknow_subcommand(output, event.bunch.object.from_id)
 			return False
 	
 	@staticmethod
@@ -176,6 +181,64 @@ class StatsCMD:
 		notice.message_new(message='⛔Неверный идентификатор пользователя.')
 		notice.message_event(text='⛔ Неверное идентификатор пользователя.')
 		notice()
+
+# Команда !cmdlist
+class ShowCommandListMessageCommand:
+	@staticmethod
+	def main(callin: ChatEventManager.CallbackInputObject):
+		event = callin.event
+		args = callin.args
+		db = callin.db
+		output = callin.output
+		manager = callin.manager
+
+		builder = PageBuilder(list(manager.message_command_list.keys()), 10)
+		number = args.int(1, 1)
+
+		try:
+			page = builder(number)
+			text = 'Список команд [{}/{}]:'.format(number, builder.max_number)
+			for i in page:
+				text += "\n• " + i
+			ShowCommandListMessageCommand.print_text(output, text, event.bunch.object.from_id, number, builder.max_number)
+		except PageBuilder.PageNumberException:
+			ShowCommandListMessageCommand.print_error_out_of_range(output)
+
+	@staticmethod
+	def print_text(output: ChatOutput, text: str, from_id: int, number: int, max_number: int):
+		message = ChatOutput.UOSMessage(output)
+		buttons = []
+		if(number > 1):
+			prev_number = number - 1
+			buttons.append(callback_button("{} ⬅".format(int2emoji(prev_number)), ['run', '!cmdlist {}'.format(prev_number), from_id], 'secondary'))
+		if(number < max_number):
+			next_number = number + 1
+			buttons.append(callback_button("➡ {}".format(int2emoji(next_number)), ['run', '!cmdlist {}'.format(next_number), from_id], 'secondary'))
+		keyboard = keyboard_inline([buttons, [callback_button('Закрыть', ['bot_cancel', from_id], 'negative')]])
+		message.message_new(message=VKVariable.Multi('var', 'appeal', 'str', text), keyboard=keyboard)
+		message.message_event(message=VKVariable.Multi('var', 'appeal', 'str', text), keyboard=keyboard)
+		message()
+
+	@staticmethod
+	def print_error_out_of_range(output: ChatOutput):
+		notice = ChatOutput.UOSNotice(output)
+		notice.message_new(message=VKVariable.Multi('var', 'appeal', 'str', '⛔Неверный номер страницы.'))
+		notice.message_event(text='⛔ Неверный номер страницы.')
+		notice()
+
+class CancelCallbackButtonCommand:
+	@staticmethod
+	def main(callin: ChatEventManager.CallbackInputObject):
+		event = callin.event
+		payload = callin.payload
+		output = callin.output
+
+		testing_user_id = payload.int(1, 0)
+		if(testing_user_id == event.bunch.object.user_id or testing_user_id == 0):
+			text = payload.str(2, bot.DEFAULT_MESSAGES.MENU_CANCELED)
+			output.messages_edit(message=text, peer_id=event.bunch.object.peer_id, conversation_message_id=event.bunch.object.conversation_message_id, keep_forward_messages=True)
+		else:
+			output.show_snackbar(event.bunch.object.event_id, event.bunch.object.user_id, event.bunch.object.peer_id, bot.DEFAULT_MESSAGES.NO_RIGHTS_TO_USE_THIS_BUTTON)
 
 def message_action_handler(callin: ChatEventManager.CallbackInputObject):
 	event = callin.event
