@@ -1,4 +1,3 @@
-from email import message
 import subprocess, json, time
 import radabot.core.bot as bot
 from radabot.core.io import ChatEventManager, ChatOutput
@@ -22,21 +21,6 @@ def handle_event(vk_api, event):
 
 # Команда !стата
 class StatsMessageCommand:
-	# Стандартное состояние параметров статистики
-	STATS_DEFAULT = {
-		'msg_count': 0,
-		'msg_count_in_succession': 0,
-		'simbol_count': 0,
-		'audio_msg_count': 0,
-		'photo_count': 0,
-		'audio_count': 0,
-		'video_count': 0,
-		'sticker_count': 0,
-		# Статистика команд
-		'command_used_count': 0,
-		'button_pressed_count': 0
-	}
-
 	@staticmethod
 	def main(callin: ChatEventManager.CallbackInputObject):
 		event = callin.event
@@ -74,11 +58,11 @@ class StatsMessageCommand:
 
 			all_stats = extractor.get('chat_stats.users_daily.time{}'.format(current_day), {})
 			stats = extractor.get('chat_stats.users_daily.time{}.id{}'.format(current_day, member_id).format(member_id), {})
-			stats = {**StatsMessageCommand.STATS_DEFAULT, **stats}
+			stats = {**bot.ChatStats.STATS_DEFAULT, **stats}
 
 			rating = []
 			for k, v in all_stats.items():
-				u = {**StatsMessageCommand.STATS_DEFAULT, **v}
+				u = {**bot.ChatStats.STATS_DEFAULT, **v}
 				rating.append({'u': k, 'v': u['msg_count'] - u['msg_count_in_succession']})
 			rating.sort(reverse=True, key=lambda e: e['v'])
 
@@ -117,11 +101,11 @@ class StatsMessageCommand:
 
 			all_stats = extractor.get('chat_stats.users', {})
 			stats = extractor.get('chat_stats.users.id{}'.format(member_id), {})
-			stats = {**StatsMessageCommand.STATS_DEFAULT, **stats}
+			stats = {**bot.ChatStats.STATS_DEFAULT, **stats}
 
 			rating = []
 			for k, v in all_stats.items():
-				u = {**StatsMessageCommand.STATS_DEFAULT, **v}
+				u = {**bot.ChatStats.STATS_DEFAULT, **v}
 				rating.append({'u': k, 'v': u['msg_count'] - u['msg_count_in_succession']})
 			rating.sort(reverse=True, key=lambda e: e['v'])
 

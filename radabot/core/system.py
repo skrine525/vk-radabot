@@ -12,6 +12,7 @@ class SYSTEM_PATHS:
 
     # Файлы
     CONFIG_FILE = DATA_DIR + 'config.json'
+    MANAGER_DATA_FILE = DATA_DIR + 'manager.json'
     LONGPOLL_LOG_FILE = LOG_DIR + 'longpoll.log'
     ERROR_LOG_FILE = LOG_DIR + 'error.log'
 
@@ -144,6 +145,19 @@ class Config:
     @staticmethod
     def get(name):
         return Config.data.get(name, None)
+
+class ManagerData:
+    data = {}
+
+    @staticmethod
+    def readFile():
+        f = open(SYSTEM_PATHS.MANAGER_DATA_FILE)
+        ManagerData.data = json.loads(f.read())
+        f.close()
+
+    @staticmethod
+    def getUserPermissions():
+        return ManagerData.data.get('user_permissions', {})
 
 # Функция конвертирования числа в эмодзи
 def int2emoji(number: int):

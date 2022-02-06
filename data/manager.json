@@ -1,0 +1,46 @@
+{
+    "user_permissions": {
+        "change_nick": {
+            "label": "Управление никами",
+            "desc": "Позволяет изменять никнеймы других пользователей",
+            "default": false,
+            "is_special": false
+        },
+        "customize_chat": {
+            "label": "Управление чатом",
+            "desc": "Позволяет изменять настройки беседы",
+            "default": false,
+            "is_special": false
+        },
+        "manage_punishments": {
+            "label": "Управление наказаниями",
+            "desc": "Позволяет изменять ",
+            "default": false,
+            "is_special": false
+        },
+        "prohibit_autokick": {
+            "label": "Игнорирование автокика",
+            "desc": "Позволяет носителю игнорировать систему автокика",
+            "default": false,
+            "is_special": false
+        },
+        "prohibit_antiflood": {
+            "label": "Игнорирование антифлуда",
+            "desc": "Позволяет носителю игнорировать систему антифлуда",
+            "default": false,
+            "is_special": false
+        },
+        "set_permits": {
+            "label": "Управление метками",
+            "desc": "Позволяет изменять метки пользователей",
+            "default": false,
+            "is_special": false
+        },
+        "manage_cmd": {
+            "label": "Управление командами",
+            "desc": "Позволяет управлять кастомными командами",
+            "default": false,
+            "is_special": false
+        }
+    }
+}

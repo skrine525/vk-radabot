@@ -36,6 +36,21 @@ class ChatData:
             self.invited_greeting = extractor.get('chat_settings.invited_greeting', '')
         
 class ChatStats:
+    # Стандартное состояние параметров статистики
+    STATS_DEFAULT = {
+        'msg_count': 0,
+        'msg_count_in_succession': 0,
+        'simbol_count': 0,
+        'audio_msg_count': 0,
+        'photo_count': 0,
+        'audio_count': 0,
+        'video_count': 0,
+        'sticker_count': 0,
+        # Статистика команд
+        'command_used_count': 0,
+        'button_pressed_count': 0
+    }
+
     def __init__(self, db: Database, peer_id: int):
         self.db = db['chats']
         self.db_query = get_chat_db_query(peer_id)
@@ -88,7 +103,6 @@ class ChatStats:
                 return False
         else:
             return False
-
 
 def get_chat_db_query(id: int) -> dict:
     if id > 2000000000:

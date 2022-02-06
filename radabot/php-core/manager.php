@@ -15,8 +15,6 @@ class PermissionSystem
 		'prohibit_autokick' => ['label' => 'Игнорировать автокик', 'type' => 0],
 		'prohibit_antiflood' => ['label' => 'Игнорировать антифлуд', 'type' => 0],
 		'set_permits' => ['label' => 'Управлять правами', 'type' => 0],
-		'drink_tea' => ['label' => 'Пить чай', 'type' => 2],
-		'use_chat_messanger' => ['label' => 'Использовать Чат-мессенджер', 'type' => 0],
 		'manage_cmd' => ['label' => 'Редактировать команды', 'type' => 0]
 	];
 
