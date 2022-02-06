@@ -98,6 +98,9 @@ class ChatEventManager:
             }
             modified_event = ChatEventManager.EventObject(modified_event)
             manager.runMessageCommand(modified_event, output)
+
+            if(output.messages_edit_request_count == 0 and output.show_snackbar_request_count):
+                output.show_snackbar(event.bunch.object.event_id, event.bunch.object.user_id, event.bunch.object.peer_id, '✅ Выполнено!.')
         else:
             output.show_snackbar(event.bunch.object.event_id, event.bunch.object.user_id, event.bunch.object.peer_id, '⛔ У вас нет прав использовать эту кнопку.')
 
@@ -416,7 +419,6 @@ class ChatOutput:
                 else:
                     return False
             elif(self.output.event.bunch.type == 'message_event'):
-                reqm = {}
                 if(self.current_prefs['button_support']):
                     reqm = self.edit_object
 
@@ -432,10 +434,10 @@ class ChatOutput:
             for k, v in kwargs.items():
                 self.current_prefs[k] = v
 
-        def send(self, **kwargs):
+        def message_new(self, **kwargs):
             self.send_object = kwargs
 
-        def edit(self, **kwargs):
+        def message_event(self, **kwargs):
             self.edit_object = kwargs
 
     # Класс Единой системы вывода Оповещений
@@ -469,15 +471,14 @@ class ChatOutput:
                 else:
                     return False
             elif(self.output.event.bunch.type == 'message_event'):
-                reqm = {}
                 if(self.current_prefs['button_support']):
                     reqm = self.snackbar_object
 
                     reqm['peer_id'] = self.output.event.bunch.object.peer_id
-                    reqm['conversation_message_id'] = self.output.event.bunch.object.conversation_message_id
-                    reqm['keep_forward_messages'] = self.current_prefs['reply_to_message']
+                    reqm['user_id'] = self.output.event.bunch.object.user_id
+                    reqm['event_id'] = self.output.event.bunch.object.event_id
 
-                    result = self.output.messages_edit(**reqm)
+                    result = self.output.show_snackbar(**reqm)
                 else:
                     return False
 
@@ -485,17 +486,11 @@ class ChatOutput:
             for k, v in kwargs.items():
                 self.current_prefs[k] = v
 
-        def send(self, **kwargs):
+        def message_new(self, **kwargs):
             self.send_object = kwargs
 
-        def snackbar(self, event_id: str, user_id: int, peer_id: int, text: str, script: str = ''):
-            self.snackbar_object = {
-                'event_id': event_id,
-                'user_id': user_id,
-                'peer_id': peer_id,
-                'text': text,
-                'script': script
-            }
+        def message_event(self, **kwargs):
+            self.snackbar_object = kwargs
 
 
     # Класс результата выполнения
@@ -519,7 +514,10 @@ class ChatOutput:
         self.vk_api = vk_api
         self.event = event
         self.db = db
-        self.request_count = 0 # Количество вызовов output методов
+
+        self.messages_send_request_count = 0 # Количество вызовов messages_send
+        self.messages_edit_request_count = 0 # Количество вызовов messages_edit
+        self.show_snackbar_request_count = 0 # Количество вызовов show_snackbar
 
     # Метод messages.send
     def messages_send(self, **kwargs) -> OutputResult:
@@ -542,7 +540,7 @@ class ChatOutput:
         vk_vars1.var('var reqm', reqm)
         req_code += vk_vars1() + vk_vars2() + 'API.messages.send(reqm);return true;'
 
-        self.request_count += 1 # Увеличиваем счетчик вызовов output методов
+        self.messages_send_request_count += 1 # Увеличиваем счетчик вызовов
         return ChatOutput.OutputResult(self.vk_api.execute(req_code))
 
     # Метод messages.edit
@@ -564,12 +562,12 @@ class ChatOutput:
         vk_vars1.var('var reqm', reqm)
         req_code += vk_vars1() + vk_vars2() + 'API.messages.edit(reqm);return true;'
 
-        self.request_count += 1 # Увеличиваем счетчик вызовов output методов
+        self.messages_edit_request_count += 1 # Увеличиваем счетчик вызовов
         return ChatOutput.OutputResult(self.vk_api.execute(req_code))
 
     def show_snackbar(self, event_id: str, user_id: int, peer_id: int, text: str, script: str = '') -> OutputResult:
         event_data = json.dumps({'type': 'show_snackbar', 'text': text}, ensure_ascii=False, separators=(',', ':'))
         reqm = json.dumps({'event_id': event_id, 'user_id': user_id, 'peer_id': peer_id, 'event_data': event_data},  ensure_ascii=False, separators=(',', ':'))
 
-        self.request_count += 1 # Увеличиваем счетчик вызовов output методов
+        self.show_snackbar_request_count += 1 # Увеличиваем счетчик вызовов
         return ChatOutput.OutputResult(self.vk_api.execute('{}API.messages.sendMessageEventAnswer({});return true;'.format(script, reqm)))

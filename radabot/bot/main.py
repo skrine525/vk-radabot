@@ -49,11 +49,12 @@ class StatsCMD:
 				pass
 
 		if(member_id <= 0):
-			pass
+			StatsCMD.print_error_invalid_userid(output)
+			return False
 
 		subcommand = args.str(1, '').lower()
 		if(subcommand == 'дня'):
-			current_time = time.time()										# Переменная текущего времени
+			current_time = time.time()											# Переменная текущего времени
 			current_day = int(current_time - (current_time % 86400));			# Переменная текущей даты (00:00 GMT)
 
 			if(member_id == event.bunch.object.from_id):
@@ -96,7 +97,8 @@ class StatsCMD:
 								command_used_count=stats['command_used_count'], button_pressed_count=stats['button_pressed_count'],
 								rating_text=rating_text)
 
-			StatsCMD.print_info(output, info, event.bunch.object.from_id, True)
+			StatsCMD.print_info(output, info, event.bunch.object.from_id, member_id, True)
+			return True
 		elif(subcommand == ''):
 			chats_collection = db['chats']
 			projection = {'_id': 0, 'chat_stats.users': 1}
@@ -138,31 +140,42 @@ class StatsCMD:
 								command_used_count=stats['command_used_count'], button_pressed_count=stats['button_pressed_count'],
 								rating_text=rating_text)
 
-			StatsCMD.print_info(output, info, event.bunch.object.from_id, False)
+			StatsCMD.print_info(output, info, event.bunch.object.from_id, member_id, False)
+			return True
 		else:
-			StatsCMD.print_error_unknow_sub(output, event.bunch.object.from_id)
+			StatsCMD.print_error_unknow_subcommand(output, event.bunch.object.from_id)
+			return False
 	
-	def print_info(output: ChatOutput, info: str, user_id: int, daily: bool):
+	@staticmethod
+	def print_info(output: ChatOutput, info: str, from_id: int, member_id: int, daily: bool):
 		if(daily):
-			keyboard = keyboard_inline([[callback_button('Полная стата', ['run', '!стата "" {}'.format(user_id), user_id], 'primary')]])
+			keyboard = keyboard_inline([[callback_button('Полная стата', ['run', '!стата "" {}'.format(member_id), from_id], 'primary')]])
 		else:
-			keyboard = keyboard_inline([[callback_button('Дневная стата', ['run', '!стата дня {}'.format(user_id), user_id], 'primary')]])
+			keyboard = keyboard_inline([[callback_button('Дневная стата', ['run', '!стата дня {}'.format(member_id), from_id], 'primary')]])
 
 		message = ChatOutput.UOSMessage(output)
-		message.send(message=info, keyboard=keyboard)
-		message.edit(message=info, keyboard=keyboard)
+		message.message_new(message=info, keyboard=keyboard)
+		message.message_event(message=info, keyboard=keyboard)
 		message()
 
-	def print_error_unknow_sub(output: ChatOutput, user_id: int):
+	@staticmethod
+	def print_error_unknow_subcommand(output: ChatOutput, user_id: int):
 		keyboard = keyboard_inline([
 			[callback_button('Полная стата', ['run', '!стата', user_id], 'primary')],
 			[callback_button('Дневная стата', ['run', '!стата дня', user_id], 'secondary')]
 		])
 
 		message = ChatOutput.UOSMessage(output)
-		message.send(message='⛔Неизвестная команда. Используйте:\n• !стата\n• !cтата дня', keyboard=keyboard)
-		message.edit(message='⛔Неизвестная команда.', keyboard=keyboard)
+		message.message_new(message='⛔Неизвестная команда. Используйте:\n• !стата\n• !cтата дня', keyboard=keyboard)
+		message.message_event(message='⛔Неизвестная команда.', keyboard=keyboard)
 		message()
+
+	@staticmethod
+	def print_error_invalid_userid(output: ChatOutput):
+		notice = ChatOutput.UOSNotice(output)
+		notice.message_new(message='⛔Неверный идентификатор пользователя.')
+		notice.message_event(text='⛔ Неверное идентификатор пользователя.')
+		notice()
 
 def message_action_handler(callin: ChatEventManager.CallbackInputObject):
 	event = callin.event
