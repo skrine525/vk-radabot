@@ -12,8 +12,6 @@ def handle_event(vk_api, event):
 	manager.addMessageCommand('!cmdlist', ShowCommandListMessageCommand.main)
 	manager.addMessageCommand('!метки', PermissionMessageCommand.main)
 
-	manager.addMessageCommand("!тест", test, args=['Сука'])
-	manager.addMessageCommand("!тест2", test2)
 	manager.addMessageCommand('!error', error)
 
 	manager.addCallbackButtonCommand('bot_cancel', CancelCallbackButtonCommand.main)
@@ -32,10 +30,10 @@ class StatsMessageCommand:
 
 		member_id = args.int(2, 0)
 		if(member_id <= 0):
-			member_id = event.bunch.object.from_id
-		if('fwd_messages' in event.bunch.object):
+			member_id = event.from_id
+		if('fwd_messages' in event):
 			try:
-				member_id = event.bunch.object.fwd_messages[0].from_id
+				member_id = event.fwd_messages[0].from_id
 			except IndexError:
 				pass
 
@@ -48,14 +46,14 @@ class StatsMessageCommand:
 			current_time = time.time()											# Переменная текущего времени
 			current_day = int(current_time - (current_time % 86400));			# Переменная текущей даты (00:00 GMT)
 
-			if(member_id == event.bunch.object.from_id):
+			if(member_id == event.from_id):
 				pre_msg = "Cтатистика дня:"
 			else:
 				pre_msg = "Стастика дня @id{} (пользователя):".format(member_id)
 
 			chats_collection = db['chats']
 			projection = {'_id': 0, 'chat_stats.users_daily.time{}'.format(current_day): 1}
-			result = chats_collection.find_one(bot.get_chat_db_query(event.bunch.object.peer_id), projection=projection)
+			result = chats_collection.find_one(bot.get_chat_db_query(event.peer_id), projection=projection)
 			extractor = ValueExtractor(result)
 
 			all_stats = extractor.get('chat_stats.users_daily.time{}'.format(current_day), {})
@@ -88,15 +86,15 @@ class StatsMessageCommand:
 								command_used_count=stats['command_used_count'], button_pressed_count=stats['button_pressed_count'],
 								rating_text=rating_text)
 
-			StatsMessageCommand.print_info(output, info, event.bunch.object.from_id, member_id, True)
+			StatsMessageCommand.print_info(output, info, event.from_id, member_id, True)
 			return True
 		elif(subcommand == ''):
 			chats_collection = db['chats']
 			projection = {'_id': 0, 'chat_stats.users': 1}
-			result = chats_collection.find_one(bot.get_chat_db_query(event.bunch.object.peer_id), projection=projection)
+			result = chats_collection.find_one(bot.get_chat_db_query(event.peer_id), projection=projection)
 			extractor = ValueExtractor(result)
 
-			if(member_id == event.bunch.object.from_id):
+			if(member_id == event.from_id):
 				pre_msg = "Cтатистика:"
 			else:
 				pre_msg = "Стастика @id{} (пользователя):".format(member_id)
@@ -131,10 +129,10 @@ class StatsMessageCommand:
 								command_used_count=stats['command_used_count'], button_pressed_count=stats['button_pressed_count'],
 								rating_text=rating_text)
 
-			StatsMessageCommand.print_info(output, info, event.bunch.object.from_id, member_id, False)
+			StatsMessageCommand.print_info(output, info, event.from_id, member_id, False)
 			return True
 		else:
-			StatsMessageCommand.print_error_unknown_subcommand(output, event.bunch.object.from_id)
+			StatsMessageCommand.print_error_unknown_subcommand(output, event.from_id)
 			return False
 	
 	@staticmethod
@@ -144,10 +142,9 @@ class StatsMessageCommand:
 		else:
 			keyboard = keyboard_inline([[callback_button('Дневная стата', ['run', '!стата дня {}'.format(member_id), from_id], 'primary')]])
 
-		message = ChatOutput.UOSMessage(output)
-		message.message_new(message=info, keyboard=keyboard)
-		message.message_event(message=info, keyboard=keyboard)
-		message()
+		uos = output.uos()
+		uos.messages_send(message=info, keyboard=keyboard)
+		uos.messages_edit(message=info, keyboard=keyboard)
 
 	@staticmethod
 	def print_error_unknown_subcommand(output: ChatOutput, user_id: int):
@@ -156,17 +153,15 @@ class StatsMessageCommand:
 			[callback_button('Дневная стата', ['run', '!стата дня', user_id], 'secondary')]
 		])
 
-		message = ChatOutput.UOSMessage(output)
-		message.message_new(message='⛔Неизвестная команда. Используйте:\n• !стата\n• !cтата дня', keyboard=keyboard)
-		message.message_event(message='⛔Неизвестная команда.', keyboard=keyboard)
-		message()
+		uos = output.uos()
+		uos.messages_send(message='⛔Неизвестная команда. Используйте:\n• !стата\n• !cтата дня', keyboard=keyboard)
+		uos.messages_edit(message='⛔Неизвестная команда.', keyboard=keyboard)
 
 	@staticmethod
 	def print_error_invalid_userid(output: ChatOutput):
-		notice = ChatOutput.UOSNotice(output)
-		notice.message_new(message='⛔Неверный идентификатор пользователя.')
-		notice.message_event(text='⛔ Неверное идентификатор пользователя.')
-		notice()
+		uos = output.uos()
+		uos.messages_send(message='⛔Неверный идентификатор пользователя.')
+		uos.show_snackbar(text='⛔ Неверное идентификатор пользователя.')
 
 # Команда !cmdlist
 class ShowCommandListMessageCommand:
@@ -185,13 +180,13 @@ class ShowCommandListMessageCommand:
 			text = 'Список команд [{}/{}]:'.format(number, builder.max_number)
 			for i in page:
 				text += "\n• " + i
-			ShowCommandListMessageCommand.print_text(output, text, event.bunch.object.from_id, number, builder.max_number)
+			ShowCommandListMessageCommand.print_text(output, text, event.from_id, number, builder.max_number)
 		except PageBuilder.PageNumberException:
 			ShowCommandListMessageCommand.print_error_out_of_range(output)
 
 	@staticmethod
 	def print_text(output: ChatOutput, text: str, from_id: int, number: int, max_number: int):
-		message = ChatOutput.UOSMessage(output)
+		uos = output.uos()
 		buttons = []
 		if(number > 1):
 			prev_number = number - 1
@@ -200,16 +195,14 @@ class ShowCommandListMessageCommand:
 			next_number = number + 1
 			buttons.append(callback_button("➡ {}".format(int2emoji(next_number)), ['run', '!cmdlist {}'.format(next_number), from_id], 'secondary'))
 		keyboard = keyboard_inline([buttons, [callback_button('Закрыть', ['bot_cancel', from_id], 'negative')]])
-		message.message_new(message=VKVariable.Multi('var', 'appeal', 'str', text), keyboard=keyboard)
-		message.message_event(message=VKVariable.Multi('var', 'appeal', 'str', text), keyboard=keyboard)
-		message()
+		uos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', text), keyboard=keyboard)
+		uos.messages_edit(message=VKVariable.Multi('var', 'appeal', 'str', text), keyboard=keyboard)
 
 	@staticmethod
 	def print_error_out_of_range(output: ChatOutput):
-		notice = ChatOutput.UOSNotice(output)
-		notice.message_new(message=VKVariable.Multi('var', 'appeal', 'str', '⛔Неверный номер страницы.'))
-		notice.message_event(text='⛔ Неверный номер страницы.')
-		notice()
+		uos = output.uos()
+		uos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', '⛔Неверный номер страницы.'))
+		uos.show_snackbar(text='⛔ Неверный номер страницы.')
 
 class PermissionMessageCommand:
 	@staticmethod
@@ -221,9 +214,9 @@ class PermissionMessageCommand:
 
 		subcommand = args.str(1, '')
 		if(subcommand == ''):
-			userPermission = UserPermission(db, event.bunch.object.from_id, event.bunch.object.peer_id)
+			userPermission = UserPermission(db, event.from_id, event.peer_id)
 			permission_list = userPermission.getAll()
-			PermissionMessageCommand.print_my_list(output, event, permission_list)
+			PermissionMessageCommand.print_my_list(output, callin, permission_list)
 		elif(subcommand == 'установить'):
 			pass
 		else:
@@ -231,24 +224,32 @@ class PermissionMessageCommand:
 
 	@staticmethod
 	def print_error_unknown_subcommand(output: ChatOutput):
-		uosNotice = ChatOutput.UOSNotice(output)
-		message = VKVariable.Multi('var', 'appeal', 'str', '⛔Неизвестная команда.')
-		uosNotice.message_new(message=message)
-		uosNotice.message_event(text='⛔Неизвестная команда.')
-		uosNotice()
+		uos = output.uos()
+		if(uos.is_message_new):
+			message = VKVariable.Multi('var', 'appeal', 'str', '⛔Неизвестная команда.')
+			uos.messages_send(message=message)
+		elif(uos.is_message_event):
+			uos.show_snackbar(text='⛔Неизвестная команда.')
 
 	@staticmethod
-	def print_my_list(output: ChatOutput, event: ChatEventManager.EventObject, perm: dict):
+	def print_my_list(output: ChatOutput, callin: ChatEventManager.CallbackInputObject, perm: dict):
 		user_permissions_data = ManagerData.getUserPermissions()
-		uosMessage = ChatOutput.UOSMessage(output)
-		message_text = "Ваши метки:"
-		for k, v in perm.items():
-			if(v):
-				label = user_permissions_data[k]['label']
-				message_text += "\n• {}".format(label)
-		message = VKVariable.Multi('var', 'appeal', 'str', message_text)
-		uosMessage.message_new(message=message)
-		uosMessage()
+
+		uos = output.uos()
+		if(uos.is_message_new):
+			message_text = "Ваши права:"
+			for k, v in perm.items():
+				if(v):
+					label = user_permissions_data[k]['label']
+					message_text += "\n• {}".format(label)
+
+			message = VKVariable.Multi('var', 'appeal', 'str', message_text)
+			keyboard = keyboard_inline([[callback_button('Подробнее', ['run', callin.args.str(0, '')], 'positive')]])
+
+			uos.messages_send(message=message, keyboard=keyboard)
+		elif(uos.is_message_event):
+			pass
+			#uos.messages_edit(message=message, keyboard=keyboard)
 
 
 class CancelCallbackButtonCommand:
@@ -301,22 +302,3 @@ def handle_phphndl(callin: ChatEventManager.CallbackInputObject):
 	event = callin.event
 	subprocess.Popen(["/usr/bin/php7.0", "radabot-php-core.php", "hndl", json.dumps(event.dict)]).communicate()
 	return True
-
-def test(callin: ChatEventManager.CallbackInputObject, s):
-	event = callin.event
-	args = callin.args
-	output = callin.output
-
-	message = ChatOutput.UOSMessage(output)
-	message.send(message='Хуй '+args.str(1, ''))
-	message()
-
-	#result = output.messages_send(peer_id=event.peer_id, message=vk.VKVariable.Multi('str', 'Привет, ', 'var', 'appeal', 'str', '!'), script='var appeal=\"хуй\";')
-
-def test2(callin: ChatEventManager.CallbackInputObject):
-	event = callin.event
-	args = callin.args
-	db = callin.db
-	vk_api = callin.vk_api
-
-	vk_api.call('messages.send', {'peer_id': event.bunch.object.peer_id, 'message': bot.check_chat_in_db(db, int(args[1]))})

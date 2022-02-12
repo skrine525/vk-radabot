@@ -7,7 +7,7 @@ from pymongo.database import Database
 from bunch import Bunch
 from . import bot
 from .bot import DEFAULT_MESSAGES, ChatData, ChatStats
-from .system import ArgumentParser, Config, PayloadParser, generate_random_string, write_log
+from .system import ArgumentParser, Config, PayloadParser, ValueExtractor, generate_random_string, write_log
 from .vk import VK_API, VKVariable, keyboard_inline, callback_button
 from .system import SYSTEM_PATHS
 
@@ -55,6 +55,43 @@ class ChatEventManager:
                     b[k] = v
             return Bunch(b)
 
+    class MessageCommandEventObject:
+        def __bunchingList(self, l: list) -> list:
+            nl = []
+            for i in l:
+                if(isinstance(i, dict)):
+                    nl.append(self.__dict2bunch(i))
+                elif(isinstance(i, list)):
+                    nl.append(self.__bunchingList(i))
+                else:
+                    nl.append(i)
+            return nl
+
+        def __dict2bunch(self, d: dict) -> Bunch:
+            b = {}
+            for k, v in d.items():
+                if(isinstance(v, dict)):
+                    b[k] = self.__dict2bunch(v)
+                elif(isinstance(v, list)):
+                    b[k] = self.__bunchingList(v)
+                else:
+                    b[k] = v
+            return Bunch(b)
+
+        # Конструктор
+        def __init__(self, event: dict = {}):
+            extractor = ValueExtractor(event)
+
+            self.group_id = extractor.get('group_id', 0)
+            self.date = extractor.get('object.date', time.time())
+            self.from_id = extractor.get('object.from_id', 0)
+            self.peer_id = extractor.get('object.peer_id', 0)
+            self.text = extractor.get('object.text', '')
+            self.conversation_message_id = extractor.get('object.conversation_message_id', 0)
+            self.attachments = self.__bunchingList(extractor.get('object.attachments', []))
+            self.fwd_messages = self.__bunchingList(extractor.get('object.fwd_messages', []))
+            
+
     #############################
     #############################
     # Исключения
@@ -86,18 +123,14 @@ class ChatEventManager:
 
         testing_user_id = payload.int(2, event.bunch.object.user_id)
         if(testing_user_id == event.bunch.object.user_id):
-            modified_event = {
-                'type': 'message_new',
-                'group_id': event.bunch.group_id,
-                'object': {
-                    'date': time.time(),
-                    'from_id': event.bunch.object.user_id,
-                    'peer_id': event.bunch.object.peer_id,
-                    'text': payload.str(1, '')
-                }
-            }
-            modified_event = ChatEventManager.EventObject(modified_event)
-            manager.runMessageCommand(modified_event, output)
+            run_event = ChatEventManager.MessageCommandEventObject()
+            run_event.group_id = event.bunch.group_id
+            run_event.from_id = event.bunch.object.user_id
+            run_event.peer_id = event.bunch.object.peer_id
+            run_event.text = payload.str(1, '')
+
+
+            manager.runMessageCommand(run_event, output)
 
             if(output.messages_edit_request_count == 0 and output.show_snackbar_request_count):
                 output.show_snackbar(event.bunch.object.event_id, event.bunch.object.user_id, event.bunch.object.peer_id, '✅ Выполнено!.')
@@ -189,30 +222,29 @@ class ChatEventManager:
     def isCallbackButtonCommand(self, command: str) -> bool:
         return command in self.callback_button_command_list
 
-    def runMessageCommand(self, event: EventObject, output):
-        if event.bunch.type == 'message_new':
-            args = ArgumentParser(event.bunch.object.text)
-            command = args.str(0, '').lower()
-            if(self.isMessageCommand(command)):
-                if(not self.message_command_list[command]['ignore_db'] and not self.chat_data.exists_in_database):
-                    raise ChatEventManager.DatabaseException('Command \'{}\' requires document in Database'.format(command))
+    def runMessageCommand(self, event: MessageCommandEventObject, output):
+        args = ArgumentParser(event.text)
+        command = args.str(0, '').lower()
+        if(self.isMessageCommand(command)):
+            if(not self.message_command_list[command]['ignore_db'] and not self.chat_data.exists_in_database):
+                raise ChatEventManager.DatabaseException('Command \'{}\' requires document in Database'.format(command))
 
-                # Подготовка объекта входных данных Callback'а
-                callin = ChatEventManager.CallbackInputObject()
-                callin.event = event
-                callin.args = args
-                callin.vk_api = self.vk_api
-                callin.manager = self
-                callin.db = self.db
-                callin.output = output
-                callin.chat_data = self.chat_data
+            # Подготовка объекта входных данных Callback'а
+            callin = ChatEventManager.CallbackInputObject()
+            callin.event = event
+            callin.args = args
+            callin.vk_api = self.vk_api
+            callin.manager = self
+            callin.db = self.db
+            callin.output = output
+            callin.chat_data = self.chat_data
 
-                callback = self.message_command_list[command]["callback"]
-                callback_args = [callin] + self.message_command_list[command]["args"]
-                callback(*callback_args)
-                return True 
-            else:
-                raise ChatEventManager.UnknownCommandException('Command \'{}\' not found'.format(command), command)
+            callback = self.message_command_list[command]["callback"]
+            callback_args = [callin] + self.message_command_list[command]["args"]
+            callback(*callback_args)
+            return True 
+        else:
+            raise ChatEventManager.UnknownCommandException('Command \'{}\' not found'.format(command), command)
 
     def runCallbackButtonCommand(self, event: EventObject, output):
         if event.bunch.type == 'message_event':
@@ -302,7 +334,8 @@ class ChatEventManager:
             self.__stats_message_new() # Система отслеживания статистики
 
             try:
-                command_result = self.runMessageCommand(self.event, output)
+                event = ChatEventManager.MessageCommandEventObject(self.event.dict)
+                command_result = self.runMessageCommand(event, output)
 
                 # Система отслеживания статистики
                 self.__stats_command()
@@ -387,8 +420,8 @@ class ChatOutput:
     #############################
     # Внутренние классы
 
-    # Класс Единой системы вывода Сообщений
-    class UOSMessage:
+    # Класс Единой системы вывода
+    class UOS:
         def __init__(self, output):
             self.output = output
             self.current_prefs = {
@@ -398,20 +431,26 @@ class ChatOutput:
                 'appeal_to_user': True
             }
 
-            self.send_object = {}
-            self.edit_object = {}
+            if(self.output.event.bunch.type == 'message_new'):
+                self.is_message_new = True
+                self.is_message_event = False
+            elif(self.output.event.bunch.type == 'message_event'):
+                self.is_message_new = False
+                self.is_message_event = True
+
             self.appeal_id = 0
 
-        def __call__(self):
-            # Код скрипта обращения
-            appeal_code = 'var appeal="";'
-            if(self.appeal_id > 0):
-                pass
+        def prefs(self, **kwargs):
+            for k, v in kwargs.items():
+                self.current_prefs[k] = v
 
-            # Обработка события
-            if(self.output.event.bunch.type == 'message_new'):
+        def messages_send(self, **reqm):
+            if(self.is_message_new):
                 if(self.current_prefs['message_support']):
-                    reqm = self.send_object
+                    # Код скрипта обращения
+                    appeal_code = 'var appeal="";'
+                    if(self.appeal_id > 0):
+                        pass
 
                     # Добавление дополнительного кода
                     reqm['script'] = appeal_code + reqm.get('script', '')
@@ -428,9 +467,14 @@ class ChatOutput:
                     result = self.output.messages_send(**reqm)
                 else:
                     return False
-            elif(self.output.event.bunch.type == 'message_event'):
+
+        def messages_edit(self, **reqm):
+            if(self.is_message_event):
                 if(self.current_prefs['button_support']):
-                    reqm = self.edit_object
+                    # Код скрипта обращения
+                    appeal_code = 'var appeal="";'
+                    if(self.appeal_id > 0):
+                        pass
 
                     # Добавление дополнительного кода
                     reqm['script'] = appeal_code + reqm.get('script', '')
@@ -442,59 +486,14 @@ class ChatOutput:
                     result = self.output.messages_edit(**reqm)
                 else:
                     return False
-
-        def prefs(self, **kwargs):
-            for k, v in kwargs.items():
-                self.current_prefs[k] = v
-
-        def message_new(self, **kwargs):
-            self.send_object = kwargs
-
-        def message_event(self, **kwargs):
-            self.edit_object = kwargs
-
-    # Класс Единой системы вывода Оповещений
-    class UOSNotice:
-        def __init__(self, output):
-            self.output = output
-            self.current_prefs = {
-                'message_support': True,
-                'button_support': True,
-                'reply_to_message': True,
-                'appeal_to_user': True
-            }
-            self.send_object = {}
-            self.snackbar_object = {}
-            self.appeal_id = 0
-
-        def __call__(self):
-            # Код скрипта обращения
-            appeal_code = 'var appeal="";'
-            if(self.appeal_id > 0):
-                pass
-
-            if(self.output.event.bunch.type == 'message_new'):
-                if(self.current_prefs['message_support']):
-                    reqm = self.send_object
-
-                    # Добавление дополнительного кода
-                    reqm['script'] = appeal_code + reqm.get('script', '')
-
-                    reqm['peer_id'] = self.output.event.bunch.object.peer_id
-                    if(self.current_prefs['reply_to_message']):
-                        forward = {
-                            'peer_id': self.output.event.bunch.object.peer_id,
-                            'conversation_message_ids': [self.output.event.bunch.object.conversation_message_id],
-                            'is_reply': True
-                        }
-                        reqm['forward'] = json.dumps(forward, ensure_ascii=False, separators=(',', ':'))
-
-                    result = self.output.messages_send(**reqm)
-                else:
-                    return False
-            elif(self.output.event.bunch.type == 'message_event'):
+        
+        def show_snackbar(self, **reqm):
+            if(self.is_message_event):
                 if(self.current_prefs['button_support']):
-                    reqm = self.snackbar_object
+                    # Код скрипта обращения
+                    appeal_code = 'var appeal="";'
+                    if(self.appeal_id > 0):
+                        pass
 
                     # Добавление дополнительного кода
                     reqm['script'] = appeal_code + reqm.get('script', '')
@@ -506,17 +505,6 @@ class ChatOutput:
                     result = self.output.show_snackbar(**reqm)
                 else:
                     return False
-
-        def prefs(self, **kwargs):
-            for k, v in kwargs.items():
-                self.current_prefs[k] = v
-
-        def message_new(self, **kwargs):
-            self.send_object = kwargs
-
-        def message_event(self, **kwargs):
-            self.snackbar_object = kwargs
-
 
     # Класс результата выполнения
     class OutputResult:
@@ -543,6 +531,9 @@ class ChatOutput:
         self.messages_send_request_count = 0 # Количество вызовов messages_send
         self.messages_edit_request_count = 0 # Количество вызовов messages_edit
         self.show_snackbar_request_count = 0 # Количество вызовов show_snackbar
+
+    def uos(self) -> UOS:
+        return ChatOutput.UOS(self)
 
     # Метод messages.send
     def messages_send(self, **kwargs) -> OutputResult:
