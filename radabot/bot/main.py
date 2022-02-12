@@ -1,7 +1,8 @@
 import subprocess, json, time
 import radabot.core.bot as bot
 from radabot.core.io import ChatEventManager, ChatOutput
-from radabot.core.system import PageBuilder, ValueExtractor, int2emoji
+from radabot.core.manager import UserPermission
+from radabot.core.system import ManagerData, PageBuilder, ValueExtractor, int2emoji
 from radabot.core.vk import VKVariable, callback_button, keyboard, keyboard_inline
 
 def handle_event(vk_api, event):
@@ -9,6 +10,7 @@ def handle_event(vk_api, event):
 
 	manager.addMessageCommand("!стата", StatsMessageCommand.main)
 	manager.addMessageCommand('!cmdlist', ShowCommandListMessageCommand.main)
+	manager.addMessageCommand('!метки', PermissionMessageCommand.main)
 
 	manager.addMessageCommand("!тест", test, args=['Сука'])
 	manager.addMessageCommand("!тест2", test2)
@@ -132,7 +134,7 @@ class StatsMessageCommand:
 			StatsMessageCommand.print_info(output, info, event.bunch.object.from_id, member_id, False)
 			return True
 		else:
-			StatsMessageCommand.print_error_unknow_subcommand(output, event.bunch.object.from_id)
+			StatsMessageCommand.print_error_unknown_subcommand(output, event.bunch.object.from_id)
 			return False
 	
 	@staticmethod
@@ -148,7 +150,7 @@ class StatsMessageCommand:
 		message()
 
 	@staticmethod
-	def print_error_unknow_subcommand(output: ChatOutput, user_id: int):
+	def print_error_unknown_subcommand(output: ChatOutput, user_id: int):
 		keyboard = keyboard_inline([
 			[callback_button('Полная стата', ['run', '!стата', user_id], 'primary')],
 			[callback_button('Дневная стата', ['run', '!стата дня', user_id], 'secondary')]
@@ -172,7 +174,6 @@ class ShowCommandListMessageCommand:
 	def main(callin: ChatEventManager.CallbackInputObject):
 		event = callin.event
 		args = callin.args
-		db = callin.db
 		output = callin.output
 		manager = callin.manager
 
@@ -209,6 +210,46 @@ class ShowCommandListMessageCommand:
 		notice.message_new(message=VKVariable.Multi('var', 'appeal', 'str', '⛔Неверный номер страницы.'))
 		notice.message_event(text='⛔ Неверный номер страницы.')
 		notice()
+
+class PermissionMessageCommand:
+	@staticmethod
+	def main(callin: ChatEventManager.CallbackInputObject):
+		event = callin.event
+		args = callin.args
+		db = callin.db
+		output = callin.output
+
+		subcommand = args.str(1, '')
+		if(subcommand == ''):
+			userPermission = UserPermission(db, event.bunch.object.from_id, event.bunch.object.peer_id)
+			permission_list = userPermission.getAll()
+			PermissionMessageCommand.print_my_list(output, event, permission_list)
+		elif(subcommand == 'установить'):
+			pass
+		else:
+			PermissionMessageCommand.print_error_unknown_subcommand(output)
+
+	@staticmethod
+	def print_error_unknown_subcommand(output: ChatOutput):
+		uosNotice = ChatOutput.UOSNotice(output)
+		message = VKVariable.Multi('var', 'appeal', 'str', '⛔Неизвестная команда.')
+		uosNotice.message_new(message=message)
+		uosNotice.message_event(text='⛔Неизвестная команда.')
+		uosNotice()
+
+	@staticmethod
+	def print_my_list(output: ChatOutput, event: ChatEventManager.EventObject, perm: dict):
+		user_permissions_data = ManagerData.getUserPermissions()
+		uosMessage = ChatOutput.UOSMessage(output)
+		message_text = "Ваши метки:"
+		for k, v in perm.items():
+			if(v):
+				label = user_permissions_data[k]['label']
+				message_text += "\n• {}".format(label)
+		message = VKVariable.Multi('var', 'appeal', 'str', message_text)
+		uosMessage.message_new(message=message)
+		uosMessage()
+
 
 class CancelCallbackButtonCommand:
 	@staticmethod

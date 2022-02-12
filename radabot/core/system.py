@@ -138,7 +138,7 @@ class Config:
 
     @staticmethod
     def readFile():
-        f = open(SYSTEM_PATHS.CONFIG_FILE)
+        f = open(SYSTEM_PATHS.CONFIG_FILE, encoding='utf-8')
         Config.data = json.loads(f.read())
         f.close()
 
@@ -151,7 +151,7 @@ class ManagerData:
 
     @staticmethod
     def readFile():
-        f = open(SYSTEM_PATHS.MANAGER_DATA_FILE)
+        f = open(SYSTEM_PATHS.MANAGER_DATA_FILE, encoding='utf-8')
         ManagerData.data = json.loads(f.read())
         f.close()
 
