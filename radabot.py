@@ -1,17 +1,17 @@
 # Python модули
-from multiprocessing import Manager
 import time, requests, json, threading, traceback
 from radabot.core.manager import UserPermission
 
 # Части бота
 from radabot.core.vk import VK_API, longpoll
-from radabot.core.system import SYSTEM_PATHS, Config, ManagerData, prestart, write_log
+from radabot.core.system import SYSTEM_PATHS, Config, ManagerData, PHPCommandIntegration, prestart, write_log
 from radabot.bot.main import handle_event
 
 # Инициализация разных данных
 Config.readFile()										# Считываем файл config.json
 ManagerData.readFile()									# Считываем файл manager.json
 UserPermission.initDefaultStates()						# Инициализируем стандартные состояния UserPermission
+PHPCommandIntegration.init()							# Инициализация команд php
 
 # Базовые переменные
 vk_api = VK_API(Config.get('VK_GROUP_TOKEN'))

@@ -7,16 +7,7 @@
 class PermissionSystem
 {
 	// Список всех режимов.
-	// Типы режимов: 0 - Стандартный (Отключенный), 1 - Стандартный (Включенный), 2 - Особый (Отключенный), 3 - Особый (Включенный)
-	const PERMISSION_LIST = [
-		'change_nick' => ['label' => 'Управлять никами', 'type' => 0],
-		'customize_chat' => ['label' => 'Управлять чатом', 'type' => 0],
-		'manage_punishments' => ['label' => 'Управлять наказаниями', 'type' => 0],
-		'prohibit_autokick' => ['label' => 'Игнорировать автокик', 'type' => 0],
-		'prohibit_antiflood' => ['label' => 'Игнорировать антифлуд', 'type' => 0],
-		'set_permits' => ['label' => 'Управлять правами', 'type' => 0],
-		'manage_cmd' => ['label' => 'Редактировать команды', 'type' => 0]
-	];
+	private static $permission_list = [];
 
 	private $db;
 	private $owner_id;
@@ -30,6 +21,29 @@ class PermissionSystem
 		$this->owner_id = $extractor->getValue('0.owner_id');
 	}
 
+	public static function getPermissionList(){
+		if(count(self::$permission_list) == 0){
+			$data = json_decode(file_get_contents(BOTPATH_MANAGERDATAFILE), true);
+			if ($data === false) {
+				error_log('Unable to read manager.json file. File not exists or invalid.');
+				exit;
+			}
+			foreach ($data["user_permissions"] as $key => $value) {
+				$type = 0;
+				if($value['is_special'])
+					$type = 2;
+				if($value['default'])
+					$type++;
+				self::$permission_list[$key] = [
+					'label' => $value['label'],
+					'type' => $type
+				];
+			}
+		}
+
+		return self::$permission_list;
+	}
+
 	public function getChatOwnerID()
 	{
 		return $this->owner_id;
@@ -37,7 +51,7 @@ class PermissionSystem
 
 	public function isPermissionExists(string $permission_id)
 	{
-		return array_key_exists($permission_id, self::PERMISSION_LIST);
+		return array_key_exists($permission_id, self::getPermissionList());
 	}
 
 	public function getUserPermissions(int $user_id)
@@ -47,7 +61,7 @@ class PermissionSystem
 			$query = new MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.user_permissions.id{$user_id}" => 1]]);
 			$extractor = $this->db->executeQuery($query);
 			$db_permissions = $extractor->getValue([0, 'chat_settings', 'user_permissions', "id{$user_id}"], []);
-			foreach (self::PERMISSION_LIST as $key => $value) {
+			foreach (self::getPermissionList() as $key => $value) {
 				if ($value['type'] == 0 || $value['type'] == 1)
 					$permissions[] = $key;
 				elseif (array_key_exists($key, $db_permissions) && $db_permissions->$key)
@@ -59,7 +73,7 @@ class PermissionSystem
 			$query = new MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.user_permissions.id{$user_id}" => 1]]);
 			$extractor = $this->db->executeQuery($query);
 			$db_permissions = $extractor->getValue([0, 'chat_settings', 'user_permissions', "id{$user_id}"], []);
-			foreach (self::PERMISSION_LIST as $key => $value) {
+			foreach (self::getPermissionList() as $key => $value) {
 				if (array_key_exists($key, $db_permissions) && $db_permissions->$key)
 					$permissions[] = $key;
 				elseif ($value['type'] == 1 || $value['type'] == 3)
@@ -75,14 +89,14 @@ class PermissionSystem
 			return null;
 
 		if ($user_id == $this->owner_id) {
-			if (self::PERMISSION_LIST[$permission_id]['type'] == 2)
+			if (self::getPermissionList()[$permission_id]['type'] == 2)
 				$default_state = false;
-			elseif (self::PERMISSION_LIST[$permission_id]['type'] == 0 || self::PERMISSION_LIST[$permission_id]['type'] == 1 || self::PERMISSION_LIST[$permission_id]['type'] == 3)
+			elseif (self::getPermissionList()[$permission_id]['type'] == 0 || self::getPermissionList()[$permission_id]['type'] == 1 || self::getPermissionList()[$permission_id]['type'] == 3)
 				$default_state = true;
 		} else {
-			if (self::PERMISSION_LIST[$permission_id]['type'] == 0 || self::PERMISSION_LIST[$permission_id]['type'] == 2)
+			if (self::getPermissionList()[$permission_id]['type'] == 0 || self::getPermissionList()[$permission_id]['type'] == 2)
 				$default_state = false;
-			elseif (self::PERMISSION_LIST[$permission_id]['type'] == 1 || self::PERMISSION_LIST[$permission_id]['type'] == 3)
+			elseif (self::getPermissionList()[$permission_id]['type'] == 1 || self::getPermissionList()[$permission_id]['type'] == 3)
 				$default_state = true;
 		}
 
@@ -94,14 +108,14 @@ class PermissionSystem
 	public function addUserPermission(int $user_id, string $permission_id)
 	{
 		// Проверка на владельца и существования разрешения
-		if (!$this->isPermissionExists($permission_id) || $user_id <= 0 || ($user_id == $this->owner_id && (self::PERMISSION_LIST[$permission_id]['type'] == 0 || self::PERMISSION_LIST[$permission_id]['type'] == 1)))
+		if (!$this->isPermissionExists($permission_id) || $user_id <= 0 || ($user_id == $this->owner_id && (self::getPermissionList()[$permission_id]['type'] == 0 || self::getPermissionList()[$permission_id]['type'] == 1)))
 			return false;
 
 		if (!$this->checkUserPermission($user_id, $permission_id)) {
 			$bulk = new MongoDB\Driver\BulkWrite;
-			if (self::PERMISSION_LIST[$permission_id]['type'] == 0 || self::PERMISSION_LIST[$permission_id]['type'] == 2)
+			if (self::getPermissionList()[$permission_id]['type'] == 0 || self::getPermissionList()[$permission_id]['type'] == 2)
 				$bulk->update(['_id' => $this->db->getDocumentID()], ['$set' => ["chat_settings.user_permissions.id{$user_id}.{$permission_id}" => true]]);
-			elseif (self::PERMISSION_LIST[$permission_id]['type'] == 1 || self::PERMISSION_LIST[$permission_id]['type'] == 3)
+			elseif (self::getPermissionList()[$permission_id]['type'] == 1 || self::getPermissionList()[$permission_id]['type'] == 3)
 				$bulk->update(['_id' => $this->db->getDocumentID()], ['$unset' => ["chat_settings.user_permissions.id{$user_id}.{$permission_id}" => 0]]);
 
 			$this->db->executeBulkWrite($bulk);
@@ -113,14 +127,14 @@ class PermissionSystem
 	public function deleteUserPermission($user_id, $permission_id)
 	{
 		// Проверка на владельца и существования разрешения
-		if (!$this->isPermissionExists($permission_id) || $user_id <= 0 || ($user_id == $this->owner_id && (self::PERMISSION_LIST[$permission_id]['type'] == 0 || self::PERMISSION_LIST[$permission_id]['type'] == 1)))
+		if (!$this->isPermissionExists($permission_id) || $user_id <= 0 || ($user_id == $this->owner_id && (self::getPermissionList()[$permission_id]['type'] == 0 || self::getPermissionList()[$permission_id]['type'] == 1)))
 			return false;
 
 		if ($this->checkUserPermission($user_id, $permission_id)) {
 			$bulk = new MongoDB\Driver\BulkWrite;
-			if (self::PERMISSION_LIST[$permission_id]['type'] == 0 || self::PERMISSION_LIST[$permission_id]['type'] == 2)
+			if (self::getPermissionList()[$permission_id]['type'] == 0 || self::getPermissionList()[$permission_id]['type'] == 2)
 				$bulk->update(['_id' => $this->db->getDocumentID()], ['$unset' => ["chat_settings.user_permissions.id{$user_id}.{$permission_id}" => 0]]);
-			elseif (self::PERMISSION_LIST[$permission_id]['type'] == 1 || self::PERMISSION_LIST[$permission_id]['type'] == 3)
+			elseif (self::getPermissionList()[$permission_id]['type'] == 1 || self::getPermissionList()[$permission_id]['type'] == 3)
 				$bulk->update(['_id' => $this->db->getDocumentID()], ['$set' => ["chat_settings.user_permissions.id{$user_id}.{$permission_id}" => false]]);
 
 			$this->db->executeBulkWrite($bulk);
@@ -1594,7 +1608,7 @@ function manager_permissions_menu($finput)
 		if (count($user_permissions) > 0) {
 			$names = [];
 			foreach ($user_permissions as $key => $value) {
-				$names[] = PermissionSystem::PERMISSION_LIST[$value]["label"];
+				$names[] = PermissionSystem::getPermissionList()[$value]["label"];
 			}
 			$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, "%appeal%, Ваши права:", $names);
 		} else
@@ -1614,7 +1628,7 @@ function manager_permissions_menu($finput)
 	}
 
 	$elements = array();
-	foreach (PermissionSystem::PERMISSION_LIST as $key => $value) {
+	foreach (PermissionSystem::getPermissionList() as $key => $value) {
 		if ($value['type'] == 0 || $value['type'] == 1)
 			$elements[] = ['id' => $key, 'label' => $value['label']];
 	}
@@ -1706,7 +1720,7 @@ function manager_permissions_menu_cb($finput)
 			return;
 		}
 		$current_state = $permissionSystem->checkUserPermission($member_id, $permission_id);
-		if (is_null($current_state) || PermissionSystem::PERMISSION_LIST[$permission_id]['type'] == 2 || PermissionSystem::PERMISSION_LIST[$permission_id]['type'] == 3) {
+		if (is_null($current_state) || PermissionSystem::getPermissionList()[$permission_id]['type'] == 2 || PermissionSystem::getPermissionList()[$permission_id]['type'] == 3) {
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Внутренняя ошибка: Неверной указан ID разрешения!');
 			return;
 		} else {
@@ -1723,7 +1737,7 @@ function manager_permissions_menu_cb($finput)
 	}
 
 	$elements = array();
-	foreach (PermissionSystem::PERMISSION_LIST as $key => $value) {
+	foreach (PermissionSystem::getPermissionList() as $key => $value) {
 		if ($value['type'] == 0 || $value['type'] == 1)
 			$elements[] = ['id' => $key, 'label' => $value['label']];
 	}

@@ -2,7 +2,7 @@ import subprocess, json, time
 import radabot.core.bot as bot
 from radabot.core.io import ChatEventManager, ChatOutput
 from radabot.core.manager import UserPermission
-from radabot.core.system import ManagerData, PageBuilder, ValueExtractor, int2emoji
+from radabot.core.system import ManagerData, PHPCommandIntegration, PageBuilder, ValueExtractor, int2emoji
 from radabot.core.vk import VKVariable, callback_button, keyboard, keyboard_inline
 
 def handle_event(vk_api, event):
@@ -276,16 +276,14 @@ def message_action_handler(callin: ChatEventManager.CallbackInputObject):
 def error(callin: ChatEventManager.CallbackInputObject):
 	raise Exception()
 
-MSG_PHP_COMMANDS = ['!docmd', '!test-template', '!runcb', '!kick-all', '!debug-info', '!db-edit', '!special-permits', '!test-cmd', '!cmd-search', '!test-parser', '!testout', '!cmdlist', '!reg', '!помощь', '!чат', '!меню', '!лайк', '!убрать', '!id', '!base64', '!крестики-нолики', '!сообщение', '!addcustom', '!delcustom', '!customlist', 'пожать', 'дать', '!онлайн', '!ban', '!unban', '!baninfo', '!banlist', '!kick', '!ник', '!приветствие', '!modes', '!панель', 'панель', '!права', '!ники', '!стата', '!рейтинг', '!me', '!do', '!try', '!s', 'секс', 'обнять', 'уебать', 'обоссать', 'поцеловать', 'харкнуть', 'отсосать', 'отлизать', 'послать', 'кастрировать', 'посадить', 'лизнуть', 'обосрать', 'облевать', 'отшлёпать', 'отшлепать', 'покашлять', '!выбери', '!сколько', '!инфа', '!rndwall', '!memes', '!бутылочка', '!tts', '!say', '!брак', '!браки', '!shrug', '!tableflip', '!unflip', '!кек', '!кто', '!кого', '!кому', '!счет', '!счет', '!работа', '!работать', '!профессии', '!профессия', '!купить', '!продать', '!имущество', '!награды', '!банк', '!образование', '!forbes', '!бизнес', '!подарить', '!казино', '!ставка']
-CB_PHP_COMMANDS = ['bot_menu', 'bot_cmdlist', 'bot_tictactoe', 'bot_reg', 'bot_listcustomcmd', 'bot_run']
 def initcmd_php(manager: ChatEventManager):
-	for cmd in MSG_PHP_COMMANDS:
+	for cmd in PHPCommandIntegration.message_commands:
 		ignore_db = False
 		if cmd in ['!reg']:
 			ignore_db = True
 		manager.addMessageCommand(cmd, handle_phpcmd, ignore_db=ignore_db)
 
-	for cmd in CB_PHP_COMMANDS:
+	for cmd in PHPCommandIntegration.callback_button_commands:
 		ignore_db = False
 		if cmd in ['bot_reg']:
 			ignore_db = True
@@ -294,11 +292,11 @@ def initcmd_php(manager: ChatEventManager):
 	manager.addMessageHandler(handle_phphndl)
 
 def handle_phpcmd(callin: ChatEventManager.CallbackInputObject):
-	event = callin.event
-	subprocess.Popen(["/usr/bin/php7.0", "radabot-php-core.php", "cmd", json.dumps(event.dict)]).communicate()
+	manager = callin.manager
+	subprocess.Popen(["/usr/bin/php7.0", "radabot-php-core.php", "cmd", json.dumps(manager.event.dict)]).communicate()
 	return True
 
 def handle_phphndl(callin: ChatEventManager.CallbackInputObject):
-	event = callin.event
-	subprocess.Popen(["/usr/bin/php7.0", "radabot-php-core.php", "hndl", json.dumps(event.dict)]).communicate()
+	manager = callin.manager
+	subprocess.Popen(["/usr/bin/php7.0", "radabot-php-core.php", "hndl", json.dumps(manager.event.dict)]).communicate()
 	return True

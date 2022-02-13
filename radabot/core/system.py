@@ -1,4 +1,5 @@
 # Module Level 0
+import subprocess
 import string, random, json, os, time, shlex
 from datetime import datetime
 
@@ -158,6 +159,25 @@ class ManagerData:
     @staticmethod
     def getUserPermissions():
         return ManagerData.data.get('user_permissions', {})
+
+class PHPCommandIntegration:
+    message_commands = []
+    callback_button_commands = []
+    text_button_commands = []
+
+    @staticmethod
+    def init():
+        subprocess.Popen(["/usr/bin/php7.0", "radabot-php-core.php", "int", ""]).communicate()
+        path_to_php_integration = "{}php_integration.json".format(SYSTEM_PATHS.TMP_DIR)
+        if os.path.exists(path_to_php_integration):
+            f = open(path_to_php_integration, encoding='utf-8')
+            php_integration = f.read()
+            f.close()
+            os.remove(path_to_php_integration)
+            splited_php_integration = php_integration.split("\n")
+            PHPCommandIntegration.message_commands = splited_php_integration[0].split(';')
+            PHPCommandIntegration.callback_button_commands = splited_php_integration[1].split(';')
+            PHPCommandIntegration.text_button_commands = splited_php_integration[2].split(';')
 
 # Функция конвертирования числа в эмодзи
 def int2emoji(number: int):

@@ -579,7 +579,7 @@ function debug_specialpermissions_menu($finput)
 	}
 
 	$elements = array();
-	foreach (PermissionSystem::PERMISSION_LIST as $key => $value) {
+	foreach (PermissionSystem::getPermissionList() as $key => $value) {
 		if ($value['type'] == 2 || $value['type'] == 3)
 			$elements[] = ['id' => $key, 'label' => $value['label']];
 	}
@@ -665,7 +665,7 @@ function debug_specialpermissions_menu_cb($finput)
 			return;
 		}
 		$current_state = $permissionSystem->checkUserPermission($member_id, $permission_id);
-		if (is_null($current_state) || PermissionSystem::PERMISSION_LIST[$permission_id]['type'] == 0 || PermissionSystem::PERMISSION_LIST[$permission_id]['type'] == 1) {
+		if (is_null($current_state) || PermissionSystem::getPermissionList()[$permission_id]['type'] == 0 || PermissionSystem::getPermissionList()[$permission_id]['type'] == 1) {
 			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Внутренняя ошибка: Неверной указан ID разрешения!');
 			return;
 		} else {
@@ -682,7 +682,7 @@ function debug_specialpermissions_menu_cb($finput)
 	}
 
 	$elements = array();
-	foreach (PermissionSystem::PERMISSION_LIST as $key => $value) {
+	foreach (PermissionSystem::getPermissionList() as $key => $value) {
 		if ($value['type'] == 2 || $value['type'] == 3)
 			$elements[] = ['id' => $key, 'label' => $value['label']];
 	}

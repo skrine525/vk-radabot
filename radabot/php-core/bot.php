@@ -10,7 +10,7 @@ namespace Bot {
 
 	class ChatEvent
 	{
-		// Переменные
+		// Переменныеr
 		private $data;								// Объект события ВК
 		private $textCommands;				// Массив текстовых команд
 		private $buttonCommands;				// Массив команд Text-кнопок
@@ -167,6 +167,24 @@ namespace Bot {
 		{
 			$list = array();
 			foreach ($this->textCommands as $key => $value) {
+				$list[] = $key;
+			}
+			return $list;
+		}
+
+		public function getTextButtonCommandList()
+		{
+			$list = array();
+			foreach ($this->buttonCommands as $key => $value) {
+				$list[] = $key;
+			}
+			return $list;
+		}
+
+		public function getCallbackButtonCommandList()
+		{
+			$list = array();
+			foreach ($this->callbackCommands as $key => $value) {
 				$list[] = $key;
 			}
 			return $list;
@@ -1033,6 +1051,7 @@ namespace {
 	define('BOTPATH_DATA', BOTPATH_ROOT . "/data");							// Каталог данных бота
 	define('BOTPATH_TMP', BOTPATH_ROOT . "/tmp");							// Каталог временных файлов бота
 	define('BOTPATH_CONFIGFILE', BOTPATH_DATA . "/config.json");			// Файл настроек бота
+	define('BOTPATH_MANAGERDATAFILE', BOTPATH_DATA . "/manager.json");		// Файл данный менеджера
 
 	mb_internal_encoding("UTF-8");											// UTF-8 как основная кодировка для mbstring
 
@@ -1053,7 +1072,7 @@ namespace {
 
 	$GLOBALS['modules_importtime_end'] = microtime(true);					// Время подключения модулей: Конец
 
-	function bot_handle_event($data, $cmd, $hndl)
+	function bot_handle_event($data, $cmd, $hndl, $integration = false)
 	{
 		if ($data->object->peer_id < 2000000000) { 										// Запрет использование бота в лс
 			///////////////////////////
@@ -1095,8 +1114,19 @@ namespace {
 				//$event->addNonCommandTextMessageHandler('wordgame_gameplay');					// Обработчик игры Слова
 			}
 
-			bot_pre_handle($event);																// Функция предварительной обработки
-			$event->handle(); 																	// Обработка события бота
+			if(!$integration){
+				// Если не интеграция, то выполенение кода
+				bot_pre_handle($event);															// Функция предварительной обработки
+				$event->handle(); 																// Обработка события бота
+			}
+			else{
+				// Если интеграция, то заносим команды в специальный файл
+				$integration_data = implode(';', $event->getTextMessageCommandList());
+				$integration_data .= "\n" . implode(';', $event->getCallbackButtonCommandList());
+				$integration_data .= "\n" . implode(';', $event->getTextButtonCommandList());
+				error_log("hello");
+				file_put_contents(BOTPATH_TMP . '/php_integration.json', $integration_data);
+			}
 			$event->exit(); 																	// Очищение памяти
 		}
 	}
