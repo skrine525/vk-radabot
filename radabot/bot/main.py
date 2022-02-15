@@ -3,7 +3,10 @@ import radabot.core.bot as bot
 from radabot.core.io import ChatEventManager, ChatOutput
 from radabot.core.manager import UserPermission
 from radabot.core.system import ManagerData, PHPCommandIntegration, PageBuilder, ValueExtractor, int2emoji
-from radabot.core.vk import VKVariable, callback_button, keyboard, keyboard_inline
+from radabot.core.vk import KeyboardBuilder, VKVariable
+
+# Подгружаем функции инициализации команд
+from radabot.bot.debug import initcmd as initcmd_debug
 
 def handle_event(vk_api, event):
 	manager = ChatEventManager(vk_api, event)
@@ -12,10 +15,9 @@ def handle_event(vk_api, event):
 	manager.addMessageCommand('!cmdlist', ShowCommandListMessageCommand.main)
 	manager.addMessageCommand('!метки', PermissionMessageCommand.main)
 
-	manager.addMessageCommand('!error', error)
-
 	manager.addCallbackButtonCommand('bot_cancel', CancelCallbackButtonCommand.main)
 
+	initcmd_debug(manager)
 	initcmd_php(manager)
 	manager.handle()
 
@@ -187,14 +189,18 @@ class ShowCommandListMessageCommand:
 	@staticmethod
 	def print_text(output: ChatOutput, text: str, from_id: int, number: int, max_number: int):
 		uos = output.uos()
-		buttons = []
+
+		keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
 		if(number > 1):
 			prev_number = number - 1
-			buttons.append(callback_button("{} ⬅".format(int2emoji(prev_number)), ['run', '!cmdlist {}'.format(prev_number), from_id], 'secondary'))
+			keyboard.callback_button("{} ⬅".format(int2emoji(prev_number)), ['run', '!cmdlist {}'.format(prev_number), from_id], KeyboardBuilder.SECONDARY_COLOR)
 		if(number < max_number):
 			next_number = number + 1
-			buttons.append(callback_button("➡ {}".format(int2emoji(next_number)), ['run', '!cmdlist {}'.format(next_number), from_id], 'secondary'))
-		keyboard = keyboard_inline([buttons, [callback_button('Закрыть', ['bot_cancel', from_id], 'negative')]])
+			keyboard.callback_button("➡ {}".format(int2emoji(next_number)), ['run', '!cmdlist {}'.format(next_number), from_id], KeyboardBuilder.SECONDARY_COLOR)
+		keyboard.new_line()
+		keyboard.callback_button('Закрыть', ['bot_cancel', from_id], KeyboardBuilder.NEGATIVE_COLOR)
+		keyboard = keyboard.build()
+
 		uos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', text), keyboard=keyboard)
 		uos.messages_edit(message=VKVariable.Multi('var', 'appeal', 'str', text), keyboard=keyboard)
 
@@ -272,9 +278,6 @@ def message_action_handler(callin: ChatEventManager.CallbackInputObject):
 	db = callin.db
 	vk_api = callin.vk_api
 	output = callin.output
-
-def error(callin: ChatEventManager.CallbackInputObject):
-	raise Exception()
 
 def initcmd_php(manager: ChatEventManager):
 	for cmd in PHPCommandIntegration.message_commands:

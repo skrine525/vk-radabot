@@ -30,59 +30,59 @@ class UserPermission:
         UserPermission.default_states = default
 
     def __init__(self, db: Database, user_id: int, peer_id: int):
-        self.db_collection = db['chats']
-        self.db_query = get_chat_db_query(peer_id)
-        self.user_id = user_id
+        self.__db_collection = db['chats']
+        self.__db_query = get_chat_db_query(peer_id)
+        self.__user_id = user_id
 
         if(user_id > 0):
-            query = self.db_collection.find_one(self.db_query, projection={'_id': 0, 'owner_id': 1, 'chat_settings.user_permissions.id{}'.format(user_id): 1})
+            query = self.__db_collection.find_one(self.__db_query, projection={'_id': 0, 'owner_id': 1, 'chat_settings.user_permissions.id{}'.format(user_id): 1})
             extractor = ValueExtractor(query)
 
-            self.commit = {'$set': {}, '$unset': {}}
+            self.__commit_data = {'$set': {}, '$unset': {}}
             
-            self.owner_id = extractor.get('owner_id', 0)
-            if(user_id == self.owner_id):
+            self.__owner_id = extractor.get('owner_id', 0)
+            if(user_id == self.__owner_id):
                 # Если пользователь является владельцем чата
-                self.user_permissions = UserPermission.default_states
-                for k in list(self.user_permissions.keys()):
-                    self.user_permissions[k] = True
+                self.__user_permissions = UserPermission.default_states
+                for k in list(self.__user_permissions.keys()):
+                    self.__user_permissions[k] = True
             else:
                 # Если пользователь является участником чата
-                self.user_permissions = {**default, **extractor.get('chat_settings.user_permissions.id{}'.format(user_id), {})}
-                for k in list(self.user_permissions.keys()):
+                self.__user_permissions = {**default, **extractor.get('chat_settings.user_permissions.id{}'.format(user_id), {})}
+                for k in list(self.__user_permissions.keys()):
                     if(not (k in UserPermission.default_states)):
-                        self.user_permissions.pop(k)
-                        self.commit['$unset']['chat_settings.user_permissions.id{}.{}'.format(user_id, k)] = 0
+                        self.__user_permissions.pop(k)
+                        self.__commit_data['$unset']['chat_settings.user_permissions.id{}.{}'.format(user_id, k)] = 0
         else:
             raise UserPermission.InvalidArgumentException("Invalid 'user_id' parameter")
 
     def getAll(self):
-        return self.user_permissions
+        return self.__user_permissions
 
     def set(self, id: str, state: bool):
-        if(id in self.user_permissions):
-            if(self.owner_id == self.user_id):
-                raise UserPermission.OwnerPermissionException("User 'id{}' is owner".format(self.user_id))
+        if(id in self.__user_permissions):
+            if(self.__owner_id == self.__user_id):
+                raise UserPermission.OwnerPermissionException("User 'id{}' is owner".format(self.__user_id))
             else:
-                self.user_permissions[id] = state
-                self.commit['$set']['chat_settings.user_permissions.id{}.{}'.format(self.user_id, id)] = state
+                self.__user_permissions[id] = state
+                self.__commit_data['$set']['chat_settings.user_permissions.id{}.{}'.format(self.__user_id, id)] = state
         else:
             raise UserPermission.UnknownPermissionException("Unknown '{}' permission".format(id))
 
     def get(self, id: str):
-        if(id in self.user_permissions):
-            return self.user_permissions[id]
+        if(id in self.__user_permissions):
+            return self.__user_permissions[id]
         else:
             raise UserPermission.UnknownPermissionException("Unknown '{}' permission".format(id))
 
     def commit(self):
-        if(len(self.commit['$set']) == 0):
-            self.commit.pop('$set')
-        if(len(self.commit['$unset']) == 0):
-            self.commit.pop('$unset')
+        if(len(self.__commit_data['$set']) == 0):
+            self.__commit_data.pop('$set')
+        if(len(self.__commit_data['$unset']) == 0):
+            self.__commit_data.pop('$unset')
         
-        if(len(self.commit) > 0):
-            result = self.db_collection.update_one(self.db_query, self.commit)
+        if(len(self.__commit_data) > 0):
+            result = self.__db_collection.update_one(self.__db_query, self.__commit_data)
             if(result.modified_count > 0):
                 return True
             else:

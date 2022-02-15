@@ -8,7 +8,7 @@ from bunch import Bunch
 from . import bot
 from .bot import DEFAULT_MESSAGES, ChatData, ChatStats
 from .system import ArgumentParser, Config, PayloadParser, ValueExtractor, generate_random_string, write_log
-from .vk import VK_API, VKVariable, keyboard_inline, callback_button
+from .vk import VK_API, KeyboardBuilder, VKVariable
 from .system import SYSTEM_PATHS
 
 class ChatEventManager:
@@ -19,14 +19,14 @@ class ChatEventManager:
     # Класс для передачи параметров внутрь функций
     class CallbackInputObject:
         def __init__(self):
-            self.event = None										# Поле данных события
-            self.args = None										# Поле аргументов текстовой команды
-            self.payload = None										# Поле полезной нагрузки кнопки
-            self.manager = None										# Объект EventManager'а
-            self.vk_api = None										# Объект VK API
-            self.db = None											# Объект базы данных
-            self.output = None										# Объект Единой системы вывода
-            self.chat_data = None                                   # Объект Системы обработки данных чата
+            self.event = None						                    # Поле данных события
+            self.args = None										    # Поле аргументов текстовой команды
+            self.payload = None									        # Поле полезной нагрузки кнопки
+            self.manager = None									        # Объект EventManager'а
+            self.vk_api = None					                        # Объект VK API
+            self.db = None		                                        # Объект базы данных
+            self.output = None										    # Объект Единой системы вывода
+            self.chat_data = None                                       # Объект Системы обработки данных чата
 
     class EventObject:
         def __init__(self, event: dict):
@@ -343,7 +343,9 @@ class ChatEventManager:
 
                 return command_result
             except ChatEventManager.DatabaseException:
-                keyboard = keyboard_inline([[callback_button('Зарегистрировать', ['bot_reg'], 'positive')]])
+                keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
+                keyboard.callback_button('Зарегистрировать', ['bot_reg'], KeyboardBuilder.POSITIVE_COLOR)
+                keyboard = keyboard.build()
                 output.messages_send(peer_id=self.event.bunch.object.peer_id, message='⛔Беседа не зарегистрирована.', forward=bot.reply_to_message_by_event(self.event), keyboard=keyboard)
                 return False
             except ChatEventManager.UnknownCommandException:

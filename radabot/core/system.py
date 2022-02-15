@@ -25,7 +25,7 @@ class ValueExtractor:
 
     def __init__(self, data):
         if(isinstance(data, dict) or isinstance(data, list)):
-            self.data = data
+            self.__data = data
         else:
             raise ValueExtractor.InvalidArgumentException(r"argument 'data' must be dict or list")
 
@@ -38,7 +38,7 @@ class ValueExtractor:
         else:
             raise ValueExtractor.InvalidArgumentException(r"argument 'path' must be list or str")
 
-        value = self.data
+        value = self.__data
         for key in path_list:
             if(isinstance(value, dict)):
                 value = value.get(key, None)
@@ -55,51 +55,51 @@ class ValueExtractor:
 
 class ArgumentParser:
     def __init__(self, line: str):
-        self.args = shlex.split(line)
+        self.__args = shlex.split(line)
 
     def count(self):
-        return len(self.args)
+        return len(self.__args)
 
     def str(self, index: int, default: str = None) -> str:
         try:
-            return str(self.args[index])
+            return str(self.__args[index])
         except IndexError:
             return default
 
     def int(self, index: int, default: int = None) -> int:
         try:
-            return int(self.args[index])
+            return int(self.__args[index])
         except IndexError:
             return default
 
     def float(self, index: int, default: float = None) -> float:
         try:
-            return float(self.args[index])
+            return float(self.__args[index])
         except IndexError:
             return default
 
 class PayloadParser:
     def __init__(self, payload: list):
-        self.payload = payload
+        self.__payload = payload
 
     def count(self):
-        return len(self.payload)
+        return len(self.__payload)
 
     def str(self, index: int, default: str = None) -> str:
         try:
-            return str(self.payload[index])
+            return str(self.__payload[index])
         except IndexError:
             return default
 
     def int(self, index: int, default: int = None) -> int:
         try:
-            return int(self.payload[index])
+            return int(self.__payload[index])
         except IndexError:
             return default
 
     def float(self, index: int, default: float = None) -> float:
         try:
-            return float(self.payload[index])
+            return float(self.__payload[index])
         except IndexError:
             return default
 
@@ -110,55 +110,59 @@ class PageBuilder:
             self.message = message
 
     def __init__(self, data: list, page_size: int):
-        self.data = data
-        self.size = page_size
+        self.__data = data
+        self.__size = page_size
 
-        self.max_number = len(self.data) // self.size
-        if((len(self.data) % self.size) != 0):
-            self.max_number += 1
+        self.__max_number = len(self.__data) // self.__size
+        if((len(self.__data) % self.__size) != 0):
+            self.__max_number += 1
 
     def __call__(self, number: int):
         page = []
 
-        min_index = self.size * number - self.size
-        max_index = self.size * number
-        if(self.size * number >= len(self.data)):
-            max_index = len(self.data)
+        min_index = self.__size * number - self.__size
+        max_index = self.__size * number
+        if(self.__size * number >= len(self.__data)):
+            max_index = len(self.__data)
 
-        if(number <= self.max_number and number > 0):
+        if(number <= self.__max_number and number > 0):
             for i in range(min_index, max_index):
-                page.append(self.data[i])
+                page.append(self.__data[i])
         else:
-            raise PageBuilder.PageNumberException("Page number out of range [1..{}]".format(self.max_number))
+            raise PageBuilder.PageNumberException("Page number out of range [1..{}]".format(self.__max_number))
 
         return page
 
+    @property
+    def max_number(self):
+        return self.__max_number
+
 # Класс для работы с Config файлом
 class Config:
-    data = {}
+    __data = {}
 
     @staticmethod
     def readFile():
         f = open(SYSTEM_PATHS.CONFIG_FILE, encoding='utf-8')
-        Config.data = json.loads(f.read())
+        Config.__data = json.loads(f.read())
         f.close()
 
     @staticmethod
     def get(name):
-        return Config.data.get(name, None)
+        return Config.__data.get(name, None)
 
 class ManagerData:
-    data = {}
+    __data = {}
 
     @staticmethod
     def readFile():
         f = open(SYSTEM_PATHS.MANAGER_DATA_FILE, encoding='utf-8')
-        ManagerData.data = json.loads(f.read())
+        ManagerData.__data = json.loads(f.read())
         f.close()
 
     @staticmethod
     def getUserPermissions():
-        return ManagerData.data.get('user_permissions', {})
+        return ManagerData.__data.get('user_permissions', {})
 
 class PHPCommandIntegration:
     message_commands = []
