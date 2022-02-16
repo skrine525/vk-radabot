@@ -6,17 +6,18 @@ def initcmd(manager: ChatEventManager):
     manager.addMessageCommand('!error', ErrorCommand.message_command)
     manager.addMessageCommand('!test-keyboard', TestKeyboardCommand.message_command)
 
+
 class ErrorCommand:
     @staticmethod
     def message_command(callin: ChatEventManager.CallbackInputObject):
         raise Exception()
+
 
 class TestKeyboardCommand:
     @staticmethod
     def message_command(callin: ChatEventManager.CallbackInputObject):
         event = callin.event
         args = callin.args
-        db = callin.db
         output = callin.output
         
         count = args.int(1, 1)

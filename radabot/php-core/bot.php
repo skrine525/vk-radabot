@@ -1125,7 +1125,7 @@ namespace {
 				$integration_data .= "\n" . implode(';', $event->getCallbackButtonCommandList());
 				$integration_data .= "\n" . implode(';', $event->getTextButtonCommandList());
 				error_log("hello");
-				file_put_contents(BOTPATH_TMP . '/php_integration.json', $integration_data);
+				file_put_contents(BOTPATH_TMP . '/php_integration.txt', $integration_data);
 			}
 			$event->exit(); 																	// Очищение памяти
 		}

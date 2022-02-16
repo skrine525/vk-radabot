@@ -4,6 +4,7 @@ from pymongo.database import Database
 from radabot.core.bot import get_chat_db_query
 from radabot.core.system import ManagerData, ValueExtractor
 
+
 class UserPermission:
     default_states = {}
 
@@ -24,24 +25,24 @@ class UserPermission:
 
     @staticmethod
     def initDefaultStates():
-        default = {}
+        d = {}
         for k, v in ManagerData.getUserPermissions().items():
-            default[k] = v['default']
-        UserPermission.default_states = default
+            d[k] = v['default']
+        UserPermission.default_states = d
 
     def __init__(self, db: Database, user_id: int, peer_id: int):
         self.__db_collection = db['chats']
         self.__db_query = get_chat_db_query(peer_id)
         self.__user_id = user_id
 
-        if(user_id > 0):
+        if user_id > 0:
             query = self.__db_collection.find_one(self.__db_query, projection={'_id': 0, 'owner_id': 1, 'chat_settings.user_permissions.id{}'.format(user_id): 1})
             extractor = ValueExtractor(query)
 
             self.__commit_data = {'$set': {}, '$unset': {}}
             
             self.__owner_id = extractor.get('owner_id', 0)
-            if(user_id == self.__owner_id):
+            if user_id == self.__owner_id:
                 # Если пользователь является владельцем чата
                 self.__user_permissions = UserPermission.default_states
                 for k in list(self.__user_permissions.keys()):
@@ -50,7 +51,7 @@ class UserPermission:
                 # Если пользователь является участником чата
                 self.__user_permissions = {**default, **extractor.get('chat_settings.user_permissions.id{}'.format(user_id), {})}
                 for k in list(self.__user_permissions.keys()):
-                    if(not (k in UserPermission.default_states)):
+                    if not (k in UserPermission.default_states):
                         self.__user_permissions.pop(k)
                         self.__commit_data['$unset']['chat_settings.user_permissions.id{}.{}'.format(user_id, k)] = 0
         else:
@@ -59,31 +60,31 @@ class UserPermission:
     def getAll(self):
         return self.__user_permissions
 
-    def set(self, id: str, state: bool):
-        if(id in self.__user_permissions):
-            if(self.__owner_id == self.__user_id):
+    def set(self, _id: str, state: bool):
+        if _id in self.__user_permissions:
+            if self.__owner_id == self.__user_id:
                 raise UserPermission.OwnerPermissionException("User 'id{}' is owner".format(self.__user_id))
             else:
-                self.__user_permissions[id] = state
+                self.__user_permissions[_id] = state
                 self.__commit_data['$set']['chat_settings.user_permissions.id{}.{}'.format(self.__user_id, id)] = state
         else:
             raise UserPermission.UnknownPermissionException("Unknown '{}' permission".format(id))
 
-    def get(self, id: str):
-        if(id in self.__user_permissions):
-            return self.__user_permissions[id]
+    def get(self, _id: str):
+        if _id in self.__user_permissions:
+            return self.__user_permissions[_id]
         else:
             raise UserPermission.UnknownPermissionException("Unknown '{}' permission".format(id))
 
     def commit(self):
-        if(len(self.__commit_data['$set']) == 0):
+        if len(self.__commit_data['$set']) == 0:
             self.__commit_data.pop('$set')
-        if(len(self.__commit_data['$unset']) == 0):
+        if len(self.__commit_data['$unset']) == 0:
             self.__commit_data.pop('$unset')
         
-        if(len(self.__commit_data) > 0):
+        if len(self.__commit_data) > 0:
             result = self.__db_collection.update_one(self.__db_query, self.__commit_data)
-            if(result.modified_count > 0):
+            if result.modified_count > 0:
                 return True
             else:
                 return False

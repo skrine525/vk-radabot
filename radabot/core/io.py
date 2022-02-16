@@ -7,7 +7,7 @@ from pymongo.database import Database
 from bunch import Bunch
 from . import bot
 from .bot import DEFAULT_MESSAGES, ChatData, ChatStats
-from .system import ArgumentParser, Config, PayloadParser, ValueExtractor, generate_random_string, write_log
+from .system import ArgumentParser, Config, PayloadParser, ValueExtractor, bunchingList, dict2bunch, generate_random_string, write_log
 from .vk import VK_API, KeyboardBuilder, VKVariable
 from .system import SYSTEM_PATHS
 
@@ -28,56 +28,7 @@ class ChatEventManager:
             self.output = None										    # Объект Единой системы вывода
             self.chat_data = None                                       # Объект Системы обработки данных чата
 
-    class EventObject:
-        def __init__(self, event: dict):
-            self.dict = event
-            self.bunch = self.__dict2bunch(event)
-
-        def __bunchingList(self, l: list) -> list:
-            nl = []
-            for i in l:
-                if(isinstance(i, dict)):
-                    nl.append(self.__dict2bunch(i))
-                elif(isinstance(i, list)):
-                    nl.append(self.__bunchingList(i))
-                else:
-                    nl.append(i)
-            return nl
-
-        def __dict2bunch(self, d: dict) -> Bunch:
-            b = {}
-            for k, v in d.items():
-                if(isinstance(v, dict)):
-                    b[k] = self.__dict2bunch(v)
-                elif(isinstance(v, list)):
-                    b[k] = self.__bunchingList(v)
-                else:
-                    b[k] = v
-            return Bunch(b)
-
     class MessageCommandEventObject:
-        def __bunchingList(self, l: list) -> list:
-            nl = []
-            for i in l:
-                if(isinstance(i, dict)):
-                    nl.append(self.__dict2bunch(i))
-                elif(isinstance(i, list)):
-                    nl.append(self.__bunchingList(i))
-                else:
-                    nl.append(i)
-            return nl
-
-        def __dict2bunch(self, d: dict) -> Bunch:
-            b = {}
-            for k, v in d.items():
-                if(isinstance(v, dict)):
-                    b[k] = self.__dict2bunch(v)
-                elif(isinstance(v, list)):
-                    b[k] = self.__bunchingList(v)
-                else:
-                    b[k] = v
-            return Bunch(b)
-
         # Конструктор
         def __init__(self, event: dict = {}):
             extractor = ValueExtractor(event)
@@ -88,9 +39,21 @@ class ChatEventManager:
             self.peer_id = extractor.get('object.peer_id', 0)
             self.text = extractor.get('object.text', '')
             self.conversation_message_id = extractor.get('object.conversation_message_id', 0)
-            self.attachments = self.__bunchingList(extractor.get('object.attachments', []))
-            self.fwd_messages = self.__bunchingList(extractor.get('object.fwd_messages', []))
-            
+            self.attachments = bunchingList(extractor.get('object.attachments', []))
+            self.fwd_messages = bunchingList(extractor.get('object.fwd_messages', []))
+
+    class CallbackButtonCommandEventObject:
+        # Конструктор
+        def __init__(self, event: dict = {}):
+            extractor = ValueExtractor(event)
+
+            self.group_id = extractor.get('group_id', 0)
+            self.peer_id = extractor.get('object.peer_id', 0)
+            self.user_id = extractor.get('object.user_id', 0)
+            self.payload = bunchingList(extractor.get('object.payload', []))
+            self.conversation_message_id = extractor.get('object.conversation_message_id', 0)
+            self.__event_id = extractor.get('object.event_id', 0)
+
 
     #############################
     #############################
@@ -121,41 +84,40 @@ class ChatEventManager:
         payload = callin.payload
         output = callin.output
 
-        testing_user_id = payload.int(2, event.bunch.object.user_id)
-        if(testing_user_id == event.bunch.object.user_id):
+        testing_user_id = payload.int(2, event.user_id)
+        if testing_user_id == event.user_id:
             run_event = ChatEventManager.MessageCommandEventObject()
-            run_event.group_id = event.bunch.group_id
-            run_event.from_id = event.bunch.object.user_id
-            run_event.peer_id = event.bunch.object.peer_id
+            run_event.group_id = event.group_id
+            run_event.from_id = event.user_id
+            run_event.peer_id = event.peer_id
             run_event.text = payload.str(1, '')
-
 
             manager.runMessageCommand(run_event, output)
 
-            if(output.messages_edit_request_count == 0 and output.show_snackbar_request_count):
-                output.show_snackbar(event.bunch.object.event_id, event.bunch.object.user_id, event.bunch.object.peer_id, '✅ Выполнено!.')
+            if output.messages_edit_request_count == 0 and output.show_snackbar_request_count:
+                output.show_snackbar(event['object']['event_id'], event['object']['user_id'], event.bunch.object.peer_id, '✅ Выполнено!.')
         else:
-            output.show_snackbar(event.bunch.object.event_id, event.bunch.object.user_id, event.bunch.object.peer_id, DEFAULT_MESSAGES.NO_RIGHTS_TO_USE_THIS_BUTTON)
+            output.show_snackbar(event['object']['event_id'], event['object']['user_id'], event.bunch.object.peer_id, DEFAULT_MESSAGES.SNACKBAR_NO_RIGHTS_TO_USE_THIS_BUTTON)
 
     #############################
     #############################
     # Конструктор
 
     def __init__(self, vk_api: VK_API, event: dict):
-        if(event["type"] == "message_new" or event["type"] == "message_event"):
-            self.vk_api = vk_api
-            self.event = ChatEventManager.EventObject(event)
-            self.message_command_list = {}
-            self.text_button_command_list = {}
-            self.callback_button_command_list = {}
-            self.message_handler_list = []
+        if event["type"] == "message_new" or event["type"] == "message_event":
+            self.__vk_api = vk_api
+            self.__event = event
+            self.__message_commands = {}
+            self.__text_button_commands = {}
+            self.__callback_button_commands = {}
+            self.__message_handlers = []
 
             database_info = Config.get('DATABASE')
-            self.mongo_client = MongoClient(database_info['HOST'], database_info['PORT'])
-            self.db = self.mongo_client[database_info['NAME']]
+            self.__mongo_client = MongoClient(database_info['HOST'], database_info['PORT'])
+            self.__db = self.__mongo_client[database_info['NAME']]
 
-            self.chat_data = ChatData(self.db, self.event.bunch.object.peer_id)
-            self.chat_stats = ChatStats(self.db, self.event.bunch.object.peer_id)
+            self.__chat_data = ChatData(self.__db, self.__event['object']['peer_id'])
+            self.chat_stats = ChatStats(self.__db, self.__event['object']['peer_id'])
 
             # Добавление Callback команды запуска Message команды
             self.addCallbackButtonCommand('run', ChatEventManager.__run_from_callback_button, ignore_db=True)
@@ -164,116 +126,143 @@ class ChatEventManager:
 
     #############################
     #############################
-    # Методы добавления комманд
+    # Методы доступа к private полям
 
+    @property
+    def event(self):
+        return self.__event
+
+    #############################
+    #############################
+    # Действия над командами
+
+    # Добавление Message команды
     def addMessageCommand(self, command: str, callback: Callable, args: list = [], ignore_db: bool = False) -> bool:
         command = command.lower()
-        if(command in self.message_command_list):
+        if(command in self.__message_commands):
             return False
         else:
-            self.message_command_list[command] = {
+            self.__message_commands[command] = {
                 'callback': callback,
                 'args': args,
                 'ignore_db': ignore_db
             }
             return True
 
+    # Добавление Text Button команды
     def addTextButtonCommand(self, command: str, callback: Callable, args: list = [], ignore_db: bool = False) -> bool:
         command = command.lower()
         if(command in self.button_command_list):
             return False
         else:
-            self.message_command_list[command] = {
+            self.__message_commands[command] = {
                 'callback': callback,
                 'args': args,
                 'ignore_db': ignore_db
             }
             return True
 
+    # Добавление Callback Button команды
     def addCallbackButtonCommand(self, command: str, callback: Callable, args: list = [], ignore_db: bool = False) -> bool:
         command = command.lower()
-        if(command in self.callback_button_command_list):
+        if(command in self.__callback_button_commands):
             return False
         else:
-            self.callback_button_command_list[command] = {
+            self.__callback_button_commands[command] = {
                 'callback': callback,
                 'args': args,
                 'ignore_db': ignore_db
             }
             return True
 
+    # Добавление Message обработчика (Если не выполнена Message команда)
     def addMessageHandler(self, callback: Callable) -> bool:
-        if(callback in self.message_handler_list):
+        if(callback in self.__message_handlers):
             return False
         else:
-            self.message_handler_list.append(callback)
+            self.__message_handlers.append(callback)
             return True
 
-    #############################
-    #############################
-    # Методы проверки и вызова команд
-
+    # Проверка существования Message команды
     def isMessageCommand(self, command: str) -> bool:
-        return command in self.message_command_list
+        return command in self.__message_commands
 
+    # Проверка существования Text Button команды
     def isTextButtonCommand(self, command: str) -> bool:
-        return command in self.text_button_command_list
+        return command in self.__text_button_commands
 
+    # Проверка существования Callback Button команды
     def isCallbackButtonCommand(self, command: str) -> bool:
-        return command in self.callback_button_command_list
+        return command in self.__callback_button_commands
 
+    # Запуск обработки Message команды
     def runMessageCommand(self, event: MessageCommandEventObject, output):
         args = ArgumentParser(event.text)
         command = args.str(0, '').lower()
         if(self.isMessageCommand(command)):
-            if(not self.message_command_list[command]['ignore_db'] and not self.chat_data.exists_in_database):
+            if(not self.__message_commands[command]['ignore_db'] and not self.__chat_data.exists_in_database):
                 raise ChatEventManager.DatabaseException('Command \'{}\' requires document in Database'.format(command))
 
             # Подготовка объекта входных данных Callback'а
             callin = ChatEventManager.CallbackInputObject()
             callin.event = event
             callin.args = args
-            callin.vk_api = self.vk_api
+            callin.vk_api = self.__vk_api
             callin.manager = self
-            callin.db = self.db
+            callin.db = self.__db
             callin.output = output
-            callin.chat_data = self.chat_data
+            callin.chat_data = self.__chat_data
 
-            callback = self.message_command_list[command]["callback"]
-            callback_args = [callin] + self.message_command_list[command]["args"]
+            callback = self.__message_commands[command]["callback"]
+            callback_args = [callin] + self.__message_commands[command]["args"]
             callback(*callback_args)
-            return True 
+            return True
         else:
             raise ChatEventManager.UnknownCommandException('Command \'{}\' not found'.format(command), command)
 
-    def runCallbackButtonCommand(self, event: EventObject, output):
-        if event.bunch.type == 'message_event':
-            payload = PayloadParser(event.bunch.object.payload)
-            command = payload.str(0, '')
-            if(self.isCallbackButtonCommand(command)):
-                if(not self.callback_button_command_list[command]['ignore_db'] and not self.chat_data.exists_in_database):
-                    raise ChatEventManager.DatabaseException('Command \'{}\' requires document in Database'.format(command))
+    # Запуск обработки Callback Button команды
+    def runCallbackButtonCommand(self, event: CallbackButtonCommandEventObject, output):
+        payload = PayloadParser(event.payload)
+        command = payload.str(0, '')
+        if(self.isCallbackButtonCommand(command)):
+            if(not self.__callback_button_commands[command]['ignore_db'] and not self.__chat_data.exists_in_database):
+                raise ChatEventManager.DatabaseException('Command \'{}\' requires document in Database'.format(command))
 
-                # Подготовка объекта входных данных Callback'а
-                callin = ChatEventManager.CallbackInputObject()
-                callin.event = event
-                callin.payload = payload
-                callin.vk_api = self.vk_api
-                callin.manager = self
-                callin.db = self.db
-                callin.output = output
-                callin.chat_data = self.chat_data
+            # Подготовка объекта входных данных Callback'а
+            callin = ChatEventManager.CallbackInputObject()
+            callin.event = event
+            callin.payload = payload
+            callin.vk_api = self.__vk_api
+            callin.manager = self
+            callin.db = self.__db
+            callin.output = output
+            callin.chat_data = self.__chat_data
 
-                callback = self.callback_button_command_list[command]["callback"]
-                callback_args = [callin] + self.callback_button_command_list[command]["args"]
-                callback(*callback_args)
-                return True
-            else:
-                raise ChatEventManager.UnknownCommandException('Command \'{}\' not found'.format(command), command)
+            callback = self.__callback_button_commands[command]["callback"]
+            callback_args = [callin] + self.__callback_button_commands[command]["args"]
+            callback(*callback_args)
+            return True
+        else:
+            raise ChatEventManager.UnknownCommandException('Command \'{}\' not found'.format(command), command)
+
+    # Получение списка Message команд
+    @property
+    def message_command_list(self):
+        return list(self.__message_commands.keys())
+
+    # Получение списка Text Button команд
+    @property
+    def text_button_command_list(self):
+        return list(self.__text_button_commands.keys())
+
+    # Получение списка Callback Button команд
+    @property
+    def callback_button_command_list(self):
+        return list(self.__callback_button_commands.keys())
 
     #############################
     #############################
-    # Метод ведения стастики
+    # Метод ведения статистики
 
     def __stats_commit(self, user_id):
         self.chat_stats.commit(user_id)
@@ -285,13 +274,13 @@ class ChatEventManager:
         self.chat_stats.update('button_pressed_count', 1)
 
     def __stats_message_new(self):
-        if(self.event.bunch.object.from_id > 0):
+        if(self.__event['object']['from_id'] > 0):
             self.chat_stats.updateIfCommitedByLastUser('msg_count_in_succession', 1)
             self.chat_stats.update('msg_count', 1)
-            self.chat_stats.update('simbol_count', len(self.event.bunch.object.text))
+            self.chat_stats.update('simbol_count', len(self.__event['object']['text']))
 
             attachment_update = {}
-            for attachment in self.event.bunch.object.attachments:
+            for attachment in self.__event['object']['attachments']:
                 if(attachment.type == 'sticker'):
                     if('sticker_count' in attachment_update):
                         attachment_update['sticker_count'] += 1
@@ -326,27 +315,27 @@ class ChatEventManager:
     # Метод обработки события
 
     def handle(self) -> bool:
-        if self.event.bunch.type == 'message_new':
-            if(self.event.bunch.object.from_id <= 0):
+        if self.__event['type'] == 'message_new':
+            if(self.__event['object']['from_id'] <= 0):
                 return False
 
-            output = ChatOutput(self.vk_api, self.db, self.event)
+            output = ChatOutput(self.__vk_api, self.__db, self.__event)
             self.__stats_message_new() # Система отслеживания статистики
 
             try:
-                event = ChatEventManager.MessageCommandEventObject(self.event.dict)
+                event = ChatEventManager.MessageCommandEventObject(self.__event)
                 command_result = self.runMessageCommand(event, output)
 
                 # Система отслеживания статистики
                 self.__stats_command()
-                self.__stats_commit(self.event.bunch.object.from_id)
+                self.__stats_commit(self.__event['object']['from_id'])
 
                 return command_result
             except ChatEventManager.DatabaseException:
                 keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
                 keyboard.callback_button('Зарегистрировать', ['bot_reg'], KeyboardBuilder.POSITIVE_COLOR)
                 keyboard = keyboard.build()
-                output.messages_send(peer_id=self.event.bunch.object.peer_id, message='⛔Беседа не зарегистрирована.', forward=bot.reply_to_message_by_event(self.event), keyboard=keyboard)
+                output.messages_send(peer_id=self.__event['object']['peer_id'], message=DEFAULT_MESSAGES.MESSAGE_NOT_REGISTERED, forward=bot.reply_to_message_by_event(self.__event), keyboard=keyboard)
                 return False
             except ChatEventManager.UnknownCommandException:
                 pass
@@ -354,16 +343,16 @@ class ChatEventManager:
                 # Логирование непредвиденной ошибки в файл
                 logname = datetime.utcfromtimestamp(time.time() + 10800).strftime("%d%m%Y-{}".format(generate_random_string(5, uppercase=False)))
                 trace = traceback.format_exc()
-                write_log(SYSTEM_PATHS.EXEC_LOG_DIR+"{}.log".format(logname), "Event:\n{}\n\n{}".format(json.dumps(self.event.dict, indent=4, ensure_ascii=False), trace[:-1]))
-                output.messages_send(peer_id=self.event.bunch.object.peer_id, message='🆘Ошибка выполнения!\n🆔Журнал: {}.'.format(logname))
+                write_log(SYSTEM_PATHS.EXEC_LOG_DIR+"{}.log".format(logname), "Event:\n{}\n\n{}".format(json.dumps(self.__event, indent=4, ensure_ascii=False), trace[:-1]))
+                output.messages_send(peer_id=self.__event['object']['peer_id'], message=DEFAULT_MESSAGES.MESSAGE_EXECUTION_ERROR.format(logname=logname))
                 return False
 
             try:
-                command_result = self.runMessageCommand(self.event, output)
+                command_result = self.runMessageCommand(self.__event, output)
 
                 # Система отслеживания статистики
                 self.__stats_button()
-                self.__stats_commit(self.event.bunch.object.from_id)
+                self.__stats_commit(self.__event['object']['from_id'])
 
                 return command_result
             except ChatEventManager.DatabaseException:
@@ -375,46 +364,46 @@ class ChatEventManager:
 
             # Обработка сообщений вне командного пространства
             handler_result = False
-            if(self.chat_data.exists_in_database):
-                if(len(self.message_handler_list) > 0):
+            if(self.__chat_data.exists_in_database):
+                if(len(self.__message_handlers) > 0):
                     # Подготовка объекта входных данных Callback'а
                     callin = ChatEventManager.CallbackInputObject()
-                    callin.event = self.event
-                    callin.vk_api = self.vk_api
+                    callin.event = self.__event
+                    callin.vk_api = self.__vk_api
                     callin.manager = self
-                    callin.db = self.db
+                    callin.db = self.__db
                     callin.output = output
 
-                    for handler in self.message_handler_list:
+                    for handler in self.__message_handlers:
                         if(handler(callin)):
                             handler_result = True
                             break
-                self.__stats_commit(self.event.bunch.object.from_id)
+                self.__stats_commit(self.__event['object']['from_id'])
             return handler_result
 
-        elif self.event.bunch.type == 'message_event':
-            output = ChatOutput(self.vk_api, self.db, self.event)
+        elif self.__event['type'] == 'message_event':
+            output = ChatOutput(self.__vk_api, self.__db, self.__event)
             try:
-                command_result = self.runCallbackButtonCommand(self.event, output)
+                event = ChatEventManager.CallbackButtonCommandEventObject(self.__event)
+                command_result = self.runCallbackButtonCommand(event, output)
 
                 # Система отслеживания статистики
                 self.__stats_button()
-                self.__stats_commit(self.event.bunch.object.user_id)
+                self.__stats_commit(self.__event['object']['user_id'])
 
                 return command_result
             except ChatEventManager.DatabaseException:
-                result = output.show_snackbar(self.event.bunch.object.event_id, self.event.bunch.object.user_id, self.event.bunch.object.peer_id, '⛔ Беседа не зарегистрирована.')
-                write_log(SYSTEM_PATHS.ERROR_LOG_FILE, "{} {}".format(result.error, result.execute_errors))
+                result = output.show_snackbar(self.__event['object']['event_id'], self.__event['object']['user_id'], self.__event['object']['peer_id'], DEFAULT_MESSAGES.SNACKBAR_NOT_REGISTERED)
                 return False
             except ChatEventManager.UnknownCommandException:
-                output.show_snackbar(self.event.bunch.object.event_id, self.event.bunch.object.user_id, self.event.bunch.object.peer_id, '⛔ Неизвестная команда.')
+                output.show_snackbar(self.__event['object']['event_id'], self.__event['object']['user_id'], self.__event['object']['peer_id'], DEFAULT_MESSAGES.SNACKBAR_UNKNOWN_COMMAND)
                 return False
             except:
                 # Логирование непредвиденной ошибки в файл
                 logname = datetime.utcfromtimestamp(time.time() + 10800).strftime("%d%m%Y-{}".format(generate_random_string(5, uppercase=False)))
                 trace = traceback.format_exc()
-                write_log(SYSTEM_PATHS.EXEC_LOG_DIR+"{}.log".format(logname), "Event:\n{}\n\n{}".format(json.dumps(self.event.dict, indent=4, ensure_ascii=False), trace[:-1]))
-                output.messages_edit(peer_id=self.event.bunch.object.peer_id, conversation_message_id=self.event.bunch.object.conversation_message_id, message='🆘Ошибка выполнения!\n🆔Журнал: {}.'.format(logname))
+                write_log(SYSTEM_PATHS.EXEC_LOG_DIR+"{}.log".format(logname), "Event:\n{}\n\n{}".format(json.dumps(self.__event, indent=4, ensure_ascii=False), trace[:-1]))
+                output.messages_edit(peer_id=self.__event['object']['peer_id'], conversation_message_id=self.__event['object']['conversation_message_id'], message=DEFAULT_MESSAGES.MESSAGE_EXECUTION_ERROR.format(logname=logname))
                 return False
 
 class ChatOutput:
@@ -425,86 +414,94 @@ class ChatOutput:
     # Класс Единой системы вывода
     class UOS:
         def __init__(self, output):
-            self.output = output
-            self.current_prefs = {
+            self.__output = output
+            self.__current_prefs = {
                 'message_support': True,
                 'button_support': True,
                 'reply_to_message': True,
                 'appeal_to_user': True
             }
 
-            if(self.output.event.bunch.type == 'message_new'):
-                self.is_message_new = True
-                self.is_message_event = False
-            elif(self.output.event.bunch.type == 'message_event'):
-                self.is_message_new = False
-                self.is_message_event = True
+            if(self.__output.event['type'] == 'message_new'):
+                self.__is_message_new = True
+                self.__is_message_event = False
+            elif(self.__output.event['type'] == 'message_event'):
+                self.__is_message_new = False
+                self.__is_message_event = True
 
-            self.appeal_id = 0
+            self.__appeal_id = 0
+
+        @property
+        def is_message_new(self):
+            return self.__is_message_new
+
+        @property
+        def is_message_event(self):
+            return self.__is_message_event
 
         def prefs(self, **kwargs):
             for k, v in kwargs.items():
-                self.current_prefs[k] = v
+                self.__current_prefs[k] = v
 
         def messages_send(self, **reqm):
-            if(self.is_message_new):
-                if(self.current_prefs['message_support']):
+            if(self.__is_message_new):
+                if(self.__current_prefs['message_support']):
                     # Код скрипта обращения
                     appeal_code = 'var appeal="";'
-                    if(self.appeal_id > 0):
+                    if(self.__appeal_id > 0):
                         pass
 
                     # Добавление дополнительного кода
                     reqm['script'] = appeal_code + reqm.get('script', '')
 
-                    reqm['peer_id'] = self.output.event.bunch.object.peer_id
-                    if(self.current_prefs['reply_to_message']):
+                    reqm['peer_id'] = self.__output.event['object']['peer_id']
+                    if(self.__current_prefs['reply_to_message']):
                         forward = {
-                            'peer_id': self.output.event.bunch.object.peer_id,
-                            'conversation_message_ids': [self.output.event.bunch.object.conversation_message_id],
+                            'peer_id': self.__output.event['object']['peer_id'],
+                            'conversation_message_ids': [self.__output.event['object']['conversation_message_id']],
                             'is_reply': True
                         }
                         reqm['forward'] = json.dumps(forward, ensure_ascii=False, separators=(',', ':'))
 
-                    result = self.output.messages_send(**reqm)
+                    result = self.__output.messages_send(**reqm)
                 else:
                     return False
 
         def messages_edit(self, **reqm):
-            if(self.is_message_event):
-                if(self.current_prefs['button_support']):
+            if(self.__is_message_event):
+                if(self.__current_prefs['button_support']):
                     # Код скрипта обращения
                     appeal_code = 'var appeal="";'
-                    if(self.appeal_id > 0):
+                    if(self.__appeal_id > 0):
                         pass
 
                     # Добавление дополнительного кода
                     reqm['script'] = appeal_code + reqm.get('script', '')
 
-                    reqm['peer_id'] = self.output.event.bunch.object.peer_id
-                    reqm['conversation_message_id'] = self.output.event.bunch.object.conversation_message_id
-                    reqm['keep_forward_messages'] = self.current_prefs['reply_to_message']
+                    reqm['peer_id'] = self.__output.event['object']['peer_id']
+                    reqm['conversation_message_id'] = self.__output.event['object']['conversation_message_id']
+                    reqm['keep_forward_messages'] = self.__current_prefs['reply_to_message']
 
-                    result = self.output.messages_edit(**reqm)
+                    result = self.__output.messages_edit(**reqm)
                 else:
                     return False
-        
+
         def show_snackbar(self, **reqm):
-            if(self.is_message_event):
-                if(self.current_prefs['button_support']):
+            if(self.__is_message_event):
+                if(self.__current_prefs['button_support']):
                     # Код скрипта обращения
                     appeal_code = 'var appeal="";'
-                    if(self.appeal_id > 0):
+                    if(self.__appeal_id > 0):
                         pass
 
                     # Добавление дополнительного кода
                     reqm['script'] = appeal_code + reqm.get('script', '')
 
-                    reqm['peer_id'] = self.output.event.bunch.object.peer_id
-                    reqm['user_id'] = self.output.event.bunch.object.user_id
-                    reqm['event_id'] = self.output.event.bunch.object.event_id
+                    reqm['peer_id'] = self.__output.event['object']['peer_id']
+                    reqm['user_id'] = self.__output.event['object']['user_id']
+                    reqm['event_id'] = self.__output.event['object']['event_id']
 
-                    result = self.output.show_snackbar(**reqm)
+                    result = self.__output.show_snackbar(**reqm)
                 else:
                     return False
 
@@ -517,22 +514,37 @@ class ChatOutput:
             self.execute_errors = result.get('execute_errors', None)
             self.is_ok = True if((self.error == None) and (self.execute_errors == None)) else False
 
-        def exception():
+        def exception(self):
             pass
-
 
     #############################
     #############################
     # Конструктор
 
-    def __init__(self, vk_api: VK_API, db: Database, event: ChatEventManager.EventObject):
-        self.vk_api = vk_api
-        self.event = event
-        self.db = db
+    def __init__(self, vk_api: VK_API, db: Database, event: dict):
+        self.__vk_api = vk_api
+        self.__event = event
+        self.__db = db
 
-        self.messages_send_request_count = 0 # Количество вызовов messages_send
-        self.messages_edit_request_count = 0 # Количество вызовов messages_edit
-        self.show_snackbar_request_count = 0 # Количество вызовов show_snackbar
+        self.__messages_send_request_count = 0 # Количество вызовов messages_send
+        self.__messages_edit_request_count = 0 # Количество вызовов messages_edit
+        self.__show_snackbar_request_count = 0 # Количество вызовов show_snackbar
+
+    @property
+    def messages_send_request_count(self):
+        self.__messages_send_request_count
+
+    @property
+    def messages_edit_request_count(self):
+        self.__messages_edit_request_count
+
+    @property
+    def show_snackbar_request_count(self):
+        self.__show_snackbar_request_count
+
+    @property
+    def event(self):
+        return self.__event
 
     def uos(self) -> UOS:
         return ChatOutput.UOS(self)
@@ -558,8 +570,8 @@ class ChatOutput:
         vk_vars1.var('var reqm', reqm)
         req_code += vk_vars1() + vk_vars2() + 'API.messages.send(reqm);return true;'
 
-        self.messages_send_request_count += 1 # Увеличиваем счетчик вызовов
-        return ChatOutput.OutputResult(self.vk_api.execute(req_code))
+        self.__messages_send_request_count += 1 # Увеличиваем счетчик вызовов
+        return ChatOutput.OutputResult(self.__vk_api.execute(req_code))
 
     # Метод messages.edit
     def messages_edit(self, **kwargs) -> OutputResult:
@@ -580,12 +592,12 @@ class ChatOutput:
         vk_vars1.var('var reqm', reqm)
         req_code += vk_vars1() + vk_vars2() + 'API.messages.edit(reqm);return true;'
 
-        self.messages_edit_request_count += 1 # Увеличиваем счетчик вызовов
-        return ChatOutput.OutputResult(self.vk_api.execute(req_code))
+        self.__messages_edit_request_count += 1 # Увеличиваем счетчик вызовов
+        return ChatOutput.OutputResult(self.__vk_api.execute(req_code))
 
     def show_snackbar(self, event_id: str, user_id: int, peer_id: int, text: str, script: str = '') -> OutputResult:
         event_data = json.dumps({'type': 'show_snackbar', 'text': text}, ensure_ascii=False, separators=(',', ':'))
         reqm = json.dumps({'event_id': event_id, 'user_id': user_id, 'peer_id': peer_id, 'event_data': event_data},  ensure_ascii=False, separators=(',', ':'))
 
-        self.show_snackbar_request_count += 1 # Увеличиваем счетчик вызовов
-        return ChatOutput.OutputResult(self.vk_api.execute('{}API.messages.sendMessageEventAnswer({});return true;'.format(script, reqm)))
+        self.__show_snackbar_request_count += 1 # Увеличиваем счетчик вызовов
+        return ChatOutput.OutputResult(self.__vk_api.execute('{}API.messages.sendMessageEventAnswer({});return true;'.format(script, reqm)))

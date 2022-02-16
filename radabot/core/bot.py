@@ -4,9 +4,16 @@ from pymongo.database import Database
 
 from radabot.core.system import ValueExtractor
 
+
 class DEFAULT_MESSAGES:
-    NO_RIGHTS_TO_USE_THIS_BUTTON = '⛔ У вас нет прав использовать эту кнопку.'
-    MENU_CANCELED = '✅Меню закрыто.'
+    SNACKBAR_NO_RIGHTS_TO_USE_THIS_BUTTON = '⛔ У вас нет прав использовать эту кнопку.'
+    SNACKBAR_UNKNOWN_COMMAND = '⛔ Неизвестная команда.'
+    SNACKBAR_NOT_REGISTERED = '⛔ Беседа не зарегистрирована.'
+
+    MESSAGE_MENU_CANCELED = '✅Меню закрыто.'
+    MESSAGE_EXECUTION_ERROR = '🆘Ошибка выполнения!\n🆔Журнал: {logname}.'
+    MESSAGE_NOT_REGISTERED = '⛔Беседа не зарегистрирована.'
+
 
 class ChatData:
     def __init__(self, db: Database, peer_id: int):
@@ -34,7 +41,8 @@ class ChatData:
             self.banned_users = extractor.get('chat_settings.banned_users', [])
             self.custom_cmds = extractor.get('chat_settings.custom_cmds', {})
             self.invited_greeting = extractor.get('chat_settings.invited_greeting', '')
-        
+
+
 class ChatStats:
     # Стандартное состояние параметров статистики
     STATS_DEFAULT = {
@@ -104,11 +112,13 @@ class ChatStats:
         else:
             return False
 
+
 def get_chat_db_query(id: int) -> dict:
     if id > 2000000000:
         id = id - 2000000000
     return {'_id': 'chat{}'.format(id)}
 
+
 def reply_to_message_by_event(event) -> str:
-    forward = {'peer_id': event.bunch.object.peer_id, 'conversation_message_ids': [event.bunch.object.conversation_message_id], 'is_reply': True}
+    forward = {'peer_id': event['object']['peer_id'], 'conversation_message_ids': [event['object']['conversation_message_id']], 'is_reply': True}
     return json.dumps(forward, ensure_ascii=False, separators=(',', ':'))

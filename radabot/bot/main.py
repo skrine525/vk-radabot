@@ -81,12 +81,13 @@ class StatsMessageCommand:
 			rating_info = "\n\n👑Активность: {rating_text}"
 			
 			info = pre_msg + basic_info + attachment_info + cmd_info + rating_info
-			info = info.format(msg_count=stats['msg_count'], msg_count_in_succession=stats['msg_count_in_succession'], 
-								simbol_count=stats['simbol_count'], audio_msg_count=stats['audio_msg_count'],
-								photo_count=stats['photo_count'], video_count=stats['video_count'],
-								audio_count=stats['audio_count'], sticker_count=stats['sticker_count'],
-								command_used_count=stats['command_used_count'], button_pressed_count=stats['button_pressed_count'],
-								rating_text=rating_text)
+			info = info.format(
+				msg_count=stats['msg_count'], msg_count_in_succession=stats['msg_count_in_succession'], 
+				simbol_count=stats['simbol_count'], audio_msg_count=stats['audio_msg_count'],
+				photo_count=stats['photo_count'], video_count=stats['video_count'],
+				audio_count=stats['audio_count'], sticker_count=stats['sticker_count'],
+				command_used_count=stats['command_used_count'], button_pressed_count=stats['button_pressed_count'],
+				rating_text=rating_text)
 
 			StatsMessageCommand.print_info(output, info, event.from_id, member_id, True)
 			return True
@@ -174,7 +175,7 @@ class ShowCommandListMessageCommand:
 		output = callin.output
 		manager = callin.manager
 
-		builder = PageBuilder(list(manager.message_command_list.keys()), 10)
+		builder = PageBuilder(manager.message_command_list, 10)
 		number = args.int(1, 1)
 
 		try:
@@ -266,11 +267,11 @@ class CancelCallbackButtonCommand:
 		output = callin.output
 
 		testing_user_id = payload.int(1, 0)
-		if(testing_user_id == event.bunch.object.user_id or testing_user_id == 0):
-			text = payload.str(2, bot.DEFAULT_MESSAGES.MENU_CANCELED)
-			output.messages_edit(message=text, peer_id=event.bunch.object.peer_id, conversation_message_id=event.bunch.object.conversation_message_id, keep_forward_messages=True)
+		if testing_user_id == event.user_id or testing_user_id == 0:
+			text = payload.str(2, bot.DEFAULT_MESSAGES.MESSAGE_MENU_CANCELED)
+			output.messages_edit(message=text, peer_id=event.peer_id, conversation_message_id=event.conversation_message_id, keep_forward_messages=True)
 		else:
-			output.show_snackbar(event.bunch.object.event_id, event.bunch.object.user_id, event.bunch.object.peer_id, bot.DEFAULT_MESSAGES.NO_RIGHTS_TO_USE_THIS_BUTTON)
+			output.show_snackbar(event.event_id, event.user_id, event.peer_id, bot.DEFAULT_MESSAGES.SNACKBAR_NO_RIGHTS_TO_USE_THIS_BUTTON)
 
 def message_action_handler(callin: ChatEventManager.CallbackInputObject):
 	event = callin.event
@@ -296,10 +297,10 @@ def initcmd_php(manager: ChatEventManager):
 
 def handle_phpcmd(callin: ChatEventManager.CallbackInputObject):
 	manager = callin.manager
-	subprocess.Popen(["/usr/bin/php7.0", "radabot-php-core.php", "cmd", json.dumps(manager.event.dict)]).communicate()
+	subprocess.Popen(["/usr/bin/php7.0", "radabot-php-core.php", "cmd", json.dumps(manager.event)]).communicate()
 	return True
 
 def handle_phphndl(callin: ChatEventManager.CallbackInputObject):
 	manager = callin.manager
-	subprocess.Popen(["/usr/bin/php7.0", "radabot-php-core.php", "hndl", json.dumps(manager.event.dict)]).communicate()
+	subprocess.Popen(["/usr/bin/php7.0", "radabot-php-core.php", "hndl", json.dumps(manager.event)]).communicate()
 	return True
