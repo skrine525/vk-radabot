@@ -8,16 +8,17 @@ from radabot.core.system import SYSTEM_PATHS, Config, ManagerData, PHPCommandInt
 from radabot.bot.main import handle_event
 
 # Инициализация разных данных
-Config.readFile()										# Считываем файл config.json
-ManagerData.readFile()									# Считываем файл manager.json
-UserPermission.initDefaultStates()						# Инициализируем стандартные состояния UserPermission
+Config.read_file()										# Считываем файл config.json
+ManagerData.read_file()									# Считываем файл manager.json
+UserPermission.init_default_states()					# Инициализируем стандартные состояния UserPermission
 PHPCommandIntegration.init()							# Инициализация команд php
 
 # Базовые переменные
 vk_api = VK_API(Config.get('VK_GROUP_TOKEN'))
 
-Processes = {}
+# Processes = {}
 EventQueue = []
+
 
 def queue_handler():
 	while True:
@@ -38,15 +39,16 @@ def queue_handler():
 				EventQueue.remove(event)
 		time.sleep(0.05)
 		"""
-		for event in EventQueue:
+		for _event in EventQueue:
 			try:
-				handle_event(vk_api, event)
-			except Exception:                                              
+				handle_event(vk_api, _event)
+			except:
 				trace = traceback.format_exc()
 				write_log(SYSTEM_PATHS.ERROR_LOG_FILE, trace[:-1])
 			finally:
-				EventQueue.remove(event)
+				EventQueue.remove(_event)
 		time.sleep(0.05)
+
 
 # Основной код запуска
 if __name__ == "__main__":
@@ -54,11 +56,15 @@ if __name__ == "__main__":
 	write_log(SYSTEM_PATHS.LONGPOLL_LOG_FILE, "Radabot is started")
 	active = False
 
+	lp_server = ''
+	lp_key = ''
+	lp_ts = 0
+
 	attempts_count = 1
 	while True:
 		vk_response_dict = json.loads(vk_api.call('groups.getLongPollServer', {'group_id': Config.get('VK_GROUP_ID')}))
 		response_data = vk_response_dict.get('response', None)
-		if response_data != None:
+		if response_data is not None:
 			lp_server = response_data["server"]
 			lp_key = response_data["key"]
 			lp_ts = response_data["ts"]
@@ -91,7 +97,7 @@ if __name__ == "__main__":
 			elif failed == 2:
 				vk_response_dict = json.loads(vk_api.call('groups.getLongPollServer', {'group_id': Config.get('VK_GROUP_ID')}))
 				response_data = vk_response_dict.get('response', None)
-				if response_data != None:
+				if response_data is not None:
 					lp_key = response_data['key']
 					write_log(SYSTEM_PATHS.LONGPOLL_LOG_FILE, "New lp_key received")
 				else:
@@ -101,7 +107,7 @@ if __name__ == "__main__":
 			elif failed == 3:
 				vk_response_dict = json.loads(vk_api.call('groups.getLongPollServer', {'group_id': Config.get('VK_GROUP_ID')}))
 				response_data = vk_response_dict.get('response', None)
-				if response_data != None:
+				if response_data is not None:
 					lp_key = response_data["key"]
 					lp_ts = response_data["ts"]
 					write_log(SYSTEM_PATHS.LONGPOLL_LOG_FILE, "New lp_key & lp_ts received successfully")
@@ -116,4 +122,4 @@ if __name__ == "__main__":
 		except requests.exceptions.ConnectionError:
 			write_log(SYSTEM_PATHS.LONGPOLL_LOG_FILE, "Connection Error")
 
-	write_log(SYSTEM_PATHS.LONGPOLL_LOG_FILE, "Radabot is stoped")
+	write_log(SYSTEM_PATHS.LONGPOLL_LOG_FILE, "Radabot is stopped")

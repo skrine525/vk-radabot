@@ -3,6 +3,7 @@ import subprocess
 import string, random, json, os, time, shlex
 from datetime import datetime
 from bunch import Bunch
+from pymongo import MongoClient
 
 
 # Переменная системных путей
@@ -18,6 +19,48 @@ class SYSTEM_PATHS:
     MANAGER_DATA_FILE = DATA_DIR + 'manager.json'
     LONGPOLL_LOG_FILE = LOG_DIR + 'longpoll.log'
     ERROR_LOG_FILE = LOG_DIR + 'error.log'
+
+
+class ChatDatabase:
+    @staticmethod
+    def get_chat_db_filter(_id: int) -> dict:
+        if _id > 2000000000:
+            _id = _id - 2000000000
+        return {'_id': 'chat{}'.format(_id)}
+
+    def __init__(self, database_host: str, database_port: int, database_name: str, chat_id: int):
+        self.__mongo_client = MongoClient(database_host, database_port)
+        self.__database = self.__mongo_client[database_name]
+        self.__main_collection = self.__database['chats']
+        self.__main_filter = ChatDatabase.get_chat_db_filter(chat_id)
+
+        self.__is_exists = False
+        self.__owner_id = 0
+
+        projection = {
+            '_id': 0,
+            'owner_id': 1,
+        }
+        result = self.__main_collection.find_one(self.__main_filter, projection=projection)
+        if result is not None:
+            self.__is_exists = True
+
+            extractor = ValueExtractor(result)
+            self.__owner_id = extractor.get('owner_id')
+
+    @property
+    def is_exists(self):
+        return self.__is_exists
+
+    @property
+    def owner_id(self):
+        return self.__owner_id
+
+    def find(self, *args, **kwargs):
+        return self.__main_collection.find_one(self.__main_filter, *args, **kwargs)
+
+    def update(self, *args, **kwargs):
+        return self.__main_collection.update_one(self.__main_filter, *args, **kwargs)
 
 
 class ValueExtractor:
@@ -59,22 +102,30 @@ class ArgumentParser:
     def __init__(self, line: str):
         self.__args = shlex.split(line)
 
+    @property
     def count(self):
         return len(self.__args)
 
-    def str(self, index: int, default: str = None) -> str:
+    def clear_index(self, index: int) -> bool:
+        try:
+            self.__args.pop(index)
+            return True
+        except IndexError:
+            return False
+
+    def get_str(self, index: int, default: str = None) -> str:
         try:
             return str(self.__args[index])
         except IndexError:
             return default
 
-    def int(self, index: int, default: int = None) -> int:
+    def get_int(self, index: int, default: int = None) -> int:
         try:
             return int(self.__args[index])
         except IndexError:
             return default
 
-    def float(self, index: int, default: float = None) -> float:
+    def get_float(self, index: int, default: float = None) -> float:
         try:
             return float(self.__args[index])
         except IndexError:
@@ -85,22 +136,23 @@ class PayloadParser:
     def __init__(self, payload: list):
         self.__payload = payload
 
+    @property
     def count(self):
         return len(self.__payload)
 
-    def str(self, index: int, default: str = None) -> str:
+    def get_str(self, index: int, default: str = None) -> str:
         try:
             return str(self.__payload[index])
         except IndexError:
             return default
 
-    def int(self, index: int, default: int = None) -> int:
+    def get_int(self, index: int, default: int = None) -> int:
         try:
             return int(self.__payload[index])
         except IndexError:
             return default
 
-    def float(self, index: int, default: float = None) -> float:
+    def get_float(self, index: int, default: float = None) -> float:
         try:
             return float(self.__payload[index])
         except IndexError:
@@ -142,12 +194,99 @@ class PageBuilder:
         return self.__max_number
 
 
+class SelectedUserParser:
+    def __init__(self):
+        # Пересланные сообщения
+        self.__fwd_messages = None
+
+        # Аргументы команды
+        self.__args_parser = None
+        self.__args_index = 0
+        self.__clear_index = False
+        self.__args_parse_numeric = False
+        self.__args_parse_mention = False
+
+    def set_fwd_messages(self, fwd_messages: list):
+        self.__fwd_messages = fwd_messages
+
+    def set_argument_parser(self, parser: ArgumentParser, index: int, clear_index: bool = True, parse_numeric: bool = True, parse_mention: bool = True):
+        self.__args_parser = parser
+        self.__args_index = index
+        self.__clear_index = clear_index
+        self.__args_parse_numeric = parse_numeric
+        self.__args_parse_mention = parse_mention
+
+    def member_id(self, default: int = 0):
+        # Пытаемся извлечь member_id из пересланных сообщений
+        if self.__fwd_messages is not None and 0 in self.__fwd_messages and 'from_id' in self.__fwd_messages[0] and isinstance(self.__fwd_messages[0].from_id, int):
+            return self.__fwd_messages[0].from_id
+
+        if self.__args_parser is not None:
+            argument = self.__args_parser.get_str(self.__args_index, None)
+            if argument is not None:
+                if self.__args_parse_numeric:
+                    # Пытаемся извлечь member_id из аргумента и превратить в int
+                    try:
+                        member_id = int(argument)
+                        if member_id > 0:
+                            if self.__clear_index:
+                                self.__args_parser.clear_index(self.__args_index)
+                            return member_id
+                    except ValueError:
+                        pass
+
+                if self.__args_parse_mention:
+                    # Пытаемся извлечь member_id с помощью парсинга аргумента с упоминанием
+                    str_number = ''
+                    for i in range(3, len(argument)):
+                        symbol = argument[i]
+                        if symbol == '|':
+                            break
+                        else:
+                            str_number += symbol
+
+                    try:
+                        member_id = int(str_number)
+                        if member_id > 0:
+                            if self.__clear_index:
+                                self.__args_parser.clear_index(self.__args_index)
+                            return member_id
+                    except ValueError:
+                        pass
+
+        # Если не получилось извлечь member_id, то возвращаем default
+        return default
+
+
+class CommandHelpBuilder:
+    def __init__(self, message: str):
+        self.__message = message
+        self.__commands = []
+        self.__examples = []
+
+    def command(self, text: str, *args, **kwargs):
+        self.__commands.append(text.format(*args, **kwargs))
+
+    def example(self, text: str, *args, **kwargs):
+        self.__examples.append(text.format(*args, **kwargs))
+
+    def build(self):
+        message = self.__message
+        if len(self.__commands) > 0:
+            message += "\n\nИспользуйте:\n• "
+            message += '\n• '.join(self.__commands)
+        if len(self.__examples) > 0:
+            message += "\n\nНапример:\n• "
+            message += '\n• '.join(self.__examples)
+        return message
+
+
 # Класс для работы с Config файлом
 class Config:
     __data = {}
 
     @staticmethod
-    def readFile():
+    def read_file():
         f = open(SYSTEM_PATHS.CONFIG_FILE, encoding='utf-8')
         Config.__data = json.loads(f.read())
         f.close()
@@ -161,13 +300,13 @@ class ManagerData:
     __data = {}
 
     @staticmethod
-    def readFile():
+    def read_file():
         f = open(SYSTEM_PATHS.MANAGER_DATA_FILE, encoding='utf-8')
         ManagerData.__data = json.loads(f.read())
         f.close()
 
     @staticmethod
-    def getUserPermissions():
+    def get_user_permissions():
         return ManagerData.__data.get('user_permissions', {})
 
 

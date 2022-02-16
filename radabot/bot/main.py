@@ -7,19 +7,23 @@ from radabot.core.vk import KeyboardBuilder, VKVariable
 
 # Подгружаем функции инициализации команд
 from radabot.bot.debug import initcmd as initcmd_debug
+from radabot.bot.manager import initcmd as initcmd_manager
+
 
 def handle_event(vk_api, event):
 	manager = ChatEventManager(vk_api, event)
 
 	manager.addMessageCommand("!стата", StatsMessageCommand.main)
 	manager.addMessageCommand('!cmdlist', ShowCommandListMessageCommand.main)
-	manager.addMessageCommand('!метки', PermissionMessageCommand.main)
 
 	manager.addCallbackButtonCommand('bot_cancel', CancelCallbackButtonCommand.main)
 
 	initcmd_debug(manager)
+	initcmd_manager(manager)
 	initcmd_php(manager)
+
 	manager.handle()
+
 
 # Команда !стата
 class StatsMessageCommand:
@@ -74,16 +78,16 @@ class StatsMessageCommand:
 				if(user['u'] == "id{}".format(member_id)):
 					break
 			rating_text = "{} место".format(position)
-			
-			basic_info = "\n📧Сообщений: {msg_count}\n&#12288;📝Подряд: {msg_count_in_succession}\n🔍Символов: {simbol_count}\n📟Гол. сообщений: {audio_msg_count}"
+
+			basic_info = "\n📧Сообщений: {msg_count}\n&#12288;📝Подряд: {msg_count_in_succession}\n🔍Символов: {symbol_count}\n📟Гол. сообщений: {audio_msg_count}"
 			attachment_info = "\n\n📷Фотографий: {photo_count}\n📹Видео: {video_count}\n🎧Аудиозаписей: {audio_count}\n🤡Стикеров: {sticker_count}"
 			cmd_info = "\n\n🛠Команд выполнено: {command_used_count}\n🔘Нажато кнопок: {button_pressed_count}"
 			rating_info = "\n\n👑Активность: {rating_text}"
-			
+
 			info = pre_msg + basic_info + attachment_info + cmd_info + rating_info
 			info = info.format(
-				msg_count=stats['msg_count'], msg_count_in_succession=stats['msg_count_in_succession'], 
-				simbol_count=stats['simbol_count'], audio_msg_count=stats['audio_msg_count'],
+				msg_count=stats['msg_count'], msg_count_in_succession=stats['msg_count_in_succession'],
+				symbol_count=stats['symbol_count'], audio_msg_count=stats['audio_msg_count'],
 				photo_count=stats['photo_count'], video_count=stats['video_count'],
 				audio_count=stats['audio_count'], sticker_count=stats['sticker_count'],
 				command_used_count=stats['command_used_count'], button_pressed_count=stats['button_pressed_count'],
@@ -118,15 +122,15 @@ class StatsMessageCommand:
 				if(user['u'] == "id{}".format(member_id)):
 					break
 			rating_text = "{} место".format(position)
-			
-			basic_info = "\n📧Сообщений: {msg_count}\n&#12288;📝Подряд: {msg_count_in_succession}\n🔍Символов: {simbol_count}\n📟Гол. сообщений: {audio_msg_count}"
+
+			basic_info = "\n📧Сообщений: {msg_count}\n&#12288;📝Подряд: {msg_count_in_succession}\n🔍Символов: {symbol_count}\n📟Гол. сообщений: {audio_msg_count}"
 			attachment_info = "\n\n📷Фотографий: {photo_count}\n📹Видео: {video_count}\n🎧Аудиозаписей: {audio_count}\n🤡Стикеров: {sticker_count}"
 			cmd_info = "\n\n🛠Команд выполнено: {command_used_count}\n🔘Нажато кнопок: {button_pressed_count}"
 			rating_info = "\n\n👑Активность: {rating_text}"
-			
+
 			info = pre_msg + basic_info + attachment_info + cmd_info + rating_info
-			info = info.format(msg_count=stats['msg_count'], msg_count_in_succession=stats['msg_count_in_succession'], 
-								simbol_count=stats['simbol_count'], audio_msg_count=stats['audio_msg_count'],
+			info = info.format(msg_count=stats['msg_count'], msg_count_in_succession=stats['msg_count_in_succession'],
+								symbol_count=stats['symbol_count'], audio_msg_count=stats['audio_msg_count'],
 								photo_count=stats['photo_count'], video_count=stats['video_count'],
 								audio_count=stats['audio_count'], sticker_count=stats['sticker_count'],
 								command_used_count=stats['command_used_count'], button_pressed_count=stats['button_pressed_count'],
@@ -137,7 +141,7 @@ class StatsMessageCommand:
 		else:
 			StatsMessageCommand.print_error_unknown_subcommand(output, event.from_id)
 			return False
-	
+
 	@staticmethod
 	def print_info(output: ChatOutput, info: str, from_id: int, member_id: int, daily: bool):
 		if(daily):
@@ -183,25 +187,26 @@ class ShowCommandListMessageCommand:
 			text = 'Список команд [{}/{}]:'.format(number, builder.max_number)
 			for i in page:
 				text += "\n• " + i
-			ShowCommandListMessageCommand.print_text(output, text, event.from_id, number, builder.max_number)
+			ShowCommandListMessageCommand.print_text(output, event.peer_id, event.from_id, text, number, builder.max_number)
 		except PageBuilder.PageNumberException:
 			ShowCommandListMessageCommand.print_error_out_of_range(output)
 
 	@staticmethod
-	def print_text(output: ChatOutput, text: str, from_id: int, number: int, max_number: int):
+	def print_text(output: ChatOutput, peer_id: int, from_id: int, text: str, number: int, max_number: int):
 		uos = output.uos()
 
 		keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
-		if(number > 1):
+		if number > 1:
 			prev_number = number - 1
 			keyboard.callback_button("{} ⬅".format(int2emoji(prev_number)), ['run', '!cmdlist {}'.format(prev_number), from_id], KeyboardBuilder.SECONDARY_COLOR)
-		if(number < max_number):
+		if number < max_number:
 			next_number = number + 1
 			keyboard.callback_button("➡ {}".format(int2emoji(next_number)), ['run', '!cmdlist {}'.format(next_number), from_id], KeyboardBuilder.SECONDARY_COLOR)
 		keyboard.new_line()
 		keyboard.callback_button('Закрыть', ['bot_cancel', from_id], KeyboardBuilder.NEGATIVE_COLOR)
 		keyboard = keyboard.build()
 
+		uos.set_appeal(peer_id, from_id)
 		uos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', text), keyboard=keyboard)
 		uos.messages_edit(message=VKVariable.Multi('var', 'appeal', 'str', text), keyboard=keyboard)
 
@@ -211,54 +216,6 @@ class ShowCommandListMessageCommand:
 		uos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', '⛔Неверный номер страницы.'))
 		uos.show_snackbar(text='⛔ Неверный номер страницы.')
 
-class PermissionMessageCommand:
-	@staticmethod
-	def main(callin: ChatEventManager.CallbackInputObject):
-		event = callin.event
-		args = callin.args
-		db = callin.db
-		output = callin.output
-
-		subcommand = args.str(1, '')
-		if(subcommand == ''):
-			userPermission = UserPermission(db, event.from_id, event.peer_id)
-			permission_list = userPermission.getAll()
-			PermissionMessageCommand.print_my_list(output, callin, permission_list)
-		elif(subcommand == 'установить'):
-			pass
-		else:
-			PermissionMessageCommand.print_error_unknown_subcommand(output)
-
-	@staticmethod
-	def print_error_unknown_subcommand(output: ChatOutput):
-		uos = output.uos()
-		if(uos.is_message_new):
-			message = VKVariable.Multi('var', 'appeal', 'str', '⛔Неизвестная команда.')
-			uos.messages_send(message=message)
-		elif(uos.is_message_event):
-			uos.show_snackbar(text='⛔Неизвестная команда.')
-
-	@staticmethod
-	def print_my_list(output: ChatOutput, callin: ChatEventManager.CallbackInputObject, perm: dict):
-		user_permissions_data = ManagerData.getUserPermissions()
-
-		uos = output.uos()
-		if(uos.is_message_new):
-			message_text = "Ваши права:"
-			for k, v in perm.items():
-				if(v):
-					label = user_permissions_data[k]['label']
-					message_text += "\n• {}".format(label)
-
-			message = VKVariable.Multi('var', 'appeal', 'str', message_text)
-			keyboard = keyboard_inline([[callback_button('Подробнее', ['run', callin.args.str(0, '')], 'positive')]])
-
-			uos.messages_send(message=message, keyboard=keyboard)
-		elif(uos.is_message_event):
-			pass
-			#uos.messages_edit(message=message, keyboard=keyboard)
-
-
 class CancelCallbackButtonCommand:
 	@staticmethod
 	def main(callin: ChatEventManager.CallbackInputObject):
@@ -266,7 +223,7 @@ class CancelCallbackButtonCommand:
 		payload = callin.payload
 		output = callin.output
 
-		testing_user_id = payload.int(1, 0)
+		testing_user_id = payload.get_int(1, 0)
 		if testing_user_id == event.user_id or testing_user_id == 0:
 			text = payload.str(2, bot.DEFAULT_MESSAGES.MESSAGE_MENU_CANCELED)
 			output.messages_edit(message=text, peer_id=event.peer_id, conversation_message_id=event.conversation_message_id, keep_forward_messages=True)
