@@ -125,7 +125,8 @@ class PermissionCommand:
             else:
                 try:
                     permission_data = permissions_data[permission_name]
-                    message = VKVariable.Multi('var', 'appeal', 'str', permission_data['label'])
+                    message_text = "🆔Метка: {}\n✏Название: {}\n📝Описание: {}".format(permission_name, permission_data['label'], permission_data['desc'])
+                    message = VKVariable.Multi('var', 'appeal', 'str', message_text)
                     uos.messages_send(message=message)
                 except KeyError:
                     permits_text = '\n\nСписок меток:'
