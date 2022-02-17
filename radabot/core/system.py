@@ -116,19 +116,19 @@ class ArgumentParser:
     def get_str(self, index: int, default: str = None) -> str:
         try:
             return str(self.__args[index])
-        except IndexError:
+        except (IndexError, ValueError):
             return default
 
     def get_int(self, index: int, default: int = None) -> int:
         try:
             return int(self.__args[index])
-        except IndexError:
+        except (IndexError, ValueError):
             return default
 
     def get_float(self, index: int, default: float = None) -> float:
         try:
             return float(self.__args[index])
-        except IndexError:
+        except (IndexError, ValueError):
             return default
 
 
@@ -143,19 +143,19 @@ class PayloadParser:
     def get_str(self, index: int, default: str = None) -> str:
         try:
             return str(self.__payload[index])
-        except IndexError:
+        except (IndexError, ValueError):
             return default
 
     def get_int(self, index: int, default: int = None) -> int:
         try:
             return int(self.__payload[index])
-        except IndexError:
+        except (IndexError, ValueError):
             return default
 
     def get_float(self, index: int, default: float = None) -> float:
         try:
             return float(self.__payload[index])
-        except IndexError:
+        except (IndexError, ValueError):
             return default
 
 
@@ -218,8 +218,11 @@ class SelectedUserParser:
 
     def member_id(self, default: int = 0):
         # Пытаемся извлечь member_id из пересланных сообщений
-        if self.__fwd_messages is not None and 0 in self.__fwd_messages and 'from_id' in self.__fwd_messages[0] and isinstance(self.__fwd_messages[0].from_id, int):
-            return self.__fwd_messages[0].from_id
+        try:
+            if self.__fwd_messages is not None and 'from_id' in self.__fwd_messages[0] and isinstance(self.__fwd_messages[0].from_id, int):
+                return self.__fwd_messages[0].from_id
+        except IndexError:
+            pass
 
         if self.__args_parser is not None:
             argument = self.__args_parser.get_str(self.__args_index, None)
@@ -386,7 +389,6 @@ def generate_random_string(length, uppercase=True, lowercase=True, numbers=True)
         letters += '0123456789'
 
     return ''.join(random.choice(letters) for _ in range(length))
-
 
 # Метод журналирования
 def write_log(filename: str, text: str):

@@ -7,6 +7,8 @@ class DEFAULT_MESSAGES:
     SNACKBAR_NO_RIGHTS_TO_USE_THIS_BUTTON = '⛔ У вас нет прав использовать эту кнопку.'
     SNACKBAR_UNKNOWN_COMMAND = '⛔ Неизвестная команда.'
     SNACKBAR_NOT_REGISTERED = '⛔ Беседа не зарегистрирована.'
+    SNACKBAR_INTERNAL_ERROR = '⛔ Внутренняя ошибка команды.'
+    SNACKBAR_YOU_HAVE_NO_RIGHTS = '⛔ У вас нет прав использовать это.'
 
     MESSAGE_MENU_CANCELED = '✅Меню закрыто.'
     MESSAGE_EXECUTION_ERROR = '🆘Ошибка выполнения!\n🆔Журнал: {logname}.'
@@ -83,12 +85,6 @@ class ChatStats:
                 return False
         else:
             return False
-
-
-def get_chat_db_query(_id: int) -> dict:
-    if _id > 2000000000:
-        _id = _id - 2000000000
-    return {'_id': 'chat{}'.format(_id)}
 
 
 def reply_to_message_by_event(event) -> str:

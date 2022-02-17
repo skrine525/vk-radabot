@@ -1,9 +1,9 @@
 import subprocess, json, time
 import radabot.core.bot as bot
 from radabot.core.io import ChatEventManager, ChatOutput
-from radabot.core.manager import UserPermission
-from radabot.core.system import ManagerData, PHPCommandIntegration, PageBuilder, ValueExtractor, int2emoji
+from radabot.core.system import PHPCommandIntegration, PageBuilder, ValueExtractor, int2emoji
 from radabot.core.vk import KeyboardBuilder, VKVariable
+from radabot.core.bot import DEFAULT_MESSAGES
 
 # Подгружаем функции инициализации команд
 from radabot.bot.debug import initcmd as initcmd_debug
@@ -222,13 +222,16 @@ class CancelCallbackButtonCommand:
 		event = callin.event
 		payload = callin.payload
 		output = callin.output
+		db = callin.db
+
+		uos = output.uos(db)
 
 		testing_user_id = payload.get_int(1, 0)
 		if testing_user_id == event.user_id or testing_user_id == 0:
-			text = payload.str(2, bot.DEFAULT_MESSAGES.MESSAGE_MENU_CANCELED)
-			output.messages_edit(message=text, peer_id=event.peer_id, conversation_message_id=event.conversation_message_id, keep_forward_messages=True)
+			text = payload.get_str(2, bot.DEFAULT_MESSAGES.MESSAGE_MENU_CANCELED)
+			uos.messages_edit(message=text)
 		else:
-			output.show_snackbar(event.event_id, event.user_id, event.peer_id, bot.DEFAULT_MESSAGES.SNACKBAR_NO_RIGHTS_TO_USE_THIS_BUTTON)
+			uos.show_snackbar(text=DEFAULT_MESSAGES.SNACKBAR_NO_RIGHTS_TO_USE_THIS_BUTTON)
 
 def message_action_handler(callin: ChatEventManager.CallbackInputObject):
 	event = callin.event

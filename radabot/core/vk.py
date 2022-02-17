@@ -105,18 +105,18 @@ class KeyboardBuilder:
 	def __init__(self, keyboard_type: int):
 		if keyboard_type == KeyboardBuilder.DEFAULT_TYPE:
 			self.__keyboard_type = keyboard_type
-			self.width_max = 5
-			self.height_max = 10
-			self.buttons_max = 40
+			self.__width_max = 5
+			self.__height_max = 10
+			self.__buttons_max = 40
 
 			self.__buttons = []
 			self.__current_height = 0
 			self.__buttons_count = 0
 		elif keyboard_type == KeyboardBuilder.INLINE_TYPE:
 			self.__keyboard_type = keyboard_type
-			self.width_max = 5
-			self.height_max = 6
-			self.buttons_max = 10
+			self.__width_max = 5
+			self.__height_max = 6
+			self.__buttons_max = 10
 
 			self.__buttons = []
 			self.__current_height = 0
@@ -124,11 +124,31 @@ class KeyboardBuilder:
 		else:
 			raise KeyboardBuilder.UnknownTypeException('Unknown keyboard type')
 
+	def size(self, width: int = 0, height: int = 0):
+		if width > 0:
+			self.__width_max = min(width, 5)
+
+		if height > 0:
+			if self.__keyboard_type == KeyboardBuilder.DEFAULT_TYPE:
+				self.__height_max = min(height, 10)
+			elif self.__keyboard_type == KeyboardBuilder.INLINE_TYPE:
+				self.__height_max = min(height, 6)
+
+	def reset_size(self, width: bool = True, height: bool = False):
+		if width:
+			self.__width_max = 5
+
+		if height:
+			if self.__keyboard_type == KeyboardBuilder.DEFAULT_TYPE:
+				self.__height_max = 10
+			elif self.__keyboard_type == KeyboardBuilder.INLINE_TYPE:
+				self.__height_max = 6
+
 	def new_line(self):
 		try:
 			if len(self.__buttons[self.__current_height]) > 0:
 				new_height = self.__current_height + 1
-				if new_height < self.height_max:
+				if new_height < self.__height_max:
 					self.__buttons.append([])
 					self.__current_height = new_height
 					return True
@@ -141,9 +161,9 @@ class KeyboardBuilder:
 			return True
 
 	def callback_button(self, label: str, payload: list, color: str) -> bool:
-		if self.__buttons_count < self.buttons_max:
+		if self.__buttons_count < self.__buttons_max:
 			try:
-				if len(self.__buttons[self.__current_height]) < self.width_max:
+				if len(self.__buttons[self.__current_height]) < self.__width_max:
 					payload_json = json.dumps(payload, ensure_ascii=False, separators=(',', ':'))
 					self.__buttons[self.__current_height].append({"action":{"type": "callback", "payload": payload_json, "label": label}, "color": color})
 					self.__buttons_count += 1
@@ -168,9 +188,9 @@ class KeyboardBuilder:
 			raise KeyboardBuilder.KeyboardLimitException('Button limit exceeded')
 
 	def text_button(self, label: str, payload: list, color: str) -> bool:
-		if self.__buttons_count < self.buttons_max:
+		if self.__buttons_count < self.__buttons_max:
 			try:
-				if len(self.__buttons[self.__current_height]) < self.width_max:
+				if len(self.__buttons[self.__current_height]) < self.__width_max:
 					payload_json = json.dumps(payload, ensure_ascii=False, separators=(',', ':'))
 					self.__buttons[self.__current_height].append({"action":{"type": "text", "payload": payload_json, "label": label}, "color": color})
 					self.__buttons_count += 1

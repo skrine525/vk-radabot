@@ -3,7 +3,7 @@ from email.policy import default
 from radabot.core.system import ManagerData, ValueExtractor, ChatDatabase
 
 
-class UserPermission:
+class UserPermissions:
     default_states = {}
 
     # Исключние неправильного аргумента
@@ -26,7 +26,7 @@ class UserPermission:
         d = {}
         for k, v in ManagerData.get_user_permissions_data().items():
             d[k] = v['default']
-        UserPermission.default_states = d
+        UserPermissions.default_states = d
 
     def __init__(self, db: ChatDatabase, user_id: int):
         self.__db = db
@@ -40,18 +40,18 @@ class UserPermission:
 
             if user_id == self.__db.owner_id:
                 # Если пользователь является владельцем чата
-                self.__user_permissions = UserPermission.default_states.copy()
+                self.__user_permissions = UserPermissions.default_states.copy()
                 for k in list(self.__user_permissions):
                     self.__user_permissions[k] = True
             else:
                 # Если пользователь является участником чата
-                self.__user_permissions = {**UserPermission.default_states, **extractor.get('chat_settings.user_permissions.id{}'.format(user_id), {})}
+                self.__user_permissions = {**UserPermissions.default_states, **extractor.get('chat_settings.user_permissions.id{}'.format(user_id), {})}
                 for k in list(self.__user_permissions):
-                    if not (k in UserPermission.default_states):
+                    if not (k in UserPermissions.default_states):
                         self.__user_permissions.pop(k)
                         self.__commit_data['$unset']['chat_settings.user_permissions.id{}.{}'.format(user_id, k)] = 0
         else:
-            raise UserPermission.InvalidArgumentException("Invalid 'user_id' parameter")
+            raise UserPermissions.InvalidArgumentException("Invalid 'user_id' parameter")
 
     def get_all(self):
         return self.__user_permissions
@@ -59,22 +59,22 @@ class UserPermission:
     def set(self, name: str, state: bool):
         if name in self.__user_permissions:
             if self.__db.owner_id == self.__user_id:
-                raise UserPermission.OwnerPermissionException("User 'id{}' is owner".format(self.__user_id))
+                raise UserPermissions.OwnerPermissionException("User 'id{}' is owner".format(self.__user_id))
             else:
                 self.__user_permissions[name] = state
                 self.__commit_data['$set']['chat_settings.user_permissions.id{}.{}'.format(self.__user_id, name)] = state
         else:
-            raise UserPermission.UnknownPermissionException("Unknown '{}' permission".format(id))
+            raise UserPermissions.UnknownPermissionException("Unknown '{}' permission".format(id))
 
     def get(self, name: str):
         if name in self.__user_permissions:
             return self.__user_permissions[name]
         else:
-            raise UserPermission.UnknownPermissionException("Unknown '{}' permission".format(id))
+            raise UserPermissions.UnknownPermissionException("Unknown '{}' permission".format(id))
 
     def commit(self):
         if self.__db.owner_id == self.__user_id:
-            raise UserPermission.OwnerPermissionException("User 'id{}' is owner".format(self.__user_id))
+            raise UserPermissions.OwnerPermissionException("User 'id{}' is owner".format(self.__user_id))
         else:
             if len(self.__commit_data['$set']) == 0:
                 self.__commit_data.pop('$set')

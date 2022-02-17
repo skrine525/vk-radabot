@@ -4,9 +4,8 @@ from datetime import datetime
 from typing import Callable
 from pymongo import MongoClient
 from . import bot
-from .bot import DEFAULT_MESSAGES, ChatStats, get_chat_db_query
-from .system import ArgumentParser, Config, PayloadParser, ValueExtractor, bunchingList, generate_random_string, \
-    write_log, ChatDatabase
+from .bot import DEFAULT_MESSAGES, ChatStats
+from .system import ArgumentParser, Config, PayloadParser, ValueExtractor, bunchingList, generate_random_string, write_log, ChatDatabase
 from .vk import VK_API, KeyboardBuilder, VKVariable
 from .system import SYSTEM_PATHS
 
