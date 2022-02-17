@@ -13,10 +13,10 @@ from radabot.bot.manager import initcmd as initcmd_manager
 def handle_event(vk_api, event):
 	manager = ChatEventManager(vk_api, event)
 
-	manager.addMessageCommand("!стата", StatsMessageCommand.main)
-	manager.addMessageCommand('!cmdlist', ShowCommandListMessageCommand.main)
+	manager.add_message_command("!стата", StatsMessageCommand.main)
+	manager.add_message_command('!cmdlist', ShowCommandListMessageCommand.main)
 
-	manager.addCallbackButtonCommand('bot_cancel', CancelCallbackButtonCommand.main)
+	manager.add_callback_button_command('bot_cancel', CancelCallbackButtonCommand.main)
 
 	initcmd_debug(manager)
 	initcmd_manager(manager)
@@ -242,15 +242,15 @@ def initcmd_php(manager: ChatEventManager):
 		ignore_db = False
 		if cmd in ['!reg']:
 			ignore_db = True
-		manager.addMessageCommand(cmd, handle_phpcmd, ignore_db=ignore_db)
+		manager.add_message_command(cmd, handle_phpcmd, ignore_db=ignore_db)
 
 	for cmd in PHPCommandIntegration.callback_button_commands:
 		ignore_db = False
 		if cmd in ['bot_reg']:
 			ignore_db = True
-		manager.addCallbackButtonCommand(cmd, handle_phpcmd, ignore_db=ignore_db)
+		manager.add_callback_button_command(cmd, handle_phpcmd, ignore_db=ignore_db)
 
-	manager.addMessageHandler(handle_phphndl)
+	manager.add_message_handler(handle_phphndl)
 
 def handle_phpcmd(callin: ChatEventManager.CallbackInputObject):
 	manager = callin.manager

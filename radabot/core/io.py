@@ -91,7 +91,7 @@ class ChatEventManager:
             run_event.peer_id = event.peer_id
             run_event.text = payload.str(1, '')
 
-            manager.runMessageCommand(run_event, output)
+            manager.run_message_command(run_event, output)
 
             if output.messages_edit_request_count == 0 and output.show_snackbar_request_count:
                 output.show_snackbar(event['object']['event_id'], event['object']['user_id'], event.bunch.object.peer_id, '✅ Выполнено!.')
@@ -117,7 +117,7 @@ class ChatEventManager:
             self.chat_stats = ChatStats(self.__db)
 
             # Добавление Callback команды запуска Message команды
-            self.addCallbackButtonCommand('run', ChatEventManager.__run_from_callback_button, ignore_db=True)
+            self.add_callback_button_command('run', ChatEventManager.__run_from_callback_button, ignore_db=True)
         else:
             raise ChatEventManager.InvalidEventException('ChatEventManager support only message_new & message_event types')
 
@@ -134,7 +134,7 @@ class ChatEventManager:
     # Действия над командами
 
     # Добавление Message команды
-    def addMessageCommand(self, command: str, callback: Callable, args: list = [], ignore_db: bool = False) -> bool:
+    def add_message_command(self, command: str, callback: Callable, args: list = [], ignore_db: bool = False) -> bool:
         command = command.lower()
         if command in self.__message_commands:
             return False
@@ -147,7 +147,7 @@ class ChatEventManager:
             return True
 
     # Добавление Text Button команды
-    def addTextButtonCommand(self, command: str, callback: Callable, args: list = [], ignore_db: bool = False) -> bool:
+    def add_text_button_command(self, command: str, callback: Callable, args: list = [], ignore_db: bool = False) -> bool:
         command = command.lower()
         if command in self.__text_button_commands:
             return False
@@ -160,7 +160,7 @@ class ChatEventManager:
             return True
 
     # Добавление Callback Button команды
-    def addCallbackButtonCommand(self, command: str, callback: Callable, args: list = [], ignore_db: bool = False) -> bool:
+    def add_callback_button_command(self, command: str, callback: Callable, args: list = [], ignore_db: bool = False) -> bool:
         command = command.lower()
         if command in self.__callback_button_commands:
             return False
@@ -173,7 +173,7 @@ class ChatEventManager:
             return True
 
     # Добавление Message обработчика (Если не выполнена Message команда)
-    def addMessageHandler(self, callback: Callable) -> bool:
+    def add_message_handler(self, callback: Callable) -> bool:
         if callback in self.__message_handlers:
             return False
         else:
@@ -181,22 +181,22 @@ class ChatEventManager:
             return True
 
     # Проверка существования Message команды
-    def isMessageCommand(self, command: str) -> bool:
+    def is_message_command(self, command: str) -> bool:
         return command in self.__message_commands
 
     # Проверка существования Text Button команды
-    def isTextButtonCommand(self, command: str) -> bool:
+    def is_text_button_command(self, command: str) -> bool:
         return command in self.__text_button_commands
 
     # Проверка существования Callback Button команды
-    def isCallbackButtonCommand(self, command: str) -> bool:
+    def is_callback_button_command(self, command: str) -> bool:
         return command in self.__callback_button_commands
 
     # Запуск обработки Message команды
-    def runMessageCommand(self, event: MessageCommandEventObject, output):
+    def run_message_command(self, event: MessageCommandEventObject, output):
         args = ArgumentParser(event.text)
         command = args.get_str(0, '').lower()
-        if self.isMessageCommand(command):
+        if self.is_message_command(command):
             if not self.__message_commands[command]['ignore_db'] and not self.__db.is_exists:
                 raise ChatEventManager.DatabaseException('Command \'{}\' requires document in Database'.format(command))
 
@@ -217,10 +217,10 @@ class ChatEventManager:
             raise ChatEventManager.UnknownCommandException('Command \'{}\' not found'.format(command), command)
 
     # Запуск обработки Callback Button команды
-    def runCallbackButtonCommand(self, event: CallbackButtonCommandEventObject, output):
+    def run_callback_button_command(self, event: CallbackButtonCommandEventObject, output):
         payload = PayloadParser(event.payload)
         command = payload.get_str(0, '')
-        if self.isCallbackButtonCommand(command):
+        if self.is_callback_button_command(command):
             if not self.__callback_button_commands[command]['ignore_db'] and not self.__db.is_exists:
                 raise ChatEventManager.DatabaseException('Command \'{}\' requires document in Database'.format(command))
 
@@ -243,17 +243,17 @@ class ChatEventManager:
     # Получение списка Message команд
     @property
     def message_command_list(self):
-        return list(self.__message_commands.keys())
+        return list(self.__message_commands)
 
     # Получение списка Text Button команд
     @property
     def text_button_command_list(self):
-        return list(self.__text_button_commands.keys())
+        return list(self.__text_button_commands)
 
     # Получение списка Callback Button команд
     @property
     def callback_button_command_list(self):
-        return list(self.__callback_button_commands.keys())
+        return list(self.__callback_button_commands)
 
     #############################
     #############################
@@ -318,7 +318,7 @@ class ChatEventManager:
 
             try:
                 event = ChatEventManager.MessageCommandEventObject(self.__event)
-                command_result = self.runMessageCommand(event, output)
+                command_result = self.run_message_command(event, output)
 
                 # Система отслеживания статистики
                 self.__stats_command()
@@ -343,7 +343,7 @@ class ChatEventManager:
 
             try:
                 '''
-                command_result = self.runMessageCommand(self.__event, output)
+                command_result = self.run_message_command(self.__event, output)
 
                 # Система отслеживания статистики
                 self.__stats_button()
@@ -351,7 +351,7 @@ class ChatEventManager:
 
                 return command_result
                 '''
-                raise ChatEventManager.UnknownCommandException()
+                raise ChatEventManager.UnknownCommandException('', '')
             except ChatEventManager.DatabaseException:
                 return False
             except ChatEventManager.UnknownCommandException:
@@ -379,10 +379,10 @@ class ChatEventManager:
             return handler_result
 
         elif self.__event['type'] == 'message_event':
-            output = ChatOutput(self.__vk_api, self.__db, self.__event)
+            output = ChatOutput(self.__vk_api, self.__event)
             try:
                 event = ChatEventManager.CallbackButtonCommandEventObject(self.__event)
-                command_result = self.runCallbackButtonCommand(event, output)
+                command_result = self.run_callback_button_command(event, output)
 
                 # Система отслеживания статистики
                 self.__stats_button()

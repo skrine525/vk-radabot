@@ -1,5 +1,11 @@
 {
     "user_permissions": {
+        "set_permits": {
+            "label": "Управление метками",
+            "desc": "Позволяет изменять метки пользователей",
+            "default": false,
+            "is_special": false
+        },
         "change_nick": {
             "label": "Управление никами",
             "desc": "Позволяет изменять никнеймы других пользователей",
@@ -19,20 +25,14 @@
             "is_special": false
         },
         "prohibit_autokick": {
-            "label": "Игнорирование автокика",
+            "label": "Игнор автокика",
             "desc": "Позволяет носителю игнорировать систему автокика",
             "default": false,
             "is_special": false
         },
         "prohibit_antiflood": {
-            "label": "Игнорирование антифлуда",
+            "label": "Игнор антифлуда",
             "desc": "Позволяет носителю игнорировать систему антифлуда",
-            "default": false,
-            "is_special": false
-        },
-        "set_permits": {
-            "label": "Управление метками",
-            "desc": "Позволяет изменять метки пользователей",
             "default": false,
             "is_special": false
         },

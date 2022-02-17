@@ -11,6 +11,7 @@ class DEFAULT_MESSAGES:
     MESSAGE_MENU_CANCELED = '✅Меню закрыто.'
     MESSAGE_EXECUTION_ERROR = '🆘Ошибка выполнения!\n🆔Журнал: {logname}.'
     MESSAGE_NOT_REGISTERED = '⛔Беседа не зарегистрирована.'
+    MESSAGE_YOU_HAVE_NO_RIGHTS = '⛔У вас нет прав использовать это.'
 
 
 class ChatStats:

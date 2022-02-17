@@ -24,7 +24,7 @@ class UserPermission:
     @staticmethod
     def init_default_states():
         d = {}
-        for k, v in ManagerData.get_user_permissions().items():
+        for k, v in ManagerData.get_user_permissions_data().items():
             d[k] = v['default']
         UserPermission.default_states = d
 
@@ -41,12 +41,12 @@ class UserPermission:
             if user_id == self.__db.owner_id:
                 # Если пользователь является владельцем чата
                 self.__user_permissions = UserPermission.default_states.copy()
-                for k in list(self.__user_permissions.keys()):
+                for k in list(self.__user_permissions):
                     self.__user_permissions[k] = True
             else:
                 # Если пользователь является участником чата
                 self.__user_permissions = {**UserPermission.default_states, **extractor.get('chat_settings.user_permissions.id{}'.format(user_id), {})}
-                for k in list(self.__user_permissions.keys()):
+                for k in list(self.__user_permissions):
                     if not (k in UserPermission.default_states):
                         self.__user_permissions.pop(k)
                         self.__commit_data['$unset']['chat_settings.user_permissions.id{}.{}'.format(user_id, k)] = 0

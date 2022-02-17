@@ -306,7 +306,7 @@ class ManagerData:
         f.close()
 
     @staticmethod
-    def get_user_permissions():
+    def get_user_permissions_data():
         return ManagerData.__data.get('user_permissions', {})
 
 

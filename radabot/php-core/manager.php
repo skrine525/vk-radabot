@@ -377,7 +377,7 @@ function manager_initcmd($event)
 	$event->addTextMessageCommand("!modes", "manager_mode_list");
 	$event->addTextMessageCommand("!панель", "manager_panel_control");
 	$event->addTextMessageCommand("панель", "manager_panel_show");
-	$event->addTextMessageCommand("!права", 'manager_permissions_menu');
+	//$event->addTextMessageCommand("!права", 'manager_permissions_menu');
 
 	// Прочее
 	$event->addTextMessageCommand("!ники", 'manager_show_nicknames');

@@ -1278,7 +1278,7 @@ namespace {
 		// Игнорирование отсутствие базы данных для следующих команд
 
 		// Основное
-		$event->addTextMessageCommand("!cmdlist", 'bot_cmdlist');
+		//$event->addTextMessageCommand("!cmdlist", 'bot_cmdlist');
 		$event->addTextMessageCommand("!reg", 'bot_register', ['ignore_db' => true]);
 		$event->addTextMessageCommand("!помощь", 'bot_help');
 		$event->addTextMessageCommand("!чат", 'bot_chatinfo');

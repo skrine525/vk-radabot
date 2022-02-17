@@ -3,8 +3,8 @@ from radabot.core.vk import KeyboardBuilder
 
 
 def initcmd(manager: ChatEventManager):
-    manager.addMessageCommand('!error', ErrorCommand.message_command)
-    manager.addMessageCommand('!test-keyboard', TestKeyboardCommand.message_command)
+    manager.add_message_command('!error', ErrorCommand.message_command)
+    manager.add_message_command('!test-keyboard', TestKeyboardCommand.message_command)
 
 
 class ErrorCommand:
