@@ -1124,7 +1124,6 @@ namespace {
 				$integration_data = implode(';', $event->getTextMessageCommandList());
 				$integration_data .= "\n" . implode(';', $event->getCallbackButtonCommandList());
 				$integration_data .= "\n" . implode(';', $event->getTextButtonCommandList());
-				error_log("hello");
 				file_put_contents(BOTPATH_TMP . '/php_integration.txt', $integration_data);
 			}
 			$event->exit(); 																	// Очищение памяти
@@ -1525,7 +1524,7 @@ namespace {
 		$main_info = "🆔ID чата: {$chat_id}\n👤Владелец: %OWNER%";
 
 		$chat_modes_info = "⚙Режимы:";
-		foreach (ChatModes::MODE_LIST as $key => $value) {
+		foreach (ChatModes::getDefaultModeList() as $key => $value) {
 			if (array_key_exists($key, $chat_modes)) {
 				if ($chat_modes->$key)
 					$chat_modes_info .= "\n&#12288;✅{$value["label"]}";
@@ -1588,7 +1587,7 @@ namespace {
 			return;
 		}
 
-		$reciever_chat_messanger_state = $extractor->getValue('0.chat_settings.chat_modes.chat_messanger', ChatModes::MODE_LIST['chat_messanger']['default_state']);
+		$reciever_chat_messanger_state = $extractor->getValue('0.chat_settings.chat_modes.chat_messanger', ChatModes::getDefaultModeList()['chat_messanger']['default_state']);
 		if (!$reciever_chat_messanger_state) {
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔В указанной беседе отключен Чат-мессенджер.");
 			return;

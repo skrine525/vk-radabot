@@ -14,7 +14,7 @@ def handle_event(vk_api, event):
 	manager = ChatEventManager(vk_api, event)
 
 	manager.add_message_command("!стата", StatsMessageCommand.main)
-	manager.add_message_command('!cmdlist', ShowCommandListMessageCommand.main)
+	manager.add_message_command('!cmdlist', ShowCommandListMessageCommand.message_command)
 
 	manager.add_callback_button_command('bot_cancel', CancelCallbackButtonCommand.main)
 
@@ -173,48 +173,38 @@ class StatsMessageCommand:
 # Команда !cmdlist
 class ShowCommandListMessageCommand:
 	@staticmethod
-	def main(callin: ChatEventManager.CallbackInputObject):
+	def message_command(callin: ChatEventManager.CallbackInputObject):
 		event = callin.event
 		args = callin.args
 		output = callin.output
 		manager = callin.manager
+		db = callin.db
+
+		uos = output.uos(db)
+		uos.set_appeal(event.from_id)
 
 		builder = PageBuilder(manager.message_command_list, 10)
-		number = args.int(1, 1)
+		number = args.get_int(1, 1)
 
 		try:
 			page = builder(number)
 			text = 'Список команд [{}/{}]:'.format(number, builder.max_number)
 			for i in page:
 				text += "\n• " + i
-			ShowCommandListMessageCommand.print_text(output, event.peer_id, event.from_id, text, number, builder.max_number)
+
+			keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
+			if number > 1:
+				prev_number = number - 1
+				keyboard.callback_button("{} ⬅".format(int2emoji(prev_number)), ['run', '!cmdlist {}'.format(prev_number), event.from_id], KeyboardBuilder.SECONDARY_COLOR)
+			if number < builder.max_number:
+				next_number = number + 1
+				keyboard.callback_button("➡ {}".format(int2emoji(next_number)), ['run', '!cmdlist {}'.format(next_number), event.from_id], KeyboardBuilder.SECONDARY_COLOR)
+			keyboard.new_line()
+			keyboard.callback_button('Закрыть', ['bot_cancel', event.from_id], KeyboardBuilder.NEGATIVE_COLOR)
+
+			uos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', text), keyboard=keyboard.build())
 		except PageBuilder.PageNumberException:
-			ShowCommandListMessageCommand.print_error_out_of_range(output)
-
-	@staticmethod
-	def print_text(output: ChatOutput, peer_id: int, from_id: int, text: str, number: int, max_number: int):
-		uos = output.uos()
-
-		keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
-		if number > 1:
-			prev_number = number - 1
-			keyboard.callback_button("{} ⬅".format(int2emoji(prev_number)), ['run', '!cmdlist {}'.format(prev_number), from_id], KeyboardBuilder.SECONDARY_COLOR)
-		if number < max_number:
-			next_number = number + 1
-			keyboard.callback_button("➡ {}".format(int2emoji(next_number)), ['run', '!cmdlist {}'.format(next_number), from_id], KeyboardBuilder.SECONDARY_COLOR)
-		keyboard.new_line()
-		keyboard.callback_button('Закрыть', ['bot_cancel', from_id], KeyboardBuilder.NEGATIVE_COLOR)
-		keyboard = keyboard.build()
-
-		uos.set_appeal(peer_id, from_id)
-		uos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', text), keyboard=keyboard)
-		uos.messages_edit(message=VKVariable.Multi('var', 'appeal', 'str', text), keyboard=keyboard)
-
-	@staticmethod
-	def print_error_out_of_range(output: ChatOutput):
-		uos = output.uos()
-		uos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', '⛔Неверный номер страницы.'))
-		uos.show_snackbar(text='⛔ Неверный номер страницы.')
+			uos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', '⛔Неверный номер страницы.'))
 
 class CancelCallbackButtonCommand:
 	@staticmethod
@@ -258,9 +248,7 @@ def initcmd_php(manager: ChatEventManager):
 def handle_phpcmd(callin: ChatEventManager.CallbackInputObject):
 	manager = callin.manager
 	subprocess.Popen(["/usr/bin/php7.0", "radabot-php-core.php", "cmd", json.dumps(manager.event)]).communicate()
-	return True
 
 def handle_phphndl(callin: ChatEventManager.CallbackInputObject):
 	manager = callin.manager
 	subprocess.Popen(["/usr/bin/php7.0", "radabot-php-core.php", "hndl", json.dumps(manager.event)]).communicate()
-	return True

@@ -32,6 +32,7 @@ class ChatDatabase:
         self.__mongo_client = MongoClient(database_host, database_port)
         self.__database = self.__mongo_client[database_name]
         self.__main_collection = self.__database['chats']
+        self.__chat_id = chat_id
         self.__main_filter = ChatDatabase.get_chat_db_filter(chat_id)
 
         self.__is_exists = False
@@ -55,6 +56,10 @@ class ChatDatabase:
     @property
     def owner_id(self):
         return self.__owner_id
+
+    @property
+    def chat_id(self):
+        return self.__chat_id
 
     def find(self, *args, **kwargs):
         return self.__main_collection.find_one(self.__main_filter, *args, **kwargs)
@@ -302,15 +307,22 @@ class Config:
 class ManagerData:
     __data = {}
 
+    # Метод чтения файла manager.json
     @staticmethod
     def read_file():
         f = open(SYSTEM_PATHS.MANAGER_DATA_FILE, encoding='utf-8')
         ManagerData.__data = json.loads(f.read())
         f.close()
 
+    # Возвращение данных user_permissions
     @staticmethod
     def get_user_permissions_data():
         return ManagerData.__data.get('user_permissions', {})
+
+    # Возвращение данных chat_modes
+    @staticmethod
+    def get_chat_modes_data():
+        return ManagerData.__data.get('chat_modes', {})
 
 
 class PHPCommandIntegration:
@@ -397,7 +409,6 @@ def write_log(filename: str, text: str):
     dt = datetime.utcfromtimestamp(tm).strftime("%d-%b-%Y %X Russia/Moscow")
     f.write("[{}] {}\n".format(dt, text))
     f.close()
-
 
 # Функция предстарта
 def prestart():

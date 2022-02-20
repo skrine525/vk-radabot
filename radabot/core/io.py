@@ -3,6 +3,8 @@ import json, traceback, time
 from datetime import datetime
 from typing import Callable
 from pymongo import MongoClient
+
+from radabot.core.manager import ChatModes
 from . import bot
 from .bot import DEFAULT_MESSAGES, ChatStats
 from .system import ArgumentParser, Config, PayloadParser, ValueExtractor, bunchingList, generate_random_string, write_log, ChatDatabase
@@ -51,7 +53,7 @@ class ChatEventManager:
             self.user_id = extractor.get('object.user_id', 0)
             self.payload = bunchingList(extractor.get('object.payload', []))
             self.conversation_message_id = extractor.get('object.conversation_message_id', 0)
-            self.__event_id = extractor.get('object.event_id', 0)
+            self.event_id = extractor.get('object.event_id', 0)
 
     #############################
     #############################
@@ -113,7 +115,8 @@ class ChatEventManager:
             database_info = Config.get('DATABASE')
             self.__db = ChatDatabase(database_info['HOST'], database_info['PORT'], database_info['NAME'], self.__event['object']['peer_id'])
 
-            self.chat_stats = ChatStats(self.__db)
+            self.__chat_stats = ChatStats(self.__db)        # Инициализация менеджера ведения статисики
+            self.__chat_modes = ChatModes(self.__)          # Инициализация менеджера режимов беседы
 
             # Добавление Callback команды запуска Message команды
             self.add_callback_button_command('run', ChatEventManager.__run_from_callback_button, ignore_db=True)
@@ -127,6 +130,14 @@ class ChatEventManager:
     @property
     def event(self):
         return self.__event
+    
+    @property
+    def chat_stats(self):
+        return self.__chat_stats
+
+    @property
+    def chat_modes(self):
+        return self.__chat_modes
 
     #############################
     #############################
@@ -259,19 +270,19 @@ class ChatEventManager:
     # Метод ведения статистики
 
     def __stats_commit(self, user_id):
-        self.chat_stats.commit(user_id)
+        self.__chat_stats.commit(user_id)
 
     def __stats_command(self):
-        self.chat_stats.update('command_used_count', 1)
+        self.__chat_stats.update('command_used_count', 1)
 
     def __stats_button(self):
-        self.chat_stats.update('button_pressed_count', 1)
+        self.__chat_stats.update('button_pressed_count', 1)
 
     def __stats_message_new(self):
         if self.__event['object']['from_id'] > 0:
-            self.chat_stats.update_if_commited_by_last_user('msg_count_in_succession', 1)
-            self.chat_stats.update('msg_count', 1)
-            self.chat_stats.update('symbol_count', len(self.__event['object']['text']))
+            self.__chat_stats.update_if_commited_by_last_user('msg_count_in_succession', 1)
+            self.__chat_stats.update('msg_count', 1)
+            self.__chat_stats.update('symbol_count', len(self.__event['object']['text']))
 
             attachment_update = {}
             for attachment in self.__event['object']['attachments']:
@@ -301,7 +312,7 @@ class ChatEventManager:
                     else:
                         attachment_update['audio_count'] = 1
             for k, v in attachment_update.items():
-                self.chat_stats.update(k, v)
+                self.__chat_stats.update(k, v)
 
     #############################
     #############################

@@ -11,7 +11,7 @@ def initcmd(manager: ChatEventManager):
     manager.add_callback_button_command('manager_permits', PermissionCommand.callback_button_command)
 
 
-# Команда !права
+# Команда !метки
 class PermissionCommand:
     @staticmethod
     def message_command(callin: ChatEventManager.CallbackInputObject):

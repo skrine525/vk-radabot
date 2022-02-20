@@ -146,21 +146,28 @@ class PermissionSystem
 
 class ChatModes
 {
-	// Список всех режимов
-	const MODE_LIST = [
-		'allow_memes' => ['label' => 'Мемы', 'default_state' => true],
-		'antiflood_enabled' => ['label' => 'Антифлуд', 'default_state' => true],
-		'auto_referendum' => ['label' => 'Авто выборы', 'default_state' => false],
-		'economy_enabled' => ['label' => 'Экономика', 'default_state' => false],
-		'roleplay_enabled' => ['label' => 'РП', 'default_state' => true],
-		'games_enabled' => ['label' => 'Игры', 'default_state' => true],
-		'legacy_enabled' => ['label' => 'Legacy', 'default_state' => false],
-		'chat_messanger' => ['label' => 'Чат-мессенджер', 'default_state' => true],
-		'custom_cmd' => ['label' => 'Кастомные команды', 'default_state' => true]
-	];
+	private static $mode_list = [];
 
 	private $db;
 	private $modes;
+
+	public static function getDefaultModeList(){
+		if(count(self::$mode_list) == 0){
+			$data = json_decode(file_get_contents(BOTPATH_MANAGERDATAFILE), true);
+			if ($data === false) {
+				error_log('Unable to read manager.json file. File not exists or invalid.');
+				exit;
+			}
+			foreach ($data["chat_modes"] as $key => $value) {
+				self::$mode_list[$key] = [
+					'label' => $value['label'],
+					'default_state' => $value['default']
+				];
+			}
+		}
+
+		return self::$mode_list;
+	}
 
 	function __construct($db)
 	{
@@ -174,7 +181,7 @@ class ChatModes
 			$db_modes = $extractor->getValue("0.chat_settings.chat_modes", []);
 
 			$this->modes = array();
-			foreach (self::MODE_LIST as $key => $value) {
+			foreach (self::getDefaultModeList() as $key => $value) {
 				if (array_key_exists($key, $db_modes))
 					$this->modes[$key] = $db_modes->$key;
 				else
@@ -185,29 +192,29 @@ class ChatModes
 
 	public function getModeLabel($name)
 	{
-		if (gettype($name) != "string" || !array_key_exists($name, self::MODE_LIST))
+		if (gettype($name) != "string" || !array_key_exists($name, self::getDefaultModeList()))
 			return null;
 
-		return self::MODE_LIST[$name]["label"];
+		return self::getDefaultModeList()[$name]["label"];
 	}
 
 	public function getModeValue($name)
 	{
-		if (gettype($name) != "string" || !array_key_exists($name, self::MODE_LIST))
+		if (gettype($name) != "string" || !array_key_exists($name, self::getDefaultModeList()))
 			return null;
 
 		$query = new MongoDB\Driver\Query(['_id' => $this->db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.chat_modes.{$name}" => 1]]);
 		$extractor = $this->db->executeQuery($query);
-		return $extractor->getValue([0, 'chat_settings', 'chat_modes', $name], self::MODE_LIST[$name]["default_state"]);
+		return $extractor->getValue([0, 'chat_settings', 'chat_modes', $name], self::getDefaultModeList()[$name]["default_state"]);
 	}
 
 	public function setModeValue($name, $value)
 	{
-		if (gettype($name) != "string" || gettype($value) != "boolean" || !array_key_exists($name, self::MODE_LIST))
+		if (gettype($name) != "string" || gettype($value) != "boolean" || !array_key_exists($name, self::getDefaultModeList()))
 			return false;
 
 		$bulk = new MongoDB\Driver\BulkWrite;
-		if ($value === self::MODE_LIST[$name]["default_state"])
+		if ($value === self::getDefaultModeList()[$name]["default_state"])
 			$bulk->update(['_id' => $this->db->getDocumentID()], ['$unset' => ["chat_settings.chat_modes.{$name}" => 0]]);
 		else
 			$bulk->update(['_id' => $this->db->getDocumentID()], ['$set' => ["chat_settings.chat_modes.{$name}" => $value]]);
@@ -223,7 +230,7 @@ class ChatModes
 		$db_modes = $extractor->getValue("0.chat_settings.chat_modes", []);
 
 		$list = array();
-		foreach (self::MODE_LIST as $key => $value) {
+		foreach (self::getDefaultModeList() as $key => $value) {
 			if (array_key_exists($key, $db_modes))
 				$mode_value = $db_modes->$key;
 			else

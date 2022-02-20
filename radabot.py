@@ -1,6 +1,6 @@
 # Python модули
 import time, requests, json, threading, traceback
-from radabot.core.manager import UserPermissions
+from radabot.core.manager import ChatModes, UserPermissions
 
 # Части бота
 from radabot.core.vk import VK_API, longpoll
@@ -11,12 +11,12 @@ from radabot.bot.main import handle_event
 Config.read_file()										# Считываем файл config.json
 ManagerData.read_file()									# Считываем файл manager.json
 UserPermissions.init_default_states()					# Инициализируем стандартные состояния UserPermissions
+ChatModes.init_default_states()							# Инициализируем стандартные состояния Chat
 PHPCommandIntegration.init()							# Инициализация команд php
 
 # Базовые переменные
 vk_api = VK_API(Config.get('VK_GROUP_TOKEN'))
 
-# Processes = {}
 EventQueue = []
 
 

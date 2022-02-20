@@ -42,5 +42,43 @@
             "default": false,
             "is_special": false
         }
+    },
+    "chat_modes": {
+        "allow_memes": {
+            "label": "Мемы",
+            "default": true
+        },
+        "antiflood_enabled": {
+            "label": "Антифлуд",
+            "default": true
+        },
+        "auto_referendum": {
+            "label": "Авто выборы",
+            "default": false
+        },
+        "economy_enabled": {
+            "label": "Экономика",
+            "default": false
+        },
+        "roleplay_enabled": {
+            "label": "РП",
+            "default": true
+        },
+        "games_enabled": {
+            "label": "Игры",
+            "default": true
+        },
+        "legacy_enabled": {
+            "label": "PHP-Обработчик",
+            "default": false
+        },
+        "chat_messanger": {
+            "label": "Чат-мессенджер",
+            "default": true
+        },
+        "custom_cmd": {
+            "label": "Кастомные команды",
+            "default": true
+        }
     }
 }
