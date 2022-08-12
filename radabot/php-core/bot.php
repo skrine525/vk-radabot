@@ -40,8 +40,10 @@ namespace Bot {
 				$this->nonCommandTextMessageHandlers = [];
 
 				// Подгрузка базы данных
-				$database_info = bot_getconfig("DATABASE");
-				$this->db = new \Database\Manager("mongodb://{$database_info['HOST']}:{$database_info['PORT']}", $database_info['NAME'], $this->data->object->peer_id);
+				$database_host = bot_getconfig("DATABASE_HOST");
+				$database_port = bot_getconfig("DATABASE_PORT");
+				$database_name = bot_getconfig("DATABASE_NAME");
+				$this->db = new \Database\Manager("mongodb://{$database_host}:{$database_port}", $database_name, $this->data->object->peer_id);
 
 				// Подгрузка других модулей
 				$this->chatModes = new \ChatModes($this->db);					// Режимы беседы
@@ -192,7 +194,7 @@ namespace Bot {
 
 		public function exit()
 		{
-			unset($this);
+			//unset($this);
 		}
 
 		public function runTextCommand(\stdClass $data, OutputSystem $output)

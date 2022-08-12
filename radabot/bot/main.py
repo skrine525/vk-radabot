@@ -1,7 +1,7 @@
 import subprocess, json, time
 import radabot.core.bot as bot
 from radabot.core.io import ChatEventManager, ChatOutput
-from radabot.core.system import PHPCommandIntegration, PageBuilder, ValueExtractor, int2emoji
+from radabot.core.system import PHPCommandIntegration, PageBuilder, ValueExtractor, Config, int2emoji
 from radabot.core.vk import KeyboardBuilder, VKVariable
 from radabot.core.bot import DEFAULT_MESSAGES
 
@@ -247,8 +247,8 @@ def initcmd_php(manager: ChatEventManager):
 
 def handle_phpcmd(callin: ChatEventManager.CallbackInputObject):
 	manager = callin.manager
-	subprocess.Popen(["/usr/bin/php7.0", "radabot-php-core.php", "cmd", json.dumps(manager.event)]).communicate()
+	subprocess.Popen([Config.get("PHP_COMMAND"), "radabot-php-core.php", "cmd", json.dumps(manager.event)]).communicate()
 
 def handle_phphndl(callin: ChatEventManager.CallbackInputObject):
 	manager = callin.manager
-	subprocess.Popen(["/usr/bin/php7.0", "radabot-php-core.php", "hndl", json.dumps(manager.event)]).communicate()
+	subprocess.Popen([Config.get("PHP_COMMAND"), "radabot-php-core.php", "hndl", json.dumps(manager.event)]).communicate()

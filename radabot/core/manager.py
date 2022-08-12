@@ -26,9 +26,6 @@ class ChatModes:
     def __init__(self, db: ChatDatabase):
         self.__db = db
 
-        if not self.__db.is_exists:
-            raise ChatModes.ChatNotExistsException("Chat 'chat{}' does not exists".format(self.__db.chat_id))
-
         query = self.__db.find(projection={'_id': 0, 'chat_settings.chat_modes': 1})
 
         self.__modes = {**ChatModes.__default_states, **ValueExtractor(query).get('chat_settings.chat_modes', {})}
@@ -57,6 +54,9 @@ class ChatModes:
             raise UserPermissions.UnknownPermissionException("Unknown '{}' permission".format(name))
 
     def commit(self):
+        if not self.__db.is_exists:
+            raise ChatModes.ChatNotExistsException("Chat 'chat{}' does not exists".format(self.__db.chat_id))
+
         if len(self.__commit_data['$set']) == 0:
             self.__commit_data.pop('$set')
         if len(self.__commit_data['$unset']) == 0:

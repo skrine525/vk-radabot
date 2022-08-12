@@ -1,2 +1,5 @@
-#Visual Studio Code folder
 /.vscode
+/tmp
+/log
+/data/config.json
+__pycache__/

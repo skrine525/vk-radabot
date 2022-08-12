@@ -1,5 +1,5 @@
 # Module Level 2
-import json, traceback, time
+import json, traceback, time, os
 from datetime import datetime
 from typing import Callable
 from pymongo import MongoClient
@@ -112,11 +112,10 @@ class ChatEventManager:
             self.__callback_button_commands = {}
             self.__message_handlers = []
 
-            database_info = Config.get('DATABASE')
-            self.__db = ChatDatabase(database_info['HOST'], database_info['PORT'], database_info['NAME'], self.__event['object']['peer_id'])
+            self.__db = ChatDatabase(Config.get('DATABASE_HOST'), Config.get('DATABASE_PORT'), Config.get('DATABASE_NAME'), self.__event['object']['peer_id'])
 
             self.__chat_stats = ChatStats(self.__db)        # Инициализация менеджера ведения статисики
-            self.__chat_modes = ChatModes(self.__)          # Инициализация менеджера режимов беседы
+            #self.__chat_modes = ChatModes(self.__)          # Инициализация менеджера режимов беседы
 
             # Добавление Callback команды запуска Message команды
             self.add_callback_button_command('run', ChatEventManager.__run_from_callback_button, ignore_db=True)
@@ -347,7 +346,8 @@ class ChatEventManager:
                 # Логирование непредвиденной ошибки в файл
                 logname = datetime.utcfromtimestamp(time.time() + 10800).strftime("%d%m%Y-{}".format(generate_random_string(5, uppercase=False)))
                 trace = traceback.format_exc()
-                write_log(SYSTEM_PATHS.EXEC_LOG_DIR+"{}.log".format(logname), "Event:\n{}\n\n{}".format(json.dumps(self.__event, indent=4, ensure_ascii=False), trace[:-1]))
+                logpath = os.path.join(SYSTEM_PATHS.EXEC_LOG_DIR, "{}.log".format(logname))
+                write_log(logpath, "Event:\n{}\n\n{}".format(json.dumps(self.__event, indent=4, ensure_ascii=False), trace[:-1]))
                 output.messages_send(peer_id=self.__event['object']['peer_id'], message=DEFAULT_MESSAGES.MESSAGE_EXECUTION_ERROR.format(logname=logname))
                 return False
 
@@ -409,7 +409,8 @@ class ChatEventManager:
                 # Логирование непредвиденной ошибки в файл
                 logname = datetime.utcfromtimestamp(time.time() + 10800).strftime("%d%m%Y-{}".format(generate_random_string(5, uppercase=False)))
                 trace = traceback.format_exc()
-                write_log(SYSTEM_PATHS.EXEC_LOG_DIR+"{}.log".format(logname), "Event:\n{}\n\n{}".format(json.dumps(self.__event, indent=4, ensure_ascii=False), trace[:-1]))
+                logpath = os.path.join(SYSTEM_PATHS.EXEC_LOG_DIR, "{}.log".format(logname))
+                write_log(logpath, "Event:\n{}\n\n{}".format(json.dumps(self.__event, indent=4, ensure_ascii=False), trace[:-1]))
                 output.messages_edit(peer_id=self.__event['object']['peer_id'], conversation_message_id=self.__event['object']['conversation_message_id'], message=DEFAULT_MESSAGES.MESSAGE_EXECUTION_ERROR.format(logname=logname))
                 return False
 

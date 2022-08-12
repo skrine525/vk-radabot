@@ -9,16 +9,16 @@ from pymongo import MongoClient
 # Переменная системных путей
 class SYSTEM_PATHS:
     # Директории
-    DATA_DIR = 'data/'
-    LOG_DIR = 'log/'
-    TMP_DIR = 'tmp/'
-    EXEC_LOG_DIR = LOG_DIR + 'exec/'
+    DATA_DIR = 'data'
+    LOG_DIR = 'log'
+    TMP_DIR = 'tmp'
+    EXEC_LOG_DIR = os.path.join(LOG_DIR, 'exec')
 
     # Файлы
-    CONFIG_FILE = DATA_DIR + 'config.json'
-    MANAGER_DATA_FILE = DATA_DIR + 'manager.json'
-    LONGPOLL_LOG_FILE = LOG_DIR + 'longpoll.log'
-    ERROR_LOG_FILE = LOG_DIR + 'error.log'
+    CONFIG_FILE = os.path.join(DATA_DIR, 'config.json')
+    MANAGER_DATA_FILE = os.path.join(DATA_DIR, 'manager.json')
+    LONGPOLL_LOG_FILE = os.path.join(LOG_DIR, 'longpoll.log')
+    ERROR_LOG_FILE = os.path.join(LOG_DIR, 'error.log')
 
 
 class ChatDatabase:
@@ -28,12 +28,12 @@ class ChatDatabase:
             _id = _id - 2000000000
         return {'_id': 'chat{}'.format(_id)}
 
-    def __init__(self, database_host: str, database_port: int, database_name: str, chat_id: int):
+    def __init__(self, database_host: str, database_port: int, database_name: str, peer_id: int):
         self.__mongo_client = MongoClient(database_host, database_port)
         self.__database = self.__mongo_client[database_name]
         self.__main_collection = self.__database['chats']
-        self.__chat_id = chat_id
-        self.__main_filter = ChatDatabase.get_chat_db_filter(chat_id)
+        self.__chat_id = peer_id - 2000000000
+        self.__main_filter = ChatDatabase.get_chat_db_filter(self.__chat_id)
 
         self.__is_exists = False
         self.__owner_id = 0
@@ -292,12 +292,36 @@ class CommandHelpBuilder:
 # Класс для работы с Config файлом
 class Config:
     __data = {}
+    __DEFAULT_DATA = {
+        'PHP_COMMAND': '',
+        'VK_GROUP_TOKEN': '',
+        'VK_GROUP_ID': 0,
+        'VK_USER_TOKEN': '',
+        'VOICERSS_KEY': '',
+        'GIPHY_API_TOKEN': '',
+        'RANDOMORG_API_KEY': '',
+        'DEBUG_USER_ID': 0,
+        'DATABASE_HOST': '',
+        'DATABASE_PORT': 0,
+        'DATABASE_NAME': ''
+    }
+    
+    # Исключение Config файла
+    class FileException(Exception):
+        def __init__(self, message: str):
+            self.message = message
 
     @staticmethod
     def read_file():
-        f = open(SYSTEM_PATHS.CONFIG_FILE, encoding='utf-8')
-        Config.__data = json.loads(f.read())
-        f.close()
+        if(os.path.isfile(SYSTEM_PATHS.CONFIG_FILE)):
+            f = open(SYSTEM_PATHS.CONFIG_FILE, encoding='utf-8')
+            Config.__data = json.loads(f.read())
+            f.close()
+        else:
+            f = open(SYSTEM_PATHS.CONFIG_FILE, 'w', encoding='utf-8')
+            f.write(json.dumps(Config.__DEFAULT_DATA, indent=4))
+            f.close()
+            raise Config.FileException("File 'config.json' does not exist")
 
     @staticmethod
     def get(name):
@@ -332,8 +356,8 @@ class PHPCommandIntegration:
 
     @staticmethod
     def init():
-        subprocess.Popen(["/usr/bin/php7.0", "radabot-php-core.php", "int", ""]).communicate()
-        path_to_php_integration = "{}php_integration.txt".format(SYSTEM_PATHS.TMP_DIR)
+        subprocess.Popen([Config.get("PHP_COMMAND"), "radabot-php-core.php", "int", ""]).communicate()
+        path_to_php_integration = os.path.join(SYSTEM_PATHS.TMP_DIR, 'php_integration.txt')
         if os.path.exists(path_to_php_integration):
             f = open(path_to_php_integration, encoding='utf-8')
             php_integration = f.read()

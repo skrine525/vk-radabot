@@ -15,38 +15,47 @@ ChatModes.init_default_states()							# Инициализируем станд�
 PHPCommandIntegration.init()							# Инициализация команд php
 
 # Базовые переменные
-vk_api = VK_API(Config.get('VK_GROUP_TOKEN'))
+vk_api = VK_API(Config.get('VK_GROUP_TOKEN'))			# VK API
+event_queue = []										# Очередь событий на обработку
+active_workers = []										# Массив потоков обработчика
+WORKERS_MAX_COUNT = 1									# Максимальное количество одновременных обработчиков
 
-EventQueue = []
+# def queue_handler():
+# 	while True:
+# 		for _event in event_queue:
+# 			try:
+# 				handle_event(vk_api, _event)
+# 			except:
+# 				trace = traceback.format_exc()
+# 				write_log(SYSTEM_PATHS.ERROR_LOG_FILE, trace[:-1])
+# 			finally:
+# 				event_queue.remove(_event)
+# 		time.sleep(0.05)
 
+# Функция обработки события
+def event_worker_def(event):
+	try:
+		handle_event(vk_api, event)
+	except:
+		trace = traceback.format_exc()
+		write_log(SYSTEM_PATHS.ERROR_LOG_FILE, trace[:-1])
 
+# Поток обработки очереди
 def queue_handler():
 	while True:
-		"""
-		for i in Processes.copy():
-			if Processes[i].poll() != None:
-				Processes.pop(i)
+		for event_worker in active_workers:
+			if not event_worker.is_alive():
+				active_workers.remove(event_worker)
+				del event_worker
 
-		for event in EventQueue:
-			if event["type"] == "message_new" or event["type"] == "message_event":
-				peer_id = event["object"]["peer_id"]
-				process_name = "chat{}".format(peer_id)
-				process = Processes.get(process_name)
-				if process == None:
-					Processes[process_name] = subprocess.Popen(["/usr/bin/php7.0", "radabot-system.php", json.dumps(event).encode('utf-8')])
-					EventQueue.remove(event)
+		for event in event_queue:
+			if len(active_workers) < WORKERS_MAX_COUNT:
+				event_worker = threading.Thread(target=event_worker_def, daemon=False, args=[event])
+				active_workers.append(event_worker)
+				event_worker.start()
+				event_queue.remove(event)
 			else:
-				EventQueue.remove(event)
-		time.sleep(0.05)
-		"""
-		for _event in EventQueue:
-			try:
-				handle_event(vk_api, _event)
-			except:
-				trace = traceback.format_exc()
-				write_log(SYSTEM_PATHS.ERROR_LOG_FILE, trace[:-1])
-			finally:
-				EventQueue.remove(_event)
+				break
 		time.sleep(0.05)
 
 
@@ -78,7 +87,7 @@ if __name__ == "__main__":
 			attempts_count = attempts_count + 1
 		if attempts_count > 5:
 			break
-		time.sleep(0.25)
+		time.sleep(3)
 	del attempts_count
 
 	if active:
@@ -117,7 +126,7 @@ if __name__ == "__main__":
 				del response_data
 			else:
 				for event in data_dict["updates"]:
-					EventQueue.append(event)
+					event_queue.append(event)
 				lp_ts = data_dict["ts"]
 		except requests.exceptions.ConnectionError:
 			write_log(SYSTEM_PATHS.LONGPOLL_LOG_FILE, "Connection Error")
