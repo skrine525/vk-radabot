@@ -380,6 +380,10 @@ def int2emoji(number: int):
         number = number // 10
     numbers.reverse()
 
+    # Если массив пустой, то добавляем 0
+    if len(numbers) == 0:
+        numbers.append(0)
+
     emoji = ['0&#8419;', '1&#8419;', '2&#8419;', '3&#8419;', '4&#8419;', '5&#8419;', '6&#8419;', '7&#8419;', '8&#8419;',
              '9&#8419;']
     emoji_str = ""

@@ -1,3 +1,4 @@
+from email import message
 import subprocess, json, time
 import radabot.core.bot as bot
 from radabot.core.io import AdvancedOutputSystem, ChatEventManager, OutputSystem
@@ -7,11 +8,13 @@ from radabot.core.bot import DEFAULT_MESSAGES
 
 def initcmd(manager: ChatEventManager):
 	manager.add_message_command('!cmdlist', ShowCommandListCommand.message_command)
-	manager.add_message_command("!стата", StatsCommand.message_command)
+	manager.add_message_command('!стата', StatsCommand.message_command)
+	manager.add_message_command('!чит', CheatMenuCommand.message_command)
 
 	manager.add_callback_button_command('bot_cancel', CancelCallbackButtonCommand.callback_button_command)
 	manager.add_callback_button_command('bot_cmdlist', ShowCommandListCommand.callback_button_command)
 	manager.add_callback_button_command('bot_stats', StatsCommand.callback_button_command)
+	manager.add_callback_button_command('bot_cheat', CheatMenuCommand.callback_button_command)
 
 # Команда !стата
 class StatsCommand:
@@ -284,6 +287,79 @@ class CancelCallbackButtonCommand:
 		else:
 			aos.show_snackbar(text=DEFAULT_MESSAGES.SNACKBAR_NO_RIGHTS_TO_USE_THIS_BUTTON)
 
+class CheatMenuCommand:
+	@staticmethod
+	def message_command(callin: ChatEventManager.CallbackInputObject):
+		event = callin.event
+		output = callin.output
+		db = callin.db
+
+		aos = AdvancedOutputSystem(output, event, db)
+
+		keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
+		keyboard.size(width=3)
+		for i in range(1, 10):
+			keyboard.callback_button(int2emoji(i), ['bot_cheat', event.event_object.from_id, "", i], KeyboardBuilder.SECONDARY_COLOR)
+		keyboard.callback_button(int2emoji(0), ['bot_cheat', event.event_object.from_id, "", 0], KeyboardBuilder.SECONDARY_COLOR)
+		keyboard = keyboard.build()
+
+		message_text = "Введите код:\n\n😐😐😐😐😐"
+
+		aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', message_text), keyboard=keyboard)
+
+	@staticmethod
+	def callback_button_command(callin: ChatEventManager.CallbackInputObject):
+		event = callin.event
+		payload = callin.payload
+		output = callin.output
+		db = callin.db
+
+		aos = AdvancedOutputSystem(output, event, db)
+
+		testing_user_id = payload.get_int(1, event.event_object.user_id)
+		if testing_user_id != event.event_object.user_id:
+			aos.show_snackbar(text=DEFAULT_MESSAGES.SNACKBAR_NO_RIGHTS_TO_USE_THIS_BUTTON)
+			return
+
+		code = payload.get_str(2, "")
+		num = payload.get_int(3, -1)
+
+		if 0 <= num and num < 10:
+			code += str(num)
+
+			if len(code) >= 5:
+				CheatMenuCommand.__check_code(aos, event, db, code)
+			else:
+				message_text = "Введите код:\n\n"
+				for i in range(1, 6):
+					if len(code) >= i:
+						message_text += '🙂'
+					else:
+						message_text += '😐'
+
+				keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
+				keyboard.size(width=3)
+				for i in range(1, 10):
+					keyboard.callback_button(int2emoji(i), ['bot_cheat', event.event_object.user_id, code, i], KeyboardBuilder.SECONDARY_COLOR)
+				keyboard.callback_button(int2emoji(0), ['bot_cheat', event.event_object.user_id, code, 0], KeyboardBuilder.SECONDARY_COLOR)
+				keyboard = keyboard.build()
+
+				aos.messages_edit(message=VKVariable.Multi('var', 'appeal', 'str', message_text), keyboard=keyboard)
+		else:
+			aos.show_snackbar(text="🤨 Не получается.")
+
+	@staticmethod
+	def __check_code(aos: AdvancedOutputSystem, event: ChatEventManager.EventObject, db: ChatDatabase, code: str):
+		if code == '00000':
+			# Код 00000 - Кик из группы
+			remove_chat_user_params = {'chat_id': db.chat_id, 'user_id': event.event_object.user_id}
+			pscript = 'API.messages.removeChatUser({});'.format(json.dumps(remove_chat_user_params, ensure_ascii=False, separators=(',', ':')))
+			message_text = '😡Не стоит шутить со мной!'
+			aos.messages_edit(message=VKVariable.Multi('var', 'appeal', 'str', message_text), pscript=pscript)
+		else:
+			# Просто сообщение о неудаче
+			message_text = '😮К сожалению, код не сработал.'
+			aos.messages_edit(message=VKVariable.Multi('var', 'appeal', 'str', message_text))
 
 # Инициализация PHP команд
 def initcmd_php(manager: ChatEventManager):

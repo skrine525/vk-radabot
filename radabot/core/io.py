@@ -504,14 +504,17 @@ class OutputSystem:
 
     # Метод messages.send
     def messages_send(self, **kwargs) -> Result:
-        req_code = ''
         reqm = {}
         vk_vars1 = VKVariable()
         vk_vars2 = VKVariable()
 
+        script = ''
+        pscript = ''
         for key, value in kwargs.items():
             if key == 'script':
-                req_code = value + req_code
+                script = value
+            elif key == 'pscript':
+                pscript = value
             else:
                 if isinstance(value, VKVariable.Multi):
                     vk_vars2.var('reqm.'+key, value)
@@ -521,21 +524,23 @@ class OutputSystem:
         reqm['random_id'] = 0   # Устаналивам random_id
 
         vk_vars1.var('var reqm', reqm)
-        req_code += vk_vars1() + vk_vars2() + 'API.messages.send(reqm);return true;'
 
         self.__messages_send_request_count += 1  # Увеличиваем счетчик вызовов
-        return OutputSystem.Result(self.__vk_api.execute(req_code))
+        return OutputSystem.Result(self.__vk_api.execute("{}{}{}API.messages.send(reqm);{}return true;".format(script, vk_vars1(), vk_vars2(), pscript)))
 
     # Метод messages.edit
     def messages_edit(self, **kwargs) -> Result:
-        req_code = ''
         reqm = {}
         vk_vars1 = VKVariable()
         vk_vars2 = VKVariable()
 
+        script = ''
+        pscript = ''
         for key, value in kwargs.items():
             if key == 'script':
-                req_code = value + req_code
+                script = value
+            elif key == 'pscript':
+                pscript = value
             else:
                 if isinstance(value, VKVariable.Multi):
                     vk_vars2.var('reqm.'+key, value)
@@ -543,17 +548,16 @@ class OutputSystem:
                     reqm[key] = value
 
         vk_vars1.var('var reqm', reqm)
-        req_code += vk_vars1() + vk_vars2() + 'API.messages.edit(reqm);return true;'
 
         self.__messages_edit_request_count += 1     # Увеличиваем счетчик вызовов
-        return OutputSystem.Result(self.__vk_api.execute(req_code))
+        return OutputSystem.Result(self.__vk_api.execute("{}{}{}API.messages.edit(reqm);{}return true;".format(script, vk_vars1(), vk_vars2(), pscript)))
 
-    def show_snackbar(self, event_id: str, user_id: int, peer_id: int, text: str, script: str = '') -> Result:
+    def show_snackbar(self, event_id: str, user_id: int, peer_id: int, text: str, script: str = '', pscript: str = '') -> Result:
         event_data = json.dumps({'type': 'show_snackbar', 'text': text}, ensure_ascii=False, separators=(',', ':'))
         reqm = json.dumps({'event_id': event_id, 'user_id': user_id, 'peer_id': peer_id, 'event_data': event_data},  ensure_ascii=False, separators=(',', ':'))
 
         self.__show_snackbar_request_count += 1     # Увеличиваем счетчик вызовов
-        return OutputSystem.Result(self.__vk_api.execute('{}API.messages.sendMessageEventAnswer({});return true;'.format(script, reqm)))
+        return OutputSystem.Result(self.__vk_api.execute('{}API.messages.sendMessageEventAnswer({});{}return true;'.format(script, reqm, pscript)))
 
 
 # Класс Продвинутой системы вывода
@@ -605,7 +609,7 @@ class AdvancedOutputSystem:
                 }
                 reqm['forward'] = json.dumps(forward, ensure_ascii=False, separators=(',', ':'))
 
-            self.__output.messages_send(**reqm)
+            return self.__output.messages_send(**reqm)
 
     def messages_edit(self, **reqm):
         if self.__event.event_type == 'message_event':
@@ -620,7 +624,7 @@ class AdvancedOutputSystem:
             reqm['conversation_message_id'] = self.__event.event_object.conversation_message_id
             reqm['keep_forward_messages'] = self.__prefs['reply_to_message']
 
-            self.__output.messages_edit(**reqm)
+            return self.__output.messages_edit(**reqm)
 
     def show_snackbar(self, **reqm):
         if self.__event.event_type == 'message_event':
@@ -628,4 +632,4 @@ class AdvancedOutputSystem:
             reqm['user_id'] = self.__event.event_object.user_id
             reqm['event_id'] = self.__event.event_object.event_id
 
-            self.__output.show_snackbar(**reqm)
+            return self.__output.show_snackbar(**reqm)
