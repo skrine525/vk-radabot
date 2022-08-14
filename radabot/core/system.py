@@ -61,6 +61,9 @@ class ChatDatabase:
     def chat_id(self):
         return self.__chat_id
 
+    def get_collection(self, name):
+        return self.__database[name]
+
     def find(self, *args, **kwargs):
         return self.__main_collection.find_one(self.__main_filter, *args, **kwargs)
 
@@ -300,7 +303,7 @@ class Config:
         'VOICERSS_KEY': '',
         'GIPHY_API_TOKEN': '',
         'RANDOMORG_API_KEY': '',
-        'DEBUG_USER_ID': 0,
+        'SUPERUSER_ID': 0,
         'DATABASE_HOST': '',
         'DATABASE_PORT': 0,
         'DATABASE_NAME': ''

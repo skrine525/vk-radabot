@@ -30,7 +30,7 @@ class PermissionSystem
 			}
 			foreach ($data["user_permissions"] as $key => $value) {
 				$type = 0;
-				if($value['is_special'])
+				if($value['hidden'])
 					$type = 2;
 				if($value['default'])
 					$type++;

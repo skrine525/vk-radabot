@@ -1,8 +1,13 @@
 from radabot.core.io import ChatEventManager
+from ..core.system import Config
 from radabot.core.vk import KeyboardBuilder
 
 
 def initcmd(manager: ChatEventManager):
+    # Если пользователь не является суперпользователем, то не инициализируем отладочные команды
+    if (manager.event.event_type == 'message_new' and manager.event.event_object.from_id != Config.get("SUPERUSER_ID")) or (manager.event.event_type == 'message_event' and manager.event.event_object.user_id != Config.get("SUPERUSER_ID")):
+        return
+
     manager.add_message_command('!error', ErrorCommand.message_command)
     manager.add_message_command('!test-keyboard', TestKeyboardCommand.message_command)
 

@@ -12,7 +12,7 @@ function debug_cmdinit($event)
 
 	// Проверка на доступ
 	$data = $event->getData();
-	$debug_userid = bot_getconfig('DEBUG_USER_ID');
+	$debug_userid = bot_getconfig('SUPERUSER_ID');
 	if ($data->type == "message_new" && $data->object->from_id === $debug_userid)
 		$access = true;
 	elseif ($data->type == "message_event" && $data->object->user_id === $debug_userid)

@@ -5,7 +5,7 @@ from radabot.core.manager import ChatModes, UserPermissions
 # Части бота
 from radabot.core.vk import VK_API, longpoll
 from radabot.core.system import SYSTEM_PATHS, Config, ManagerData, PHPCommandIntegration, prestart, write_log
-from radabot.bot.main import handle_event
+from radabot.bot.handler import handle_event
 
 # Инициализация разных данных
 Config.read_file()										# Считываем файл config.json

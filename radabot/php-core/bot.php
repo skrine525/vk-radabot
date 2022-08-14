@@ -1110,7 +1110,7 @@ namespace {
 
 			if ($hndl) {
 				// Обработчики текстовых сообщений без команд
-				//$event->addNonCommandTextMessageHandler('bot_message_action_handler');		// Обработчик событий в сообщениях
+				$event->addNonCommandTextMessageHandler('bot_message_action_handler');		// Обработчик событий в сообщениях
 				//$event->addNonCommandTextMessageHandler('government_election_system');		// Обработчик выборов
 				$event->addNonCommandTextMessageHandler('fun_handler');							// Обработчик фанового модуля
 				//$event->addNonCommandTextMessageHandler('wordgame_gameplay');					// Обработчик игры Слова
@@ -1557,7 +1557,7 @@ namespace {
 		$messagesModule->setAppealID($data->object->from_id);
 
 		$chatModes = $finput->event->getChatModes();
-		if (!$chatModes->getModeValue('chat_messanger')) {
+		if (!$chatModes->getModeValue('chat_messenger')) {
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Чат-мессенджер отключен администратором беседы.");
 			return;
 		}
@@ -1580,7 +1580,7 @@ namespace {
 			return;
 		}
 
-		$query = new MongoDB\Driver\Query(['_id' => "chat{$reciever_id}"], ['projection' => ['chat_settings.chat_modes.chat_messanger' => 1]]);
+		$query = new MongoDB\Driver\Query(['_id' => "chat{$reciever_id}"], ['projection' => ['chat_settings.chat_modes.chat_messenger' => 1]]);
 		$extractor = $db->executeQuery($query);
 
 		$reciever_document_id = $extractor->getValue('0._id');
@@ -1589,7 +1589,7 @@ namespace {
 			return;
 		}
 
-		$reciever_chat_messanger_state = $extractor->getValue('0.chat_settings.chat_modes.chat_messanger', ChatModes::getDefaultModeList()['chat_messanger']['default_state']);
+		$reciever_chat_messanger_state = $extractor->getValue('0.chat_settings.chat_modes.chat_messenger', ChatModes::getDefaultModeList()['chat_messenger']['default_state']);
 		if (!$reciever_chat_messanger_state) {
 			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔В указанной беседе отключен Чат-мессенджер.");
 			return;
