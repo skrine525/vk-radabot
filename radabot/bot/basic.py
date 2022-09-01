@@ -1,7 +1,7 @@
-from email import message
 import subprocess, json, time
 import radabot.core.bot as bot
 from radabot.core.io import AdvancedOutputSystem, ChatEventManager, OutputSystem
+from radabot.core.manager import UserPermissions
 from radabot.core.system import ChatDatabase, PHPCommandIntegration, PageBuilder, ValueExtractor, Config, int2emoji
 from radabot.core.vk import KeyboardBuilder, VKVariable
 from radabot.core.bot import DEFAULT_MESSAGES
@@ -352,10 +352,17 @@ class CheatMenuCommand:
 	def __check_code(aos: AdvancedOutputSystem, event: ChatEventManager.EventObject, db: ChatDatabase, code: str):
 		if code == '00000':
 			# Код 00000 - Кик из группы
-			remove_chat_user_params = {'chat_id': db.chat_id, 'user_id': event.event_object.user_id}
+			chat_id = event.event_object.peer_id - 2000000000
+			remove_chat_user_params = {'chat_id': chat_id, 'user_id': event.event_object.user_id}
 			pscript = 'API.messages.removeChatUser({});'.format(json.dumps(remove_chat_user_params, ensure_ascii=False, separators=(',', ':')))
 			message_text = '😡Не стоит шутить со мной!'
 			aos.messages_edit(message=VKVariable.Multi('var', 'appeal', 'str', message_text), pscript=pscript)
+		elif code == '39751':
+			user_permissions = UserPermissions(db, event.event_object.user_id)
+			user_permissions.set('drink_tea', True)
+			user_permissions.commit()
+			message_text = '☕Теперь ты можешь пить чай!'
+			aos.messages_edit(message=VKVariable.Multi('var', 'appeal', 'str', message_text))
 		else:
 			# Просто сообщение о неудаче
 			message_text = '😮К сожалению, код не сработал.'
@@ -375,7 +382,7 @@ def initcmd_php(manager: ChatEventManager):
 			ignore_db = True
 		manager.add_callback_button_command(cmd, handle_phpcmd, ignore_db=ignore_db)
 
-	manager.add_message_handler(handle_phphndl)
+	manager.add_message_handler(handle_phphndl, ignore_db=True)
 
 # Выполенение PHP команд
 def handle_phpcmd(callin: ChatEventManager.CallbackInputObject):

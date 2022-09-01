@@ -1,6 +1,6 @@
 # Module Level 1
 import json, time
-from radabot.core.system import ValueExtractor, ChatDatabase
+from .system import ValueExtractor, ChatDatabase
 
 
 class DEFAULT_MESSAGES:

@@ -1,5 +1,5 @@
 # Module Level 1
-from radabot.core.system import ManagerData, ValueExtractor, ChatDatabase
+from .system import ManagerData, ValueExtractor, ChatDatabase
 
 
 class ChatModes:
@@ -22,6 +22,14 @@ class ChatModes:
         for k, v in ManagerData.get_chat_modes_data().items():
             d[k] = v['default']
         ChatModes.__default_states = d
+
+    @staticmethod
+    def get_label(name: str) -> str:
+        chat_modes_data = ManagerData.get_chat_modes_data()
+        try:
+            return chat_modes_data[name]['label']
+        except KeyError:
+            raise UserPermissions.UnknownPermissionException("Unknown '{}' permission".format(name))
 
     def __init__(self, db: ChatDatabase):
         self.__db = db

@@ -26,7 +26,6 @@ class ChatEventManager:
             self.vk_api = None					                        # Объект VK API
             self.db = None		                                        # Объект базы данных
             self.output = None										    # Объект системы вывода
-            self.chat_data = None                                       # Объект Системы обработки данных чата
 
     class EventObject:
         # Исключения
@@ -159,7 +158,7 @@ class ChatEventManager:
             self.__db = ChatDatabase(Config.get('DATABASE_HOST'), Config.get('DATABASE_PORT'), Config.get('DATABASE_NAME'), self.__event.event_object.peer_id)
 
             self.__chat_stats = ChatStats(self.__db)        # Инициализация менеджера ведения статисики
-            #self.__chat_modes = ChatModes(self.__)          # Инициализация менеджера режимов беседы
+            self.__chat_modes = ChatModes(self.__db)          # Инициализация менеджера режимов беседы
 
             # Добавление Callback команды для репорта ошибок
             self.add_callback_button_command('report_error', ChatEventManager.IntenalCommands.ErrorReportCommand.callback_button_command)
@@ -226,11 +225,15 @@ class ChatEventManager:
             return True
 
     # Добавление Message обработчика (Если не выполнена Message команда)
-    def add_message_handler(self, callback: Callable) -> bool:
+    def add_message_handler(self, callback: Callable, ignore_db: bool = False) -> bool:
         if callback in self.__message_handlers:
             return False
         else:
-            self.__message_handlers.append(callback)
+            handler = {
+                'callback': callback,
+                'ignore_db': ignore_db
+            }
+            self.__message_handlers.append(handler)
             return True
 
     # Проверка существования Message команды
@@ -313,7 +316,12 @@ class ChatEventManager:
     # Метод ведения статистики
 
     def __stats_commit(self, user_id):
-        self.__chat_stats.commit(user_id)
+        if self.__db.is_exists:
+            self.__chat_stats.commit(user_id)
+        else:
+            self.__db.recheck()
+            if self.__db.is_exists:
+                self.__chat_stats.commit(user_id)
 
     def __stats_command(self):
         self.__chat_stats.update('command_used_count', 1)
@@ -375,6 +383,7 @@ class ChatEventManager:
 
                 # Система отслеживания статистики
                 self.__stats_command()
+                # Делаем коммит статистики, если беседа зарегистрирована
                 self.__stats_commit(self.__event.event_object.from_id)
 
                 return command_result
@@ -419,8 +428,7 @@ class ChatEventManager:
 
             # Обработка сообщений вне командного пространства
             handler_result = False
-            if self.__db.is_exists:
-                if len(self.__message_handlers) > 0:
+            if len(self.__message_handlers) > 0:
                     # Подготовка объекта входных данных Callback
                     callin = ChatEventManager.CallbackInputObject()
                     callin.event = self.__event
@@ -430,10 +438,14 @@ class ChatEventManager:
                     callin.output = output
 
                     for handler in self.__message_handlers:
-                        if handler(callin):
-                            handler_result = True
-                            break
-                self.__stats_commit(self.__event.event_object.from_id)
+                        if handler['ignore_db'] or self.__db.is_exists:
+                            if handler['callback'](callin):
+                                handler_result = True
+                                break
+
+            # Делаем коммит статистики, если беседа зарегистрирована
+            self.__stats_commit(self.__event.event_object.from_id)
+
             return handler_result
 
         elif self.__event.event_type == 'message_event':
@@ -442,6 +454,7 @@ class ChatEventManager:
 
                 # Система отслеживания статистики
                 self.__stats_button()
+                # Делаем коммит статистики, если беседа зарегистрирована
                 self.__stats_commit(self.__event.event_object.user_id)
 
                 return command_result

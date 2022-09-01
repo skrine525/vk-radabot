@@ -38,16 +38,8 @@ class ChatDatabase:
         self.__is_exists = False
         self.__owner_id = 0
 
-        projection = {
-            '_id': 0,
-            'owner_id': 1,
-        }
-        result = self.__main_collection.find_one(self.__main_filter, projection=projection)
-        if result is not None:
-            self.__is_exists = True
-
-            extractor = ValueExtractor(result)
-            self.__owner_id = extractor.get('owner_id')
+        # Выполняем проверку базы данных
+        self.recheck()
 
     @property
     def is_exists(self):
@@ -69,6 +61,14 @@ class ChatDatabase:
 
     def update(self, *args, **kwargs):
         return self.__main_collection.update_one(self.__main_filter, *args, **kwargs)
+
+    def recheck(self):
+        result = self.__main_collection.find_one(self.__main_filter, projection={'_id': 0, 'owner_id': 1})
+        if result is not None:
+            self.__is_exists = True
+
+            extractor = ValueExtractor(result)
+            self.__owner_id = extractor.get('owner_id')
 
 
 class ValueExtractor:
@@ -441,8 +441,8 @@ def write_log(filename: str, text: str):
     f.write("[{}] {}\n".format(dt, text))
     f.close()
 
-# Функция предстарта
-def prestart():
+# Функция инициализации системных директорий
+def initdir():
     if not os.path.exists(SYSTEM_PATHS.TMP_DIR):
         os.mkdir(SYSTEM_PATHS.TMP_DIR)
 
