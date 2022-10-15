@@ -14,8 +14,8 @@ class VK_API:
 		r = requests.post("https://api.vk.com/method/{}".format(method), data=params, headers=headers)
 		return r.text
 
-	def execute(self, code: str) -> str:
-		return self.call('execute', {'code': code})
+	def execute(self, code: str, api_version: float = 5.131) -> str:
+		return self.call('execute', {'code': code}, api_version)
 
 
 class VKVariable:

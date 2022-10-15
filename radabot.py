@@ -24,13 +24,13 @@ vk_api = VK_API(Config.get('VK_GROUP_TOKEN'))			# VK API
 event_queue = []										# Очередь событий на обработку
 active_workers = []										# Массив потоков обработчика
 
-# Функция обработки события
-def event_worker_def(event):
+# Функция обработки события из очереди
+def queue_worker(event):
 	try:
 		handle_event(vk_api, event)
 	except:
 		trace = traceback.format_exc()
-		write_log(SYSTEM_PATHS.ERROR_LOG_FILE, trace[:-1])
+		write_log(SYSTEM_PATHS.ERROR_LOG_FILE, f"\n{trace[:-1]}\n")
 
 # Поток обработки очереди
 def queue_handler():
@@ -42,7 +42,7 @@ def queue_handler():
 
 		for event in event_queue:
 			if len(active_workers) < WORKERS_MAX_COUNT:
-				event_worker = threading.Thread(target=event_worker_def, daemon=False, args=[event])
+				event_worker = threading.Thread(target=queue_worker, daemon=False, args=[event])
 				active_workers.append(event_worker)
 				event_worker.start()
 				event_queue.remove(event)

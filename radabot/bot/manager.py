@@ -1,6 +1,6 @@
 from radabot.core.io import AdvancedOutputSystem, ChatEventManager
 from radabot.core.manager import UserPermissions
-from radabot.core.system import ManagerData, PageBuilder, SelectedUserParser, ArgumentParser, CommandHelpBuilder, int2emoji
+from radabot.core.system import ManagerData, PageBuilder, SelectedUserParser, ArgumentParser, CommandHelpBuilder, get_reply_message_from_event, int2emoji
 from radabot.core.vk import KeyboardBuilder, VKVariable
 from radabot.core.bot import DEFAULT_MESSAGES
 
@@ -14,11 +14,11 @@ def initcmd(manager: ChatEventManager):
 # Команда !права
 class PermissionCommand:
     @staticmethod
-    def message_command(callin: ChatEventManager.CallbackInputObject):
-        event = callin.event
-        args = callin.args
-        db = callin.db
-        output = callin.output
+    def message_command(callback_object: dict):
+        event = callback_object["event"]
+        args = callback_object["args"]
+        db = callback_object["db"]
+        output = callback_object["output"]
 
         aos = AdvancedOutputSystem(output, event, db)
 
@@ -27,14 +27,14 @@ class PermissionCommand:
         subcommand = args.get_str(1, '').lower()
         if subcommand == 'показ':
             member_parser = SelectedUserParser()
-            member_parser.set_fwd_messages(event.event_object.fwd_messages)
+            member_parser.set_reply_message(get_reply_message_from_event(event))
             member_parser.set_argument_parser(args, 2)
             member_id = member_parser.member_id()
 
             if member_id == 0:
                 permits_text = "Ваши права:"
                 no_permits_text = "❗У вас нет прав."
-                member_id = event.event_object.from_id
+                member_id = event["object"]["message"]["from_id"]
             else:
                 permits_text = "Права @id{} (пользователя):".format(member_id)
                 no_permits_text = "❗У @id{} (пользователя) нет прав.".format(member_id)
@@ -56,11 +56,11 @@ class PermissionCommand:
                 aos.messages_send(message=message)
         elif subcommand == 'упр':
             member_parser = SelectedUserParser()
-            member_parser.set_fwd_messages(event.event_object.fwd_messages)
+            member_parser.set_reply_message(get_reply_message_from_event(event))
             member_parser.set_argument_parser(args, 2)
             member_id = member_parser.member_id()
 
-            user_permissions = UserPermissions(db, event.event_object.from_id)
+            user_permissions = UserPermissions(db, event["object"]["message"]["from_id"])
             if user_permissions.get('set_permits'):
                 if member_id > 0:
                     # Просчитываем права, которыми может управлять пользователь
@@ -70,7 +70,7 @@ class PermissionCommand:
                             can_manage_list.append(k)
                     
                     # Удаляем set_permits из списка управляемых прав, если пользователь не является владельцем
-                    if event.event_object.from_id != db.owner_id:
+                    if event["object"]["message"]["from_id"] != db.owner_id:
                         can_manage_list.remove('set_permits')
 
                     # Ошибки
@@ -79,7 +79,7 @@ class PermissionCommand:
                         message = VKVariable.Multi('var', 'appeal', 'str', message_text)
                         aos.messages_send(message=message)
                         return
-                    elif member_id == event.event_object.from_id:
+                    elif member_id == event["object"]["message"]["from_id"]:
                         message_text = '⛔Нельзя управлять своими правами.'
                         message = VKVariable.Multi('var', 'appeal', 'str', message_text)
                         aos.messages_send(message=message)
@@ -122,10 +122,10 @@ class PermissionCommand:
                             permits_text = ', '.join(can_manage_list)
                         message = VKVariable.Multi('var', 'appeal', 'str', '⛔Укажите права (не больше 10 штук).\n\nПрава, которыми вы можете управлять: {}.'.format(permits_text))
                         keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
-                        keyboard.callback_button('Управлять правами', ['manager_permits', event.event_object.from_id, 1, member_id], KeyboardBuilder.PRIMARY_COLOR)
+                        keyboard.callback_button('Управлять правами', ['manager_permits', event["object"]["message"]["from_id"], 1, member_id], KeyboardBuilder.PRIMARY_COLOR)
                         aos.messages_send(message=message, keyboard=keyboard.build())
                 else:
-                    PermissionCommand.__get_error_message_select_user(args)
+                    message_text = PermissionCommand.__get_error_message_select_user(args)
                     message = VKVariable.Multi('var', 'appeal', 'str', message_text)
                     aos.messages_send(message=message)
             else:
@@ -143,7 +143,7 @@ class PermissionCommand:
                 message_text += "\n\nПодробная информация:\n➡️ !права инфа [право]"
 
                 keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
-                keyboard.callback_button('Информация', ['manager_permits', event.event_object.from_id, 2], KeyboardBuilder.PRIMARY_COLOR)
+                keyboard.callback_button('Информация', ['manager_permits', event["object"]["message"]["from_id"], 2], KeyboardBuilder.PRIMARY_COLOR)
 
                 message = VKVariable.Multi('var', 'appeal', 'str', message_text)
                 aos.messages_send(message=message, keyboard=keyboard.build())
@@ -166,24 +166,24 @@ class PermissionCommand:
             aos.messages_send(message=message)
 
     @staticmethod
-    def callback_button_command(callin: ChatEventManager.CallbackInputObject):
-        event = callin.event
-        payload = callin.payload
-        db = callin.db
-        output = callin.output
+    def callback_button_command(callback_object: dict):
+        event = callback_object["event"]
+        payload = callback_object["payload"]
+        db = callback_object["db"]
+        output = callback_object["output"]
 
         aos = AdvancedOutputSystem(output, event, db)
 
         permissions_data = ManagerData.get_user_permissions_data()
 
-        testing_user_id = payload.get_int(1, event.event_object.user_id)
-        if testing_user_id != event.event_object.user_id:
+        testing_user_id = payload.get_int(1, event["object"]["user_id"])
+        if testing_user_id != event["object"]["user_id"]:
             aos.show_snackbar(text=DEFAULT_MESSAGES.SNACKBAR_NO_RIGHTS_TO_USE_THIS_BUTTON)
             return
 
         sub1 = payload.get_int(2, 0)
         if sub1 == 1:
-            user_permissions = UserPermissions(db, event.event_object.user_id)
+            user_permissions = UserPermissions(db, event["object"]["user_id"])
             if user_permissions.get('set_permits'):
                 member_id = payload.get_int(3, 0)
                 if member_id > 0:
@@ -194,13 +194,13 @@ class PermissionCommand:
                             can_manage_list.append(k)
 
                     # Удаляем set_permits из списка управляемых прав, если пользователь не является владельцем
-                    if event.event_object.user_id != db.owner_id:
+                    if event["object"]["user_id"] != db.owner_id:
                         can_manage_list.remove('set_permits')
 
                     if len(can_manage_list) == 0:
                         aos.show_snackbar(text='⛔ У вас нет прав, которыми вы можете управлять.')
                         return
-                    elif member_id == event.event_object.user_id:
+                    elif member_id == event["object"]["user_id"]:
                         aos.show_snackbar(text='⛔ Нельзя управлять своими правами.')
                         return
                     elif member_id == db.owner_id:

@@ -2,7 +2,7 @@ import subprocess, json, time
 import radabot.core.bot as bot
 from radabot.core.io import AdvancedOutputSystem, ChatEventManager, OutputSystem
 from radabot.core.manager import UserPermissions
-from radabot.core.system import ChatDatabase, PHPCommandIntegration, PageBuilder, ValueExtractor, Config, int2emoji
+from radabot.core.system import ChatDatabase, PHPCommandIntegration, PageBuilder, ValueExtractor, Config, get_reply_message_from_event, int2emoji
 from radabot.core.vk import KeyboardBuilder, VKVariable
 from radabot.core.bot import DEFAULT_MESSAGES
 
@@ -19,22 +19,21 @@ def initcmd(manager: ChatEventManager):
 # Команда !стата
 class StatsCommand:
 	@staticmethod
-	def message_command(callin: ChatEventManager.CallbackInputObject):
-		event = callin.event
-		args = callin.args
-		db = callin.db
-		output = callin.output
+	def message_command(callback_object):
+		event = callback_object["event"]
+		args = callback_object["args"]
+		db = callback_object["db"]
+		output = callback_object["output"]
 
 		aos = AdvancedOutputSystem(output, event, db)
 
 		member_id = args.get_int(2, 0)
 		if member_id <= 0:
-			member_id = event.event_object.from_id
-		if 'fwd_messages' in event.event_object:
-			try:
-				member_id = event.event_object.fwd_messages[0].from_id
-			except IndexError:
-				pass
+			member_id = event["object"]["message"]["from_id"]
+		
+		rep_msg = get_reply_message_from_event(event)
+		if rep_msg is not None:
+			member_id = rep_msg["from_id"]
 
 		if(member_id <= 0):
 			aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', '⛔Неверный идентификатор пользователя.'))
@@ -43,14 +42,14 @@ class StatsCommand:
 		subcommand = args.get_str(1, '').lower()
 		if(subcommand == 'дня'):
 			keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
-			if(member_id == event.event_object.from_id):
+			if(member_id == event["object"]["message"]["from_id"]):
 				pre_msg = "Cтатистика дня:"
-				keyboard.callback_button('Полная стата', ['bot_stats', event.event_object.from_id, 1], KeyboardBuilder.PRIMARY_COLOR)
+				keyboard.callback_button('Полная стата', ['bot_stats', event["object"]["message"]["from_id"], 1], KeyboardBuilder.PRIMARY_COLOR)
 			else:
 				pre_msg = "Стастика дня @id{} (пользователя):".format(member_id)
-				keyboard.callback_button('Полная стата', ['bot_stats', event.event_object.from_id, 1, member_id], KeyboardBuilder.PRIMARY_COLOR)
+				keyboard.callback_button('Полная стата', ['bot_stats', event["object"]["message"]["from_id"], 1, member_id], KeyboardBuilder.PRIMARY_COLOR)
 			keyboard.new_line()
-			keyboard.callback_button('Закрыть', ['bot_cancel', event.event_object.from_id], KeyboardBuilder.NEGATIVE_COLOR)
+			keyboard.callback_button('Закрыть', ['bot_cancel', event["object"]["message"]["from_id"]], KeyboardBuilder.NEGATIVE_COLOR)
 			keyboard = keyboard.build()
 
 			info = StatsCommand.__get_user_text_of_user_stats(db, member_id, True)
@@ -60,15 +59,15 @@ class StatsCommand:
 			return True
 		elif(subcommand == ''):
 			keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
-			if(member_id == event.event_object.from_id):
+			if(member_id == event["object"]["message"]["from_id"]):
 				pre_msg = "Cтатистика:"
-				keyboard.callback_button('Дневная стата', ['bot_stats', event.event_object.from_id, 2], KeyboardBuilder.PRIMARY_COLOR)
+				keyboard.callback_button('Дневная стата', ['bot_stats', event["object"]["message"]["from_id"], 2], KeyboardBuilder.PRIMARY_COLOR)
 			else:
 				pre_msg = "Стастика @id{} (пользователя):".format(member_id)
-				keyboard.callback_button('Дневная стата', ['bot_stats', event.event_object.from_id, 2, member_id], KeyboardBuilder.PRIMARY_COLOR)
+				keyboard.callback_button('Дневная стата', ['bot_stats', event["object"]["message"]["from_id"], 2, member_id], KeyboardBuilder.PRIMARY_COLOR)
 
 			keyboard.new_line()
-			keyboard.callback_button('Закрыть', ['bot_cancel', event.event_object.from_id], KeyboardBuilder.NEGATIVE_COLOR)
+			keyboard.callback_button('Закрыть', ['bot_cancel', event["object"]["message"]["from_id"]], KeyboardBuilder.NEGATIVE_COLOR)
 			keyboard = keyboard.build()
 
 			info = StatsCommand.__get_user_text_of_user_stats(db, member_id, False)
@@ -78,10 +77,10 @@ class StatsCommand:
 			return True
 		else:
 			keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
-			keyboard.callback_button('Полная стата', ['bot_stats', event.event_object.from_id, 1], KeyboardBuilder.PRIMARY_COLOR)
-			keyboard.callback_button('Дневная стата', ['bot_stats', event.event_object.from_id, 2], KeyboardBuilder.SECONDARY_COLOR)
+			keyboard.callback_button('Полная стата', ['bot_stats', event["object"]["message"]["from_id"], 1], KeyboardBuilder.PRIMARY_COLOR)
+			keyboard.callback_button('Дневная стата', ['bot_stats', event["object"]["message"]["from_id"], 2], KeyboardBuilder.SECONDARY_COLOR)
 			keyboard.new_line()
-			keyboard.callback_button('Закрыть', ['bot_cancel', event.event_object.from_id], KeyboardBuilder.NEGATIVE_COLOR)
+			keyboard.callback_button('Закрыть', ['bot_cancel', event["object"]["message"]["from_id"]], KeyboardBuilder.NEGATIVE_COLOR)
 			keyboard = keyboard.build()
 
 			message_text = '⛔Неизвестная команда. Используйте:\n• !стата\n• !cтата дня'
@@ -89,21 +88,21 @@ class StatsCommand:
 			return False
 
 	@staticmethod
-	def callback_button_command(callin: ChatEventManager.CallbackInputObject):
-		event = callin.event
-		payload = callin.payload
-		output = callin.output
-		db = callin.db
+	def callback_button_command(callback_object: dict):
+		event = callback_object["event"]
+		payload = callback_object["payload"]
+		db = callback_object["db"]
+		output = callback_object["output"]
 
 		aos = AdvancedOutputSystem(output, event, db)
 
-		testing_user_id = payload.get_int(1, event.event_object.user_id)
-		if testing_user_id != event.event_object.user_id:
+		testing_user_id = payload.get_int(1, event["object"]["user_id"])
+		if testing_user_id != event["object"]["user_id"]:
 			aos.show_snackbar(text=DEFAULT_MESSAGES.SNACKBAR_NO_RIGHTS_TO_USE_THIS_BUTTON)
 			return
 
 		subcommand = payload.get_int(2, 1)
-		member_id = payload.get_int(3, event.event_object.user_id)
+		member_id = payload.get_int(3, event["object"]["user_id"])
 
 		if member_id <= 0:
 			aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', '⛔Неверный идентификатор пользователя.'))
@@ -111,14 +110,14 @@ class StatsCommand:
 
 		if subcommand == 2:
 			keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
-			if(member_id == event.event_object.user_id):
+			if(member_id == event["object"]["user_id"]):
 				pre_msg = "Cтатистика дня:"
-				keyboard.callback_button('Полная стата', ['bot_stats', event.event_object.user_id, 1], KeyboardBuilder.PRIMARY_COLOR)
+				keyboard.callback_button('Полная стата', ['bot_stats', event["object"]["user_id"], 1], KeyboardBuilder.PRIMARY_COLOR)
 			else:
 				pre_msg = "Стастика дня @id{} (пользователя):".format(member_id)
-				keyboard.callback_button('Полная стата', ['bot_stats', event.event_object.user_id, 1, member_id], KeyboardBuilder.PRIMARY_COLOR)
+				keyboard.callback_button('Полная стата', ['bot_stats', event["object"]["user_id"], 1, member_id], KeyboardBuilder.PRIMARY_COLOR)
 			keyboard.new_line()
-			keyboard.callback_button('Закрыть', ['bot_cancel', event.event_object.user_id], KeyboardBuilder.NEGATIVE_COLOR)
+			keyboard.callback_button('Закрыть', ['bot_cancel', event["object"]["user_id"]], KeyboardBuilder.NEGATIVE_COLOR)
 			keyboard = keyboard.build()
 
 			info = StatsCommand.__get_user_text_of_user_stats(db, member_id, True)
@@ -128,14 +127,14 @@ class StatsCommand:
 			return True
 		elif subcommand == 1:
 			keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
-			if(member_id == event.event_object.user_id):
+			if(member_id == event["object"]["user_id"]):
 				pre_msg = "Cтатистика:"
-				keyboard.callback_button('Дневная стата', ['bot_stats', event.event_object.user_id, 2], KeyboardBuilder.PRIMARY_COLOR)
+				keyboard.callback_button('Дневная стата', ['bot_stats', event["object"]["user_id"], 2], KeyboardBuilder.PRIMARY_COLOR)
 			else:
 				pre_msg = "Стастика @id{} (пользователя):".format(member_id)
-				keyboard.callback_button('Дневная стата', ['bot_stats', event.event_object.user_id, 2, member_id], KeyboardBuilder.PRIMARY_COLOR)
+				keyboard.callback_button('Дневная стата', ['bot_stats', event["object"]["user_id"], 2, member_id], KeyboardBuilder.PRIMARY_COLOR)
 			keyboard.new_line()
-			keyboard.callback_button('Закрыть', ['bot_cancel', event.event_object.user_id], KeyboardBuilder.NEGATIVE_COLOR)
+			keyboard.callback_button('Закрыть', ['bot_cancel', event["object"]["user_id"]], KeyboardBuilder.NEGATIVE_COLOR)
 			keyboard = keyboard.build()
 
 			info = StatsCommand.__get_user_text_of_user_stats(db, member_id, False)
@@ -199,12 +198,12 @@ class StatsCommand:
 # Команда !cmdlist
 class ShowCommandListCommand:
 	@staticmethod
-	def message_command(callin: ChatEventManager.CallbackInputObject):
-		event = callin.event
-		args = callin.args
-		output = callin.output
-		manager = callin.manager
-		db = callin.db
+	def message_command(callback_object: dict):
+		event = callback_object["event"]
+		args = callback_object["args"]
+		db = callback_object["db"]
+		manager = callback_object["manager"]
+		output = callback_object["output"]
 
 		aos = AdvancedOutputSystem(output, event, db)
 
@@ -220,29 +219,29 @@ class ShowCommandListCommand:
 			keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
 			if number > 1:
 				prev_number = number - 1
-				keyboard.callback_button("{} ⬅".format(int2emoji(prev_number)), ['bot_cmdlist', event.event_object.from_id, prev_number], KeyboardBuilder.SECONDARY_COLOR)
+				keyboard.callback_button("{} ⬅".format(int2emoji(prev_number)), ['bot_cmdlist', event["object"]["message"]["from_id"], prev_number], KeyboardBuilder.SECONDARY_COLOR)
 			if number < builder.max_number:
 				next_number = number + 1
-				keyboard.callback_button("➡ {}".format(int2emoji(next_number)), ['bot_cmdlist', event.event_object.from_id, next_number], KeyboardBuilder.SECONDARY_COLOR)
+				keyboard.callback_button("➡ {}".format(int2emoji(next_number)), ['bot_cmdlist', event["object"]["message"]["from_id"], next_number], KeyboardBuilder.SECONDARY_COLOR)
 			keyboard.new_line()
-			keyboard.callback_button('Закрыть', ['bot_cancel', event.event_object.from_id], KeyboardBuilder.NEGATIVE_COLOR)
+			keyboard.callback_button('Закрыть', ['bot_cancel', event["object"]["message"]["from_id"]], KeyboardBuilder.NEGATIVE_COLOR)
 
 			aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', text), keyboard=keyboard.build())
 		except PageBuilder.PageNumberException:
 			aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', '⛔Неверный номер страницы.'))
 
 	@staticmethod
-	def callback_button_command(callin: ChatEventManager.CallbackInputObject):
-		event = callin.event
-		payload = callin.payload
-		output = callin.output
-		manager = callin.manager
-		db = callin.db
+	def callback_button_command(callback_object: dict):
+		event = callback_object["event"]
+		payload = callback_object["payload"]
+		db = callback_object["db"]
+		manager = callback_object["manager"]
+		output = callback_object["output"]
 
 		aos = AdvancedOutputSystem(output, event, db)
 		
-		testing_user_id = payload.get_int(1, event.event_object.user_id)
-		if testing_user_id != event.event_object.user_id:
+		testing_user_id = payload.get_int(1, event["object"]["user_id"])
+		if testing_user_id != event["object"]["user_id"]:
 			aos.show_snackbar(text=DEFAULT_MESSAGES.SNACKBAR_NO_RIGHTS_TO_USE_THIS_BUTTON)
 			return
 
@@ -258,12 +257,12 @@ class ShowCommandListCommand:
 			keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
 			if number > 1:
 				prev_number = number - 1
-				keyboard.callback_button("{} ⬅".format(int2emoji(prev_number)), ['bot_cmdlist', event.event_object.user_id, prev_number], KeyboardBuilder.SECONDARY_COLOR)
+				keyboard.callback_button("{} ⬅".format(int2emoji(prev_number)), ['bot_cmdlist', event["object"]["user_id"], prev_number], KeyboardBuilder.SECONDARY_COLOR)
 			if number < builder.max_number:
 				next_number = number + 1
-				keyboard.callback_button("➡ {}".format(int2emoji(next_number)), ['bot_cmdlist', event.event_object.user_id, next_number], KeyboardBuilder.SECONDARY_COLOR)
+				keyboard.callback_button("➡ {}".format(int2emoji(next_number)), ['bot_cmdlist', event["object"]["user_id"], next_number], KeyboardBuilder.SECONDARY_COLOR)
 			keyboard.new_line()
-			keyboard.callback_button('Закрыть', ['bot_cancel', event.event_object.user_id], KeyboardBuilder.NEGATIVE_COLOR)
+			keyboard.callback_button('Закрыть', ['bot_cancel', event["object"]["user_id"]], KeyboardBuilder.NEGATIVE_COLOR)
 
 			aos.messages_edit(message=VKVariable.Multi('var', 'appeal', 'str', text), keyboard=keyboard.build())
 		except PageBuilder.PageNumberException:
@@ -272,16 +271,16 @@ class ShowCommandListCommand:
 # Команда закрытия меню через тектовую кнопку
 class CancelCallbackButtonCommand:
 	@staticmethod
-	def callback_button_command(callin: ChatEventManager.CallbackInputObject):
-		event = callin.event
-		payload = callin.payload
-		output = callin.output
-		db = callin.db
+	def callback_button_command(callback_object: dict):
+		event = callback_object["event"]
+		payload = callback_object["payload"]
+		db = callback_object["db"]
+		output = callback_object["output"]
 
 		aos = AdvancedOutputSystem(output, event, db)
 
 		testing_user_id = payload.get_int(1, 0)
-		if testing_user_id == event.event_object.user_id or testing_user_id == 0:
+		if testing_user_id == event["object"]["user_id"] or testing_user_id == 0:
 			text = payload.get_str(2, bot.DEFAULT_MESSAGES.MESSAGE_MENU_CANCELED)
 			aos.messages_edit(message=text)
 		else:
@@ -289,18 +288,18 @@ class CancelCallbackButtonCommand:
 
 class CheatMenuCommand:
 	@staticmethod
-	def message_command(callin: ChatEventManager.CallbackInputObject):
-		event = callin.event
-		output = callin.output
-		db = callin.db
+	def message_command(callback_object: dict):
+		event = callback_object["event"]
+		db = callback_object["db"]
+		output = callback_object["output"]
 
 		aos = AdvancedOutputSystem(output, event, db)
 
 		keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
 		keyboard.size(width=3)
 		for i in range(1, 10):
-			keyboard.callback_button(int2emoji(i), ['bot_cheat', event.event_object.from_id, "", i], KeyboardBuilder.SECONDARY_COLOR)
-		keyboard.callback_button(int2emoji(0), ['bot_cheat', event.event_object.from_id, "", 0], KeyboardBuilder.SECONDARY_COLOR)
+			keyboard.callback_button(int2emoji(i), ['bot_cheat', event["object"]["message"]["from_id"], "", i], KeyboardBuilder.SECONDARY_COLOR)
+		keyboard.callback_button(int2emoji(0), ['bot_cheat', event["object"]["message"]["from_id"], "", 0], KeyboardBuilder.SECONDARY_COLOR)
 		keyboard = keyboard.build()
 
 		message_text = "Введите код:\n\n😐😐😐😐😐"
@@ -308,16 +307,16 @@ class CheatMenuCommand:
 		aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', message_text), keyboard=keyboard)
 
 	@staticmethod
-	def callback_button_command(callin: ChatEventManager.CallbackInputObject):
-		event = callin.event
-		payload = callin.payload
-		output = callin.output
-		db = callin.db
+	def callback_button_command(callback_object: dict):
+		event = callback_object["event"]
+		payload = callback_object["payload"]
+		db = callback_object["db"]
+		output = callback_object["output"]
 
 		aos = AdvancedOutputSystem(output, event, db)
 
-		testing_user_id = payload.get_int(1, event.event_object.user_id)
-		if testing_user_id != event.event_object.user_id:
+		testing_user_id = payload.get_int(1, event["object"]["user_id"])
+		if testing_user_id != event["object"]["user_id"]:
 			aos.show_snackbar(text=DEFAULT_MESSAGES.SNACKBAR_NO_RIGHTS_TO_USE_THIS_BUTTON)
 			return
 
@@ -340,8 +339,8 @@ class CheatMenuCommand:
 				keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
 				keyboard.size(width=3)
 				for i in range(1, 10):
-					keyboard.callback_button(int2emoji(i), ['bot_cheat', event.event_object.user_id, code, i], KeyboardBuilder.SECONDARY_COLOR)
-				keyboard.callback_button(int2emoji(0), ['bot_cheat', event.event_object.user_id, code, 0], KeyboardBuilder.SECONDARY_COLOR)
+					keyboard.callback_button(int2emoji(i), ['bot_cheat', event["object"]["user_id"], code, i], KeyboardBuilder.SECONDARY_COLOR)
+				keyboard.callback_button(int2emoji(0), ['bot_cheat', event["object"]["user_id"], code, 0], KeyboardBuilder.SECONDARY_COLOR)
 				keyboard = keyboard.build()
 
 				aos.messages_edit(message=VKVariable.Multi('var', 'appeal', 'str', message_text), keyboard=keyboard)
@@ -349,16 +348,16 @@ class CheatMenuCommand:
 			aos.show_snackbar(text="🤨 Не получается.")
 
 	@staticmethod
-	def __check_code(aos: AdvancedOutputSystem, event: ChatEventManager.EventObject, db: ChatDatabase, code: str):
+	def __check_code(aos: AdvancedOutputSystem, event: dict, db: ChatDatabase, code: str):
 		if code == '00000':
 			# Код 00000 - Кик из группы
-			chat_id = event.event_object.peer_id - 2000000000
-			remove_chat_user_params = {'chat_id': chat_id, 'user_id': event.event_object.user_id}
+			chat_id = event["object"]["peer_id"] - 2000000000
+			remove_chat_user_params = {'chat_id': chat_id, 'user_id': event["object"]["user_id"]}
 			pscript = 'API.messages.removeChatUser({});'.format(json.dumps(remove_chat_user_params, ensure_ascii=False, separators=(',', ':')))
 			message_text = '😡Не стоит шутить со мной!'
 			aos.messages_edit(message=VKVariable.Multi('var', 'appeal', 'str', message_text), pscript=pscript)
 		elif code == '39751':
-			user_permissions = UserPermissions(db, event.event_object.user_id)
+			user_permissions = UserPermissions(db, event["object"]["user_id"])
 			user_permissions.set('drink_tea', True)
 			user_permissions.commit()
 			message_text = '☕Теперь ты можешь пить чай!'
@@ -374,22 +373,25 @@ def initcmd_php(manager: ChatEventManager):
 		ignore_db = False
 		if cmd in ['!reg']:
 			ignore_db = True
-		manager.add_message_command(cmd, handle_phpcmd, ignore_db=ignore_db)
+		manager.add_message_command(cmd, handle_phpcmd, ignore_db=ignore_db, event_version=ChatEventManager.EventObjectConverter.Version.OLD_5_84)
+
+	for cmd in PHPCommandIntegration.text_button_commands:
+		manager.add_text_button_command(cmd, handle_phpcmd, event_version=ChatEventManager.EventObjectConverter.Version.OLD_5_84)
 
 	for cmd in PHPCommandIntegration.callback_button_commands:
 		ignore_db = False
 		if cmd in ['bot_reg']:
 			ignore_db = True
-		manager.add_callback_button_command(cmd, handle_phpcmd, ignore_db=ignore_db)
+		manager.add_callback_button_command(cmd, handle_phpcmd, ignore_db=ignore_db, event_version=ChatEventManager.EventObjectConverter.Version.OLD_5_84)
 
-	manager.add_message_handler(handle_phphndl, ignore_db=True)
+	manager.add_message_handler(handle_phphndl, ignore_db=True, event_version=ChatEventManager.EventObjectConverter.Version.OLD_5_84)
 
 # Выполенение PHP команд
-def handle_phpcmd(callin: ChatEventManager.CallbackInputObject):
-	event = callin.event
-	subprocess.Popen([Config.get("PHP_COMMAND"), "radabot-php-core.php", "cmd", json.dumps(event.raw)]).communicate()
+def handle_phpcmd(callback_object: dict):
+	event = callback_object["event"]
+	subprocess.Popen([Config.get("PHP_COMMAND"), "radabot-php.php", "cmd", json.dumps(event)]).communicate()
 
 # Выполенение вне командное пространство PHP
-def handle_phphndl(callin: ChatEventManager.CallbackInputObject):
-	event = callin.event
-	subprocess.Popen([Config.get("PHP_COMMAND"), "radabot-php-core.php", "hndl", json.dumps(event.raw)]).communicate()
+def handle_phphndl(callback_object: dict):
+	event = callback_object["event"]
+	subprocess.Popen([Config.get("PHP_COMMAND"), "radabot-php.php", "hndl", json.dumps(event)]).communicate()

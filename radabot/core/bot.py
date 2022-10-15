@@ -88,6 +88,10 @@ class ChatStats:
 
 
 def reply_to_message_by_event(event) -> str:
-    forward = {'peer_id': event.event_object.peer_id,
-               'conversation_message_ids': [event.event_object.conversation_message_id], 'is_reply': True}
+    if event["type"] == "message_new":
+        forward = {'peer_id': event["object"]["message"]["peer_id"],
+               'conversation_message_ids': [event["object"]["message"]["conversation_message_id"]], 'is_reply': True}
+    else:
+        forward = {'peer_id': event["object"]["peer_id"],
+               'conversation_message_ids': [event["object"]["conversation_message_id"]], 'is_reply': True}
     return json.dumps(forward, ensure_ascii=False, separators=(',', ':'))

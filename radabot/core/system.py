@@ -2,7 +2,6 @@
 import subprocess
 import string, random, json, os, time, shlex
 from datetime import datetime
-from bunch import Bunch
 from pymongo import MongoClient
 
 
@@ -205,7 +204,7 @@ class PageBuilder:
 class SelectedUserParser:
     def __init__(self):
         # Пересланные сообщения
-        self.__fwd_messages = None
+        self.__reply_message = None
 
         # Аргументы команды
         self.__args_parser = None
@@ -214,8 +213,8 @@ class SelectedUserParser:
         self.__args_parse_numeric = False
         self.__args_parse_mention = False
 
-    def set_fwd_messages(self, fwd_messages: list):
-        self.__fwd_messages = fwd_messages
+    def set_reply_message(self, reply_message: list):
+        self.__reply_message = reply_message
 
     def set_argument_parser(self, parser: ArgumentParser, index: int, clear_index: bool = True, parse_numeric: bool = True, parse_mention: bool = True):
         self.__args_parser = parser
@@ -227,8 +226,8 @@ class SelectedUserParser:
     def member_id(self, default: int = 0):
         # Пытаемся извлечь member_id из пересланных сообщений
         try:
-            if self.__fwd_messages is not None and 'from_id' in self.__fwd_messages[0] and isinstance(self.__fwd_messages[0].from_id, int):
-                return self.__fwd_messages[0].from_id
+            if self.__reply_message is not None:
+                return self.__reply_message["from_id"]
         except IndexError:
             pass
 
@@ -359,13 +358,14 @@ class PHPCommandIntegration:
 
     @staticmethod
     def init():
-        subprocess.Popen([Config.get("PHP_COMMAND"), "radabot-php-core.php", "int", ""]).communicate()
-        path_to_php_integration = os.path.join(SYSTEM_PATHS.TMP_DIR, 'php_integration.txt')
+        #subprocess.Popen([Config.get("PHP_COMMAND"), "radabot-php.php", "int", ""]).communicate()
+        #path_to_php_integration = os.path.join(SYSTEM_PATHS.TMP_DIR, 'php_integration.txt')
+        path_to_php_integration = os.path.join(SYSTEM_PATHS.DATA_DIR, 'php_integration.txt')
         if os.path.exists(path_to_php_integration):
             f = open(path_to_php_integration, encoding='utf-8')
             php_integration = f.read()
             f.close()
-            os.remove(path_to_php_integration)
+            #os.remove(path_to_php_integration)
             splited_php_integration = php_integration.split("\n")
             PHPCommandIntegration.message_commands = splited_php_integration[0].split(';')
             PHPCommandIntegration.callback_button_commands = splited_php_integration[1].split(';')
@@ -392,33 +392,6 @@ def int2emoji(number: int):
 
     return emoji_str
 
-
-# Функция конвертаци элементов списка в объект Bunch (если элемент - словарь)
-def bunchingList(_list: list) -> list:
-    nl = []
-    for i in _list:
-        if isinstance(i, dict):
-            nl.append(dict2bunch(i))
-        elif isinstance(i, list):
-            nl.append(bunchingList(i))
-        else:
-            nl.append(i)
-    return nl
-
-
-# Функция конвертации словаря в объект Bunch
-def dict2bunch(_dict: dict) -> Bunch:
-    b = {}
-    for k, v in _dict.items():
-        if isinstance(v, dict):
-            b[k] = dict2bunch(v)
-        elif isinstance(v, list):
-            b[k] = bunchingList(v)
-        else:
-            b[k] = v
-    return Bunch(b)
-
-
 # Генерация случайной строки
 def generate_random_string(length, uppercase=True, lowercase=True, numbers=True):
     letters = ''
@@ -432,6 +405,18 @@ def generate_random_string(length, uppercase=True, lowercase=True, numbers=True)
         letters += '0123456789'
 
     return ''.join(random.choice(letters) for _ in range(length))
+
+# Возвращает объект сообщения, на которое ответили, или объект первого пересланного сообщения
+def get_reply_message_from_event(event: dict):
+    reply_message = None
+    if 'reply_message' in event["object"]["message"]:
+        reply_message = event["object"]["message"]["reply_message"]
+    else:
+        try:
+            reply_message = event["object"]["message"]["fwd_messages"][0]
+        except IndexError:
+            pass
+    return reply_message
 
 # Метод журналирования
 def write_log(filename: str, text: str):

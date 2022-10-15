@@ -1,12 +1,12 @@
-# Module Level 2
-import json, traceback, time, os
+import json, traceback, time, os, copy
 from datetime import datetime
 from typing import Callable
+from enum import Enum
 
 from .manager import ChatModes
 from . import bot
 from .bot import DEFAULT_MESSAGES, ChatStats
-from .system import ArgumentParser, Config, PayloadParser, ValueExtractor, dict2bunch, generate_random_string, write_log, ChatDatabase
+from .system import ArgumentParser, Config, PayloadParser, ValueExtractor, generate_random_string, write_log, ChatDatabase
 from .vk import VK_API, KeyboardBuilder, VKVariable
 from .system import SYSTEM_PATHS
 
@@ -16,76 +16,16 @@ class ChatEventManager:
     #############################
     # Внутренние классы
 
-    # Класс для передачи параметров внутрь функций
-    class CallbackInputObject:
-        def __init__(self):
-            self.event = None						                    # Поле данных события
-            self.args = None										    # Поле аргументов текстовой команды
-            self.payload = None									        # Поле полезной нагрузки кнопки
-            self.manager = None									        # Объект EventManager's
-            self.vk_api = None					                        # Объект VK API
-            self.db = None		                                        # Объект базы данных
-            self.output = None										    # Объект системы вывода
-
-    class EventObject:
-        # Исключения
-        class InvalidEventType(Exception):
-            def __init__(self, message: str):
-                self.message = message
-
-        # Конструктор
-        def __init__(self, event: dict = {}):
-            self.__event = event
-
-            if self.event_type == 'message_new':
-                obj = {
-                    'group_id': self.__event['group_id'],
-                    'date': self.__event['object']['date'],
-                    'from_id': self.__event['object']['from_id'],
-                    'peer_id': self.__event['object']['peer_id'],
-                    'text': self.__event['object']['text'],
-                    'conversation_message_id': self.__event['object']['conversation_message_id'],
-                    'attachments': self.__event['object']['attachments'],
-                    'fwd_messages': self.__event['object']['fwd_messages']
-                }
-
-                self.__object = dict2bunch(obj)
-            elif self.event_type == 'message_event':
-                obj = {
-                    'group_id': self.__event['group_id'],
-                    'user_id': self.__event['object']['user_id'],
-                    'peer_id': self.__event['object']['peer_id'],
-                    'payload': self.__event['object']['payload'],
-                    'conversation_message_id': self.__event['object']['conversation_message_id'],
-                    'event_id': self.__event['object']['event_id'],
-                }
-
-                self.__object = dict2bunch(obj)
-            else:
-                raise ChatEventManager.EventObject.InvalidEventType('object property must be used for message_new or message_event type')
-
-        @property
-        def raw(self):
-            return self.__event
-
-        @property
-        def event_type(self):
-            return self.__event["type"]
-
-        @property
-        def event_object(self):
-            return self.__object
-
     # Класс системных команд
     class IntenalCommands:
         # Команда репорта ошибки
         class ErrorReportCommand:
             @staticmethod
-            def callback_button_command(callin):
-                event = callin.event
-                payload = callin.payload
-                output = callin.output
-                db = callin.db
+            def callback_button_command(callback_object):
+                event = callback_object["event"]
+                payload = callback_object["payload"]
+                db = callback_object["db"]
+                output = callback_object["output"]
 
                 aos = AdvancedOutputSystem(output, event, db)
 
@@ -104,8 +44,8 @@ class ChatEventManager:
                 if find_result is None:
                     report = {
                         'log_name': logname,
-                        'chat_id': event.event_object.peer_id - 2000000000,
-                        'user_id': event.event_object.user_id,
+                        'chat_id': event["object"]["peer_id"] - 2000000000,
+                        'user_id': event["object"]["user_id"],
                         'date': datetime.now(),
                         'is_solved': False
                     }
@@ -120,6 +60,32 @@ class ChatEventManager:
                     aos.messages_edit(message=VKVariable.Multi('var', 'appeal', 'str', message_text), script=superuser_message_script)
                 else:
                     aos.show_snackbar(text='⛔ Репорт уже отправлен.')
+
+    # Класс версий и конвертирования Event объекта (необходим для обратной совместимости)
+    class EventObjectConverter:
+        # Перечисление версий
+        class Version(Enum):
+            ORIGIN = 1
+            OLD_5_84 = 2
+
+        # Иключение Неправильная версия
+        class InvalidVersion(Exception):
+            def __init__(self, message: str):
+                self.message = message
+
+        # Статический метод конвертации в старые версии
+        @staticmethod
+        def convert(event: dict, version: int):
+            if version == ChatEventManager.EventObjectConverter.Version.OLD_5_84:
+                if event["type"] == "message_new":
+                    new_event = copy.deepcopy(event)                            # Копируем словарь event в new_event
+                    new_event["v"] = 5.84                                       # Изменяем версию на 5.84
+                    new_event["object"] = new_event["object"]["message"]        # Копируем object->message в object
+                elif event["type"] == "message_event":
+                    new_event = copy.deepcopy(event)                            # Копируем словарь event в new_event
+                return new_event
+            else:
+                raise ChatEventManager.EventObjectConverter.InvalidVersion("Invalid version parameter")
 
     #############################
     #############################
@@ -149,13 +115,15 @@ class ChatEventManager:
     def __init__(self, vk_api: VK_API, event: dict):
         if event["type"] == "message_new" or event["type"] == "message_event":
             self.__vk_api = vk_api
-            self.__event = ChatEventManager.EventObject(event)
+            self.__event = event
             self.__message_commands = {}
             self.__text_button_commands = {}
             self.__callback_button_commands = {}
             self.__message_handlers = []
 
-            self.__db = ChatDatabase(Config.get('DATABASE_HOST'), Config.get('DATABASE_PORT'), Config.get('DATABASE_NAME'), self.__event.event_object.peer_id)
+            # Получение peer_id в зависимости от типа события
+            peer_id = self.__event["object"]["message"]["peer_id"] if self.__event["type"] == "message_new" else self.__event["object"]["peer_id"]
+            self.__db = ChatDatabase(Config.get('DATABASE_HOST'), Config.get('DATABASE_PORT'), Config.get('DATABASE_NAME'), peer_id)
 
             self.__chat_stats = ChatStats(self.__db)        # Инициализация менеджера ведения статисики
             self.__chat_modes = ChatModes(self.__db)          # Инициализация менеджера режимов беседы
@@ -186,7 +154,7 @@ class ChatEventManager:
     # Действия над командами
 
     # Добавление Message команды
-    def add_message_command(self, command: str, callback: Callable, args: list = [], ignore_db: bool = False) -> bool:
+    def add_message_command(self, command: str, callback: Callable, args: list = [], ignore_db: bool = False, event_version=EventObjectConverter.Version.ORIGIN) -> bool:
         command = command.lower()
         if command in self.__message_commands:
             return False
@@ -194,12 +162,13 @@ class ChatEventManager:
             self.__message_commands[command] = {
                 'callback': callback,
                 'args': args,
-                'ignore_db': ignore_db
+                'ignore_db': ignore_db,
+                'event_version': event_version
             }
             return True
 
     # Добавление Text Button команды
-    def add_text_button_command(self, command: str, callback: Callable, args: list = [], ignore_db: bool = False) -> bool:
+    def add_text_button_command(self, command: str, callback: Callable, args: list = [], ignore_db: bool = False, event_version=EventObjectConverter.Version.ORIGIN) -> bool:
         command = command.lower()
         if command in self.__text_button_commands:
             return False
@@ -207,12 +176,13 @@ class ChatEventManager:
             self.__message_commands[command] = {
                 'callback': callback,
                 'args': args,
-                'ignore_db': ignore_db
+                'ignore_db': ignore_db,
+                'event_version': event_version
             }
             return True
 
     # Добавление Callback Button команды
-    def add_callback_button_command(self, command: str, callback: Callable, args: list = [], ignore_db: bool = False) -> bool:
+    def add_callback_button_command(self, command: str, callback: Callable, args: list = [], ignore_db: bool = False, event_version=EventObjectConverter.Version.ORIGIN) -> bool:
         command = command.lower()
         if command in self.__callback_button_commands:
             return False
@@ -220,18 +190,20 @@ class ChatEventManager:
             self.__callback_button_commands[command] = {
                 'callback': callback,
                 'args': args,
-                'ignore_db': ignore_db
+                'ignore_db': ignore_db,
+                'event_version': event_version
             }
             return True
 
     # Добавление Message обработчика (Если не выполнена Message команда)
-    def add_message_handler(self, callback: Callable, ignore_db: bool = False) -> bool:
+    def add_message_handler(self, callback: Callable, ignore_db: bool = False, event_version=EventObjectConverter.Version.ORIGIN) -> bool:
         if callback in self.__message_handlers:
             return False
         else:
             handler = {
                 'callback': callback,
-                'ignore_db': ignore_db
+                'ignore_db': ignore_db,
+                'event_version': event_version
             }
             self.__message_handlers.append(handler)
             return True
@@ -249,50 +221,90 @@ class ChatEventManager:
         return command in self.__callback_button_commands
 
     # Запуск обработки Message команды
-    def run_message_command(self, event: EventObject, output):
-        args = ArgumentParser(event.event_object.text)
+    def run_message_command(self, event, output):
+        args = ArgumentParser(event["object"]["message"]["text"])
         command = args.get_str(0, '').lower()
         if self.is_message_command(command):
             if not self.__message_commands[command]['ignore_db'] and not self.__db.is_exists:
                 raise ChatEventManager.DatabaseException('Command \'{}\' requires document in Database'.format(command))
 
-            # Подготовка объекта входных данных Callback
-            callin = ChatEventManager.CallbackInputObject()
-            callin.event = event
-            callin.args = args
-            callin.vk_api = self.__vk_api
-            callin.manager = self
-            callin.db = self.__db
-            callin.output = output
+            # Если версия Event'а не совпадает с оригиналом, то конвертируем в нужную версию, для обратной совместимости
+            if self.__message_commands[command]["event_version"] != ChatEventManager.EventObjectConverter.Version.ORIGIN:
+                event = ChatEventManager.EventObjectConverter.convert(event, self.__message_commands[command]["event_version"])
+
+            # Подготовка объекта вызова
+            callback_object = {
+                "event": event,
+                "args": args,
+                "vk_api": self.__vk_api,
+                "manager": self,
+                "db": self.__db,
+                "output": output
+            }
 
             callback = self.__message_commands[command]["callback"]
-            callback_args = [callin] + self.__message_commands[command]["args"]
-            callback(*callback_args)
-            return True
+            callback_args = [callback_object] + self.__message_commands[command]["args"]
+            return callback(*callback_args)
         else:
             raise ChatEventManager.UnknownCommandException('Command \'{}\' not found'.format(command), command)
 
+    # Запуск обработки Message команды
+    def run_text_button_command(self, event, output):
+        if 'payload' in event["object"]:
+            payload = json.loads(event["object"]["message"]["payload"])
+            command = payload.get('command', '')
+
+            if self.is_text_button_command(command):
+                if not self.__text_button_commands[command]['ignore_db'] and not self.__db.is_exists:
+                    raise ChatEventManager.DatabaseException('Command \'{}\' requires document in Database'.format(command))
+
+                # Если версия Event'а не совпадает с оригиналом, то конвертируем в нужную версию, для обратной совместимости
+                if self.__text_button_commands[command]["event_version"] != ChatEventManager.EventObjectConverter.Version.ORIGIN:
+                    event = ChatEventManager.EventObjectConverter.convert(event, self.__text_button_commands[command]["event_version"])
+
+                # Подготовка объекта вызова
+                callback_object = {
+                    "event": event,
+                    "payload": payload,
+                    "vk_api": self.__vk_api,
+                    "manager": self,
+                    "db": self.__db,
+                    "output": output
+                }
+
+                callback = self.__text_button_commands[command]["callback"]
+                callback_args = [callback_object] + self.__text_button_commands[command]["args"]
+                return callback(*callback_args)
+            else:
+                raise ChatEventManager.UnknownCommandException('Command \'{}\' not found'.format(command), command)
+        else:
+            raise ChatEventManager.UnknownCommandException('Event not supported', '')
+
     # Запуск обработки Callback Button команды
-    def run_callback_button_command(self, event: EventObject, output):
-        payload = PayloadParser(event.event_object.payload)
+    def run_callback_button_command(self, event, output):
+        payload = PayloadParser(event["object"]["payload"])
         command = payload.get_str(0, '')
         if self.is_callback_button_command(command):
             if not self.__callback_button_commands[command]['ignore_db'] and not self.__db.is_exists:
                 raise ChatEventManager.DatabaseException('Command \'{}\' requires document in Database'.format(command))
 
-            # Подготовка объекта входных данных Callback
-            callin = ChatEventManager.CallbackInputObject()
-            callin.event = event
-            callin.payload = payload
-            callin.vk_api = self.__vk_api
-            callin.manager = self
-            callin.db = self.__db
-            callin.output = output
+            # Если версия Event'а не совпадает с оригиналом, то конвертируем в нужную версию, для обратной совместимости
+            if self.__callback_button_commands[command]["event_version"] != ChatEventManager.EventObjectConverter.Version.ORIGIN:
+                event = ChatEventManager.EventObjectConverter.convert(event, self.__callback_button_commands[command]["event_version"])
+
+            # Подготовка объекта вызова
+            callback_object = {
+                "event": event,
+                "payload": payload,
+                "vk_api": self.__vk_api,
+                "manager": self,
+                "db": self.__db,
+                "output": output
+            }
 
             callback = self.__callback_button_commands[command]["callback"]
-            callback_args = [callin] + self.__callback_button_commands[command]["args"]
-            callback(*callback_args)
-            return True
+            callback_args = [callback_object] + self.__callback_button_commands[command]["args"]
+            return callback(*callback_args)
         else:
             raise ChatEventManager.UnknownCommandException('Command \'{}\' not found'.format(command), command)
 
@@ -330,34 +342,34 @@ class ChatEventManager:
         self.__chat_stats.update('button_pressed_count', 1)
 
     def __stats_message_new(self):
-        if self.__event.event_object.from_id > 0:
+        if self.__event["object"]["message"]["from_id"] > 0:
             self.__chat_stats.update_if_commited_by_last_user('msg_count_in_succession', 1)
             self.__chat_stats.update('msg_count', 1)
-            self.__chat_stats.update('symbol_count', len(self.__event.event_object.text))
+            self.__chat_stats.update('symbol_count', len(self.__event["object"]["message"]["text"]))
 
             attachment_update = {}
-            for attachment in self.__event.event_object.attachments:
-                if attachment.type == 'sticker':
+            for attachment in self.__event["object"]["message"]["attachments"]:
+                if attachment["type"] == 'sticker':
                     if 'sticker_count' in attachment_update:
                         attachment_update['sticker_count'] += 1
                     else:
                         attachment_update['sticker_count'] = 1
-                elif attachment.type == 'photo':
+                elif attachment["type"] == 'photo':
                     if 'photo_count' in attachment_update:
                         attachment_update['photo_count'] += 1
                     else:
                         attachment_update['photo_count'] = 1
-                elif attachment.type == 'video':
+                elif attachment["type"] == 'video':
                     if 'video_count' in attachment_update:
                         attachment_update['video_count'] += 1
                     else:
                         attachment_update['video_count'] = 1
-                elif attachment.type == 'audio_message':
+                elif attachment["type"] == 'audio_message':
                     if 'audio_msg_count' in attachment_update:
                         attachment_update['audio_msg_count'] += 1
                     else:
                         attachment_update['audio_msg_count'] = 1
-                elif attachment.type == 'audio':
+                elif attachment["type"] == 'audio':
                     if 'audio_count' in attachment_update:
                         attachment_update['audio_count'] += 1
                     else:
@@ -372,26 +384,58 @@ class ChatEventManager:
     def handle(self) -> bool:
         output = OutputSystem(self.__vk_api)
 
-        if self.__event.event_type == 'message_new':
-            if self.__event.event_object.from_id <= 0:
+        if self.__event["type"] == 'message_new':
+            if self.__event["object"]["message"]["from_id"] <= 0:
                 return False
 
             self.__stats_message_new()  # Система отслеживания статистики
 
+            # Попытка обработки события, как кнопку
             try:
-                command_result = self.run_message_command(self.__event, output)
+                command_result = self.run_text_button_command(self.__event, output)
 
                 # Система отслеживания статистики
-                self.__stats_command()
+                self.__stats_button()
                 # Делаем коммит статистики, если беседа зарегистрирована
-                self.__stats_commit(self.__event.event_object.from_id)
+                self.__stats_commit(self.__event["object"]["message"]["from_id"])
 
                 return command_result
             except ChatEventManager.DatabaseException:
                 keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
                 keyboard.callback_button('Зарегистрировать', ['bot_reg'], KeyboardBuilder.POSITIVE_COLOR)
                 keyboard = keyboard.build()
-                output.messages_send(peer_id=self.__event.event_object.peer_id, message=DEFAULT_MESSAGES.MESSAGE_NOT_REGISTERED, forward=bot.reply_to_message_by_event(self.__event), keyboard=keyboard)
+                output.messages_send(peer_id=self.__event["object"]["message"]["peer_id"], message=DEFAULT_MESSAGES.MESSAGE_NOT_REGISTERED, forward=bot.reply_to_message_by_event(self.__event), keyboard=keyboard)
+                return False
+            except ChatEventManager.UnknownCommandException:
+                # Игнорируем исключение
+                pass
+            except:
+                logname = datetime.utcfromtimestamp(time.time() + 10800).strftime("%d%m%Y-{}".format(generate_random_string(5, uppercase=False)))
+                trace = traceback.format_exc()
+                logpath = os.path.join(SYSTEM_PATHS.EXEC_LOG_DIR, "{}.log".format(logname))
+                write_log(logpath, "Event:\n{}\n\n{}".format(json.dumps(self.__event, indent=4, ensure_ascii=False), trace[:-1]))
+                keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
+                keyboard.callback_button("Репорт", ['report_error', logname], KeyboardBuilder.POSITIVE_COLOR)
+                output.messages_send(peer_id=self.__event["object"]["message"]["peer_id"],
+                                        message=DEFAULT_MESSAGES.MESSAGE_EXECUTION_ERROR.format(logname=logname),
+                                        keyboard=keyboard.build())
+                return False
+
+            # Попытка обработки события, как текстовую команду
+            try:
+                command_result = self.run_message_command(self.__event, output)
+
+                # Система отслеживания статистики
+                self.__stats_command()
+                # Делаем коммит статистики, если беседа зарегистрирована
+                self.__stats_commit(self.__event["object"]["message"]["from_id"])
+
+                return command_result
+            except ChatEventManager.DatabaseException:
+                keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
+                keyboard.callback_button('Зарегистрировать', ['bot_reg'], KeyboardBuilder.POSITIVE_COLOR)
+                keyboard = keyboard.build()
+                output.messages_send(peer_id=self.__event["object"]["message"]["peer_id"], message=DEFAULT_MESSAGES.MESSAGE_NOT_REGISTERED, forward=bot.reply_to_message_by_event(self.__event), keyboard=keyboard)
                 return False
             except ChatEventManager.UnknownCommandException:
                 pass
@@ -400,80 +444,69 @@ class ChatEventManager:
                 logname = datetime.utcfromtimestamp(time.time() + 10800).strftime("%d%m%Y-{}".format(generate_random_string(5, uppercase=False)))
                 trace = traceback.format_exc()
                 logpath = os.path.join(SYSTEM_PATHS.EXEC_LOG_DIR, "{}.log".format(logname))
-                write_log(logpath, "Event:\n{}\n\n{}".format(json.dumps(self.__event.raw, indent=4, ensure_ascii=False), trace[:-1]))
+                write_log(logpath, "Event:\n{}\n\n{}".format(json.dumps(self.__event, indent=4, ensure_ascii=False), trace[:-1]))
                 keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
                 keyboard.callback_button("Репорт", ['report_error', logname], KeyboardBuilder.POSITIVE_COLOR)
-                output.messages_send(peer_id=self.__event.event_object.peer_id,
+                output.messages_send(peer_id=self.__event["object"]["message"]["peer_id"],
                                         message=DEFAULT_MESSAGES.MESSAGE_EXECUTION_ERROR.format(logname=logname),
                                         keyboard=keyboard.build())
-                return False
-
-            try:
-                '''
-                command_result = self.run_message_command(self.__event, output)
-
-                # Система отслеживания статистики
-                self.__stats_button()
-                self.__stats_commit(self.__event['object']['from_id'])
-
-                return command_result
-                '''
-                raise ChatEventManager.UnknownCommandException('', '')
-            except ChatEventManager.DatabaseException:
-                return False
-            except ChatEventManager.UnknownCommandException:
-                pass
-            except:
                 return False
 
             # Обработка сообщений вне командного пространства
             handler_result = False
             if len(self.__message_handlers) > 0:
-                    # Подготовка объекта входных данных Callback
-                    callin = ChatEventManager.CallbackInputObject()
-                    callin.event = self.__event
-                    callin.vk_api = self.__vk_api
-                    callin.manager = self
-                    callin.db = self.__db
-                    callin.output = output
+                for handler in self.__message_handlers:
+                    if handler['ignore_db'] or self.__db.is_exists:
+                        # Если версия Event'а не совпадает с оригиналом, то конвертируем в нужную версию, для обратной совместимости
+                        if handler["event_version"] == ChatEventManager.EventObjectConverter.Version.ORIGIN:
+                            event = self.__event
+                        else:
+                            event = ChatEventManager.EventObjectConverter.convert(self.__event, handler["event_version"])
 
-                    for handler in self.__message_handlers:
-                        if handler['ignore_db'] or self.__db.is_exists:
-                            if handler['callback'](callin):
-                                handler_result = True
-                                break
+                        # Подготовка объекта вызова
+                        callback_object = {
+                            "event": event,
+                            "vk_api": self.__vk_api,
+                            "manager": self,
+                            "db": self.__db,
+                            "output": output
+                        }
+
+                        if handler['callback'](callback_object):
+                            handler_result = True
+                            break
 
             # Делаем коммит статистики, если беседа зарегистрирована
-            self.__stats_commit(self.__event.event_object.from_id)
+            self.__stats_commit(self.__event["object"]["message"]["from_id"])
 
             return handler_result
 
-        elif self.__event.event_type == 'message_event':
+        elif self.__event["type"] == 'message_event':
             try:
                 command_result = self.run_callback_button_command(self.__event, output)
 
                 # Система отслеживания статистики
                 self.__stats_button()
                 # Делаем коммит статистики, если беседа зарегистрирована
-                self.__stats_commit(self.__event.event_object.user_id)
+                self.__stats_commit(self.__event["object"]["user_id"])
 
                 return command_result
             except ChatEventManager.DatabaseException:
-                result = output.show_snackbar(self.__event.event_object.event_id, self.__event.event_object.user_id, self.__event.event_object.peer_id, DEFAULT_MESSAGES.SNACKBAR_NOT_REGISTERED)
+                result = output.show_snackbar(self.__event["object"]["event_id"], self.__event["object"]["user_id"], self.__event["object"]["peer_id"], DEFAULT_MESSAGES.SNACKBAR_NOT_REGISTERED)
                 return False
             except ChatEventManager.UnknownCommandException:
-                output.show_snackbar(self.__event.event_object.event_id, self.__event.event_object.user_id, self.__event.event_object.peer_id, DEFAULT_MESSAGES.SNACKBAR_UNKNOWN_COMMAND)
+                output.show_snackbar(self.__event["object"]["event_id"], self.__event["object"]["user_id"], self.__event["object"]["peer_id"], DEFAULT_MESSAGES.SNACKBAR_UNKNOWN_COMMAND)
                 return False
             except:
                 # Логирование непредвиденной ошибки в файл
                 logname = datetime.utcfromtimestamp(time.time() + 10800).strftime("%d%m%Y-{}".format(generate_random_string(5, uppercase=False)))
                 trace = traceback.format_exc()
                 logpath = os.path.join(SYSTEM_PATHS.EXEC_LOG_DIR, "{}.log".format(logname))
-                write_log(logpath, "Event:\n{}\n\n{}".format(json.dumps(self.__event.raw, indent=4, ensure_ascii=False), trace[:-1]))
+                write_log(logpath, "Event:\n{}\n\n{}".format(json.dumps(self.__event, indent=4, ensure_ascii=False), trace[:-1]))
                 keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
                 keyboard.callback_button("Репорт", ['report_error', logname], KeyboardBuilder.POSITIVE_COLOR)
-                output.messages_edit(peer_id=self.__event.event_object.peer_id,
-                                        conversation_message_id=self.__event.event_object.conversation_message_id,
+                output.messages_edit(peer_id=self.__event["object"]["peer_id"],
+                                        conversation_message_id=self.__event["object"]["conversation_message_id"],
                                         message=DEFAULT_MESSAGES.MESSAGE_EXECUTION_ERROR.format(logname=logname),
                                         keyboard=keyboard.build())
                 return False
@@ -575,7 +608,7 @@ class OutputSystem:
 
 # Класс Продвинутой системы вывода
 class AdvancedOutputSystem:
-    def __init__(self, output: OutputSystem, event: ChatEventManager.EventObject, db: ChatDatabase):
+    def __init__(self, output: OutputSystem, event: dict, db: ChatDatabase):
         self.__output = output
         self.__db = db
         self.__event = event
@@ -588,10 +621,10 @@ class AdvancedOutputSystem:
         self.__prepare_appeal_code()
 
     def __prepare_appeal_code(self):
-        if self.__event.event_type == 'message_new':
-            user_id = self.__event.event_object.from_id
-        elif self.__event.event_type == 'message_event':
-            user_id = self.__event.event_object.user_id
+        if self.__event["type"] == 'message_new':
+            user_id = self.__event["object"]["message"]["from_id"]
+        elif self.__event["type"] == 'message_event':
+            user_id = self.__event["object"]["user_id"]
         projection = {'_id': 0, 'chat_settings.user_nicknames.id{}'.format(user_id): 1}
         query = self.__db.find(projection=projection)
         user_nickname = ValueExtractor(query).get('chat_settings.user_nicknames.id{}'.format(user_id), None)
@@ -605,7 +638,7 @@ class AdvancedOutputSystem:
             self.__prefs[k] = v
 
     def messages_send(self, **reqm):
-        if self.__event.event_type == 'message_new':
+        if self.__event["type"] == 'message_new':
             # Добавление дополнительного кода
             reqm['script'] = self.__appeal_code + reqm.get('script', '')
 
@@ -613,11 +646,11 @@ class AdvancedOutputSystem:
             if self.__prefs['disable_mentions']:
                 reqm['disable_mentions'] = True
 
-            reqm['peer_id'] = self.__event.event_object.peer_id
+            reqm['peer_id'] = self.__event["object"]["message"]["peer_id"]
             if self.__prefs['reply_to_message']:
                 forward = {
-                    'peer_id': self.__event.event_object.peer_id,
-                    'conversation_message_ids': [self.__event.event_object.conversation_message_id],
+                    'peer_id': self.__event["object"]["message"]["peer_id"],
+                    'conversation_message_ids': [self.__event["object"]["message"]["conversation_message_id"]],
                     'is_reply': True
                 }
                 reqm['forward'] = json.dumps(forward, ensure_ascii=False, separators=(',', ':'))
@@ -625,7 +658,7 @@ class AdvancedOutputSystem:
             return self.__output.messages_send(**reqm)
 
     def messages_edit(self, **reqm):
-        if self.__event.event_type == 'message_event':
+        if self.__event["type"] == 'message_event':
             # Добавление дополнительного кода
             reqm['script'] = self.__appeal_code + reqm.get('script', '')
 
@@ -633,16 +666,16 @@ class AdvancedOutputSystem:
             if self.__prefs['disable_mentions']:
                 reqm['disable_mentions'] = True
 
-            reqm['peer_id'] = self.__event.event_object.peer_id
-            reqm['conversation_message_id'] = self.__event.event_object.conversation_message_id
+            reqm['peer_id'] = self.__event["object"]["peer_id"]
+            reqm['conversation_message_id'] = self.__event["object"]["conversation_message_id"]
             reqm['keep_forward_messages'] = self.__prefs['reply_to_message']
 
             return self.__output.messages_edit(**reqm)
 
     def show_snackbar(self, **reqm):
-        if self.__event.event_type == 'message_event':
-            reqm['peer_id'] = self.__event.event_object.peer_id
-            reqm['user_id'] = self.__event.event_object.user_id
-            reqm['event_id'] = self.__event.event_object.event_id
+        if self.__event["type"] == 'message_event':
+            reqm['peer_id'] = self.__event["object"]["peer_id"]
+            reqm['user_id'] = self.__event["object"]["user_id"]
+            reqm['event_id'] = self.__event["object"]["event_id"]
 
             return self.__output.show_snackbar(**reqm)

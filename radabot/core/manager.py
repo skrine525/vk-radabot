@@ -125,18 +125,20 @@ class UserPermissions:
 
             self.__commit_data = {'$set': {}, '$unset': {}}
 
+            self.__user_permissions = {**UserPermissions.__default_states, **extractor.get('chat_settings.user_permissions.id{}'.format(user_id), {})}
+            
             if user_id == self.__db.owner_id:
                 # Если пользователь является владельцем чата
-                self.__user_permissions = UserPermissions.__default_states.copy()
-                for k in list(self.__user_permissions):
-                    self.__user_permissions[k] = True
-            else:
-                # Если пользователь является участником чата
-                self.__user_permissions = {**UserPermissions.__default_states, **extractor.get('chat_settings.user_permissions.id{}'.format(user_id), {})}
-                for k in self.__user_permissions:
-                    if not (k in UserPermissions.__default_states):
-                        self.__user_permissions.pop(k)
-                        self.__commit_data['$unset']['chat_settings.user_permissions.id{}.{}'.format(user_id, k)] = 0
+                permissions_data = ManagerData.get_user_permissions_data()
+                for k in list(permissions_data):
+                    if(not permissions_data[k]["hidden"]):
+                        self.__user_permissions[k] = True
+            
+            # Удалем несуществующие права, если такие имеются
+            for k in self.__user_permissions.copy():
+                if not (k in UserPermissions.__default_states):
+                    del self.__user_permissions[k]
+                    self.__commit_data['$unset']['chat_settings.user_permissions.id{}.{}'.format(user_id, k)] = 0
         else:
             raise UserPermissions.InvalidArgumentException("Invalid 'user_id' parameter")
 
@@ -145,11 +147,8 @@ class UserPermissions:
 
     def set(self, name: str, state: bool):
         if name in self.__user_permissions:
-            if self.__db.owner_id == self.__user_id:
-                raise UserPermissions.OwnerPermissionException("User 'id{}' is owner".format(self.__user_id))
-            else:
-                self.__user_permissions[name] = state
-                self.__commit_data['$set']['chat_settings.user_permissions.id{}.{}'.format(self.__user_id, name)] = state
+            self.__user_permissions[name] = state
+            self.__commit_data['$set']['chat_settings.user_permissions.id{}.{}'.format(self.__user_id, name)] = state
         else:
             raise UserPermissions.UnknownPermissionException("Unknown '{}' permission".format(name))
 
@@ -161,18 +160,21 @@ class UserPermissions:
 
     def commit(self):
         if self.__db.owner_id == self.__user_id:
-            raise UserPermissions.OwnerPermissionException("User 'id{}' is owner".format(self.__user_id))
-        else:
-            if len(self.__commit_data['$set']) == 0:
-                self.__commit_data.pop('$set')
-            if len(self.__commit_data['$unset']) == 0:
-                self.__commit_data.pop('$unset')
+            permissions_data = ManagerData.get_user_permissions_data()
+            for k in list(self.__user_permissions):
+                if(not permissions_data[k]["hidden"]):
+                    del self.__user_permissions[k]
+        
+        if len(self.__commit_data['$set']) == 0:
+            self.__commit_data.pop('$set')
+        if len(self.__commit_data['$unset']) == 0:
+            self.__commit_data.pop('$unset')
 
-            if len(self.__commit_data) > 0:
-                result = self.__db.update(self.__commit_data)
-                if result.modified_count > 0:
-                    return True
-                else:
-                    return False
+        if len(self.__commit_data) > 0:
+            result = self.__db.update(self.__commit_data)
+            if result.modified_count > 0:
+                return True
             else:
                 return False
+        else:
+            return False
