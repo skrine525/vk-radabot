@@ -40,9 +40,9 @@ class ChatModes:
         self.__commit_data = {'$set': {}, '$unset': {}}
 
         # Вырезаем из базы данных, если нет данных о режиме в файле
-        for k in self.__modes:
+        for k in self.__modes.copy():
             if not (k in ChatModes.__default_states):
-                self.__modes.pop(k)
+                del self.__modes[k]
                 self.__commit_data['$unset']['chat_settings.chat_modes.{}'.format(k)] = 0
 
     def get_all(self):
@@ -126,7 +126,7 @@ class UserPermissions:
             self.__commit_data = {'$set': {}, '$unset': {}}
 
             self.__user_permissions = {**UserPermissions.__default_states, **extractor.get('chat_settings.user_permissions.id{}'.format(user_id), {})}
-            
+
             if user_id == self.__db.owner_id:
                 # Если пользователь является владельцем чата
                 permissions_data = ManagerData.get_user_permissions_data()

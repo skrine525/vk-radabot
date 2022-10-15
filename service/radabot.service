@@ -1,11 +1,11 @@
 [Unit]
-Description=A Python handler of radabot
+Description=VK group bot
 After=multi-user.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/radabot/cli
-ExecStart=/usr/bin/python3 radabot.py
+WorkingDirectory=/home/radabot
+ExecStart=/home/radabot/env/bin/python radabot.py
 Restart=on-failure
 RestartSec=5
 
