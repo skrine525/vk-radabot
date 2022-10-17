@@ -1,14 +1,17 @@
-import datetime
-import math, time
+import datetime, math, time, requests, os, threading, seam_carving
+import json
+import numpy as np
+from PIL import Image
 from radabot.core.bot import DEFAULT_MESSAGES
 from radabot.core.io import ChatEventManager, AdvancedOutputSystem
 from radabot.core.manager import ChatModes, UserPermissions
-from radabot.core.system import ArgumentParser, CommandHelpBuilder, ManagerData, PageBuilder, ValueExtractor, int2emoji
+from radabot.core.system import SYSTEM_PATHS, ArgumentParser, CommandHelpBuilder, ManagerData, PageBuilder, ValueExtractor, generate_random_string, get_high_resolution_attachment_photo, int2emoji
 from radabot.core.vk import KeyboardBuilder, VKVariable
 
 
 def initcmd(manager: ChatEventManager):
     manager.add_message_command('!мемы', CustomMemes.message_command)
+    manager.add_message_command('!жмых', FunSeamCarving.message_command)
 
     manager.add_callback_button_command('fun_memes', CustomMemes.callback_button_command)
 
@@ -328,3 +331,106 @@ class CustomMemes:
         help_builder.command('{} инфа', args.get_str(0).lower())
 
         aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', help_builder.build()))
+
+class FunSeamCarving:
+    IMG_MAX_SIZE = 300                                  # Максимальный размер ширины
+    __queue_thread = None                               # Ссылка на поток очереди
+    __job_queue = []                                    # Очередь на обработку
+    __last_job_duration = None                          # Количество секунд обработки последнего задания
+
+    @staticmethod
+    def message_command(callback_object: dict):
+        event = callback_object["event"]
+        args = callback_object["args"]
+        db = callback_object["db"]
+        output = callback_object["output"]
+
+        aos = AdvancedOutputSystem(output, event, db)
+
+        try:
+            photo = get_high_resolution_attachment_photo(event["object"]["message"]["attachments"][0])
+        except IndexError:
+            message_text = f'⚠Позволяет смешно "жмыхнуть" фотографию, прикрепленную к команде.\n\nИспользуйте:\n➡️ {args.get_str(0)} [фотография]'
+            aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', message_text))
+            return
+
+        if photo == None:
+            message_text = f'⛔Необходимо прикрепить фотографию.\n\nИспользуйте:\n➡️ {args.get_str(0)} [фотография]'
+            aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', message_text))
+            return
+        
+        # Подгружаем нужную картинку и преобразовываем
+        img = Image.open(requests.get(photo["url"], stream=True).raw)                                       # Подгружаем картинку
+        dst_size = [img.size[0], img.size[1]]															    # Список размера искаженной картинки
+        if dst_size[0] > FunSeamCarving.IMG_MAX_SIZE or dst_size[1] > FunSeamCarving.IMG_MAX_SIZE:
+            if dst_size[0] >= dst_size[1]:
+                # Если ширина >= высота
+                dst_size[1] = int(FunSeamCarving.IMG_MAX_SIZE * dst_size[1] / dst_size[0])					# Вычисляем новую высоту
+                dst_size[0] = int(dst_size[0] / (dst_size[0] / FunSeamCarving.IMG_MAX_SIZE))				# Вычиляем новую ширину
+            else:
+                # Если ширина < высота
+                dst_size[0] = int(FunSeamCarving.IMG_MAX_SIZE * dst_size[0] / dst_size[1])					# Вычисляем новую ширину
+                dst_size[1] = int(dst_size[1] / (dst_size[1] / FunSeamCarving.IMG_MAX_SIZE))				# Вычиляем новую высоту
+            img.thumbnail(dst_size)						                                                    # Изменяем картинку до нового размера
+
+        photo_path = os.path.join(SYSTEM_PATHS.TMP_DIR, "{}.jpg".format(generate_random_string(10, uppercase=False)))
+        img.save(photo_path, "JPEG")
+
+        if FunSeamCarving.__last_job_duration is not None:
+            duration = (len(FunSeamCarving.__job_queue) + 1) * FunSeamCarving.__last_job_duration
+            duration_text = f"\n\nПримерное время ожидания: {duration} сек."
+        else:
+            duration_text = ""
+        message_text = f'✅Фотография добавлена в очередь.{duration_text}'
+        peer_id = event["object"]["message"]["peer_id"]
+        aos_res = aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', message_text), pscript=f"return API.photos.getMessagesUploadServer({{peer_id:{peer_id}}});")
+
+        job = {
+            "aos_output": aos,
+            "path": photo_path,
+            "upload_link": aos_res.response["upload_url"]
+        }
+        FunSeamCarving.__job_queue.append(job)
+
+    @staticmethod
+    def start_queue_thread():
+        if FunSeamCarving.__queue_thread is None:
+            FunSeamCarving.__queue_thread = threading.Thread(target=FunSeamCarving.__queue_handler, daemon=True)
+            FunSeamCarving.__queue_thread.start()
+
+    @staticmethod
+    def __queue_handler():
+        while True:
+            try:
+                current_job = FunSeamCarving.__job_queue[0]
+
+                start_time = time.time()                                                                # Начало вычисления продолжительности обработки
+                src_img = Image.open(current_job["path"])
+                src_size = src_img.size
+                src_array = np.array(src_img)
+                src_img.close()
+                src_h, src_w, _ = src_array.shape
+                dst_array = seam_carving.resize(
+                    src_array, (src_w / 2, src_h / 2),
+                    energy_mode='backward',                                                             # Choose from {backward, forward}
+                    order='width-first',                                                                # Choose from {width-first, height-first}
+                    keep_mask=None
+                )
+
+                dst_img = Image.fromarray(dst_array)
+                dst_img.resize(src_size, Image.Resampling.LANCZOS).save(current_job["path"], "JPEG")
+                FunSeamCarving.__last_job_duration = round(time.time() - start_time, 2)                # Конец вычисления продолжительности обработки
+                threading.Thread(target=FunSeamCarving.__sender_worker, daemon=True, args=[current_job]).start()
+                FunSeamCarving.__job_queue.pop(0)
+            except IndexError:
+                time.sleep(1)
+
+    @staticmethod
+    def __sender_worker(job: dict):
+        aos = job["aos_output"]
+
+        img_file = open(job["path"], 'rb')
+        upload_result = requests.post(job["upload_link"], files={'photo': img_file}).text
+
+        message_text = 'Жмыхнул😎'
+        aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', message_text), attachment=VKVariable.Multi("var", "photo"), script=f"var doc=API.photos.saveMessagesPhoto({upload_result})[0]; var photo=\"photo\"+doc.owner_id+\"_\"+doc.id;")

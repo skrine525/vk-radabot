@@ -1,8 +1,9 @@
 # Python модули
 import time, requests, json, threading, traceback
-from radabot.core.manager import ChatModes, UserPermissions
 
 # Части бота
+from radabot.bot.fun import FunSeamCarving
+from radabot.core.manager import ChatModes, UserPermissions
 from radabot.core.vk import VK_API, longpoll
 from radabot.core.system import SYSTEM_PATHS, Config, ManagerData, PHPCommandIntegration, initdir, write_log
 from radabot.bot.handler import handle_event
@@ -13,6 +14,7 @@ ManagerData.read_file()									# Считываем файл manager.json
 UserPermissions.init_default_states()					# Инициализируем стандартные состояния UserPermissions
 ChatModes.init_default_states()							# Инициализируем стандартные состояния Chat
 PHPCommandIntegration.init()							# Инициализация команд php
+FunSeamCarving.start_queue_thread()						# Запускаем поток обработки "жмых" изображений
 initdir()												# Инициализация 
 
 # Базоваые константы

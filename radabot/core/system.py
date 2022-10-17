@@ -432,6 +432,19 @@ def get_reply_message_from_event(event: dict):
             pass
     return reply_message
 
+# Возвращает объект с самым качественным изображением во вложении
+def get_high_resolution_attachment_photo(attach: dict):
+    if attach["type"] == "photo":
+        # Ищет самое качественное фото по мере уменьшения качества
+        for t in ["w", "z", "y", "x", "m", "s"]:
+            for p in attach["photo"]["sizes"]:
+                if p["type"] == t:
+                    return p
+    
+    # Если ничего не найдено, то возвращает None
+    return None
+
+
 # Метод журналирования
 def write_log(filename: str, text: str):
     f = open(filename, "a", encoding='utf-8')
