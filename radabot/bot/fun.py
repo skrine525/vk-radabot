@@ -434,3 +434,4 @@ class FunSeamCarving:
 
         message_text = 'Жмыхнул😎'
         aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', message_text), attachment=VKVariable.Multi("var", "photo"), script=f"var doc=API.photos.saveMessagesPhoto({upload_result})[0]; var photo=\"photo\"+doc.owner_id+\"_\"+doc.id;")
+        os.remove(job["path"])
