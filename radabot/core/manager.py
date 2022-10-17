@@ -34,9 +34,11 @@ class ChatModes:
     def __init__(self, db: ChatDatabase):
         self.__db = db
 
-        query = self.__db.find(projection={'_id': 0, 'chat_settings.chat_modes': 1})
-
-        self.__modes = {**ChatModes.__default_states, **ValueExtractor(query).get('chat_settings.chat_modes', {})}
+        db_result = self.__db.find(projection={'_id': 0, 'chat_settings.chat_modes': 1})
+        db_modes = {}
+        if db_result != None:
+            db_modes = ValueExtractor(db_result).get('chat_settings.chat_modes', {})
+        self.__modes = {**ChatModes.__default_states, **db_modes}
         self.__commit_data = {'$set': {}, '$unset': {}}
 
         # Вырезаем из базы данных, если нет данных о режиме в файле

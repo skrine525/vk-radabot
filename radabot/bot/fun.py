@@ -70,7 +70,7 @@ class CustomMemes:
         elif subcommand == 'добав':
             user_permissions = UserPermissions(db, event["object"]["message"]["from_id"])
             if user_permissions.get('customize_memes'):
-                meme_name = args.get_str(2, '').lower()
+                meme_name = args.get_words(2)
                 if meme_name != '':
                     # Ограничение длинны названия 15 символов
                     if len(meme_name) > 15:
@@ -289,7 +289,7 @@ class CustomMemes:
                         # Сообщаем, что мем удален
                         aos.messages_edit(message=VKVariable.Multi('var', 'appeal', 'str', '✅Мем удален!'))
                 else:
-                    CustomMemes.__print_help_message_del(aos, args)
+                    aos.show_snackbar(text=DEFAULT_MESSAGES.SNACKBAR_INTERNAL_ERROR)
             else:
                 aos.messages_send(message=DEFAULT_MESSAGES.SNACKBAR_YOU_HAVE_NO_RIGHTS)
         else:

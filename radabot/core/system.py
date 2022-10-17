@@ -113,6 +113,10 @@ class ArgumentParser:
     def count(self):
         return len(self.__args)
 
+    @property
+    def args_dict(self):
+        return self.__args
+
     def clear_index(self, index: int) -> bool:
         try:
             self.__args.pop(index)
@@ -137,6 +141,16 @@ class ArgumentParser:
             return float(self.__args[index])
         except (IndexError, ValueError):
             return default
+
+    def get_words(self, start = None, end = None):
+        if isinstance(start, int) and isinstance(end, int):
+            return " ".join(self.__args[start:end])
+        elif isinstance(start, int) and not isinstance(end, int):
+            return " ".join(self.__args[start:])
+        elif not isinstance(start, int) and isinstance(end, int):
+            return " ".join(self.__args[:end])
+        else:
+            return ""
 
 
 class PayloadParser:
