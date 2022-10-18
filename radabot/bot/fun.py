@@ -1,5 +1,4 @@
 import datetime, math, time, requests, os, threading, seam_carving
-import json
 import numpy as np
 from PIL import Image
 from radabot.core.bot import DEFAULT_MESSAGES
@@ -378,7 +377,7 @@ class FunSeamCarving:
 
         if FunSeamCarving.__last_job_duration is not None:
             duration = (len(FunSeamCarving.__job_queue) + 1) * FunSeamCarving.__last_job_duration
-            duration_text = f"\n\nПримерное время ожидания: {duration} сек."
+            duration_text = f"\n\n⏳Ожидание: ~{duration} сек."
         else:
             duration_text = ""
         message_text = f'✅Фотография добавлена в очередь.{duration_text}'
@@ -431,6 +430,7 @@ class FunSeamCarving:
 
         img_file = open(job["path"], 'rb')
         upload_result = requests.post(job["upload_link"], files={'photo': img_file}).text
+        img_file.close()
 
         message_text = 'Жмыхнул😎'
         aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', message_text), attachment=VKVariable.Multi("var", "photo"), script=f"var doc=API.photos.saveMessagesPhoto({upload_result})[0]; var photo=\"photo\"+doc.owner_id+\"_\"+doc.id;")

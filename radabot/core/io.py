@@ -336,9 +336,21 @@ class ChatEventManager:
                 self.__chat_stats.commit(user_id)
 
     def __stats_command(self):
+        # Обновление системной статистики
+        current_date = datetime.utcnow().strftime("%Y-%m-%d")
+        collection = self.__db.get_collection("system_stats")
+        collection.update_one({"date": current_date}, {"$inc": {"command_used_count": 1}}, upsert=True)
+
+        # Обновление статистики пользователя
         self.__chat_stats.update('command_used_count', 1)
 
     def __stats_button(self):
+        # Обновление системной статистики
+        current_date = datetime.utcnow().strftime("%Y-%m-%d")
+        collection = self.__db.get_collection("system_stats")
+        collection.update_one({"date": current_date}, {"$inc": {"button_pressed_count": 1}}, upsert=True)
+
+        # Обновление статистики пользователя
         self.__chat_stats.update('button_pressed_count', 1)
 
     def __stats_message_new(self):
