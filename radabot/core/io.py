@@ -173,7 +173,7 @@ class ChatEventManager:
         if command in self.__text_button_commands:
             return False
         else:
-            self.__message_commands[command] = {
+            self.__text_button_commands[command] = {
                 'callback': callback,
                 'args': args,
                 'ignore_db': ignore_db,

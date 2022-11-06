@@ -1,16 +1,17 @@
-import datetime, math, time, requests, os, threading, seam_carving
+import datetime, math, time, requests, os, threading, seam_carving, json
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFont, ImageDraw
 from radabot.core.bot import DEFAULT_MESSAGES
 from radabot.core.io import ChatEventManager, AdvancedOutputSystem
 from radabot.core.manager import ChatModes, UserPermissions
-from radabot.core.system import SYSTEM_PATHS, ArgumentParser, CommandHelpBuilder, ManagerData, PageBuilder, ValueExtractor, generate_random_string, get_high_resolution_attachment_photo, int2emoji
+from radabot.core.system import SYSTEM_PATHS, ArgumentParser, CommandHelpBuilder, ManagerData, PageBuilder, ValueExtractor, generate_random_string, get_high_resolution_attachment_photo, get_reply_message_from_event, int2emoji
 from radabot.core.vk import KeyboardBuilder, VKVariable
 
 
 def initcmd(manager: ChatEventManager):
     manager.add_message_command('!мемы', CustomMemes.message_command)
     manager.add_message_command('!жмых', FunSeamCarving.message_command)
+    manager.add_message_command('!цитата', FunQuote.message_command)
 
     manager.add_callback_button_command('fun_memes', CustomMemes.callback_button_command)
 
@@ -434,4 +435,109 @@ class FunSeamCarving:
 
         message_text = 'Жмыхнул😎'
         aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', message_text), attachment=VKVariable.Multi("var", "photo"), script=f"var doc=API.photos.saveMessagesPhoto({upload_result})[0]; var photo=\"photo\"+doc.owner_id+\"_\"+doc.id;")
-        os.remove(job["path"])
+        #os.remove(job["path"])  # TODO Удаление в tmp
+
+
+class FunQuote:
+    IMG_WIDTH = 300     # Ширина изображения
+
+    # private модот для добавление слова в массив слов, с учетом ограничения длинны строки
+    def __add_word_to_list(word_list, max_width, font, word):
+        word_list_text_length = font.getlength(' '.join(word_list[-1]))
+        word_length = font.getlength(word)
+        if word_list_text_length + word_length <= max_width:
+            word_list[-1].append(word)
+        else:
+            word_list.append([word])
+
+    @staticmethod
+    def message_command(callback_object: dict):
+        event = callback_object["event"]
+        args = callback_object["args"]
+        db = callback_object["db"]
+        output = callback_object["output"]
+        vk_api = callback_object["vk_api"]
+
+        aos = AdvancedOutputSystem(output, event, db)
+
+        reply_message = get_reply_message_from_event(event)
+
+        if reply_message is not None:
+            from_id = reply_message["from_id"]
+            if from_id > 0:
+                peer_id = event["object"]["message"]["peer_id"]
+
+                # Запрашиваем ссылку на выгрузку фотографии и получаем данные пользователя
+                execute_data = json.loads(vk_api.execute(f"var a=API.photos.getMessagesUploadServer({{peer_id:{peer_id}}});var b=API.users.get({{user_ids:{from_id},fields:\"photo_100\"}})[0];return [a, b];"))
+                execute_data = execute_data["response"]
+                
+                # Создаем массив строчек основного текста
+                main_text = reply_message["text"]
+                main_text = f"«{main_text}»."
+                main_text_font = ImageFont.truetype(os.path.join(SYSTEM_PATHS.FONTS_DIR, "Arial-Italic.ttf"), size=16)
+                main_text_list = [[]]
+                for word in main_text.split():
+                    word_length = main_text_font.getlength(word)
+                    if word_length <= FunQuote.IMG_WIDTH - 30:
+                        FunQuote.__add_word_to_list(main_text_list, FunQuote.IMG_WIDTH - 30, main_text_font, word)
+                    else:
+                        #curr_line_length = main_text_font.getlength(' '.join(main_text_list[-1]))
+                        curr_collect_word = ""
+                        for symbol in word:
+                            if main_text_font.getlength(curr_collect_word + symbol + "-") >= FunQuote.IMG_WIDTH - 30:
+                                FunQuote.__add_word_to_list(main_text_list, FunQuote.IMG_WIDTH - 30, main_text_font, curr_collect_word + "-")
+                                curr_collect_word = ""
+                                #curr_line_length = 0
+                            else:
+                                curr_collect_word = curr_collect_word + symbol
+
+                        if len(curr_collect_word) > 0:
+                            FunQuote.__add_word_to_list(main_text_list, FunQuote.IMG_WIDTH - 30, main_text_font, curr_collect_word)
+                
+                # Создаем черный квадрат
+                img_height = 35 + (50 + 20 * (len(main_text_list) - 1)) + 65
+                img = Image.new('RGB', (FunQuote.IMG_WIDTH, img_height), 'black')    
+                idraw = ImageDraw.Draw(img)
+
+                # Добавляем заголовок
+                title_font = ImageFont.truetype(os.path.join(SYSTEM_PATHS.FONTS_DIR, "Arial-Bold.ttf"), size=18)
+                title_text = "Цитаты великих людей"
+                text_length = title_font.getlength(title_text)
+                idraw.text(((FunQuote.IMG_WIDTH - 1) / 2 - text_length / 2, 10), title_text, font=title_font)
+
+                # Добавляем основной текст
+                curr_main_text_height = 50
+                for line in main_text_list:
+                    idraw.text((15, curr_main_text_height), ' '.join(line), font=main_text_font)
+                    curr_main_text_height = curr_main_text_height + 20
+
+                # Добавляем картинку и имя автора
+                img_ava = Image.open(requests.get(execute_data[1]["photo_100"], stream=True).raw)
+                img_mask = Image.new("L", img_ava.size, 0)
+                mask_draw = ImageDraw.Draw(img_mask)
+                mask_draw.ellipse((0, 0, img_mask.size[0] - 1, img_mask.size[1] - 1), fill=255)
+                img_mask = img_mask.resize((50, 50))
+                img_ava = img_ava.resize((50, 50))
+                img.paste(img_ava, (15, curr_main_text_height + 15), img_mask)
+                owner_fullname_font = ImageFont.truetype(os.path.join(SYSTEM_PATHS.FONTS_DIR, "Arial-Regular.ttf"), size=14)
+                owner_fullname = "{} {}".format(execute_data[1]["first_name"], execute_data[1]["last_name"]) 
+                idraw.text((75, curr_main_text_height + 31), f"© {owner_fullname}", font=owner_fullname_font)
+
+                # Генерируем имя файла и сохраняем фотографию
+                photo_path = os.path.join(SYSTEM_PATHS.TMP_DIR, "{}.jpg".format(generate_random_string(10, uppercase=False)))
+                img.save(photo_path, "JPEG")
+
+                # Загружаем фотографию и отправляем сообщение
+                img_file = open(photo_path, 'rb')
+                upload_result = requests.post(execute_data[0]["upload_url"], files={'photo': img_file}).text
+                img_file.close()
+
+                aos.messages_send(attachment=VKVariable.Multi("var", "photo"), script=f"var doc=API.photos.saveMessagesPhoto({upload_result})[0]; var photo=\"photo\"+doc.owner_id+\"_\"+doc.id;")
+
+                # TODO Удаление в tmp
+            else:
+                message_text = "⛔ Автором цитаты может быть только пользователь."
+                aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', message_text))
+        else:
+            message_text = "⚠Создает картинку-цитату из пересланного сообщения.\n\nИспользуйте:\n➡️ {} [сообщение]".format(args.get_str(0).lower())
+            aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', message_text))

@@ -1,5 +1,10 @@
 <?php
 
+// Логирование ошибок в нужную директорию
+ini_set("log_errors", "On");  
+ini_set('error_log', 'log/php-errors.log');
+ini_set('error_reporting', E_ALL); 
+
 require("radabot/php-core/bot.php"); // Подгружаем PHP код бота
 
 set_time_limit(5); // Время жизни скрипта - 5 секунд

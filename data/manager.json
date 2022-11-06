@@ -26,7 +26,7 @@
         },
         "manage_punishments": {
             "label": "Управление наказаниями",
-            "desc": "Позволяет изменять ",
+            "desc": "Позволяет \"наказывать\" пользователей",
             "default": false,
             "hidden": false
         },
@@ -39,12 +39,6 @@
         "prohibit_antiflood": {
             "label": "Игнор антифлуда",
             "desc": "Позволяет носителю игнорировать систему антифлуда",
-            "default": false,
-            "hidden": false
-        },
-        "manage_cmd": {
-            "label": "Управление командами",
-            "desc": "Позволяет управлять кастомными командами",
             "default": false,
             "hidden": false
         },
@@ -79,10 +73,6 @@
         "legacy_enabled": {
             "label": "Legacy-контент",
             "default": false
-        },
-        "chat_messenger": {
-            "label": "Чат-мессенджер",
-            "default": true
         }
     }
 }

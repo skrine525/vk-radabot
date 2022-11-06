@@ -12,6 +12,7 @@ class SYSTEM_PATHS:
     LOG_DIR = 'log'
     TMP_DIR = 'tmp'
     EXEC_LOG_DIR = os.path.join(LOG_DIR, 'exec')
+    FONTS_DIR = os.path.join(DATA_DIR, 'fonts')
 
     # Файлы
     CONFIG_FILE = os.path.join(DATA_DIR, 'config.json')
@@ -107,7 +108,11 @@ class ValueExtractor:
 
 class ArgumentParser:
     def __init__(self, line: str):
-        self.__args = shlex.split(line)
+        try:
+            self.__args = shlex.split(line, posix=False)
+        except ValueError:
+            # Вызывается, когда есть незакрытая ковычка
+            self.__args = []
 
     @property
     def count(self):

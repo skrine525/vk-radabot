@@ -440,12 +440,9 @@ namespace Legacy {
 					break;
 
 				case 'дата регистрации':
-					$user_info = simplexml_load_file("https://vk.com/foaf.php?id={$data->object->from_id}");
-					$created_date_unformed = $user_info->xpath('//ya:created/@dc:date')[0];
-					unset($user_info);
-					$formating = explode("T", $created_date_unformed);
-					$date = $formating[0];
-					$time = $formating[1];
+					$user_info_xml_str = file_get_contents("https://vk.com/foaf.php?id={$data->object->from_id}");
+					$created_pos = mb_stripos($user_info_xml_str, "ya:created dc:date=\"");
+					$date = mb_strcut($user_info_xml_str, $created_pos + 20, 10);
 					$formating = explode("-", $date);
 					$date = "{$formating[2]}.{$formating[1]}.{$formating[0]}";
 					$msg = ", Ваша страница была зарегистрирована {$date}.";
