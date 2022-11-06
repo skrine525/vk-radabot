@@ -49,3 +49,6 @@ def notification_thread(vk_api: VK_API, event: dict):
     # Уведомление суперпользователя о конце рассылки
     vk_api.call("messages.send", {"peer_id": Config.get("SUPERUSER_ID"), "message": f"✅Рассылка поста окончена.\n{post_link}", "random_id": 0})
 
+    # Закрываем соединение с базой данных
+    mongo_client.close()
+
