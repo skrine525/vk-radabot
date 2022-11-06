@@ -22,6 +22,8 @@ class SYSTEM_PATHS:
 
 
 class ChatDatabase:
+    CHAT_DATA_COLLECTION_NAME = "chats"         # Название коллекция с данными чатов
+
     @staticmethod
     def get_chat_db_filter(_id: int) -> dict:
         if _id > 2000000000:
@@ -31,7 +33,7 @@ class ChatDatabase:
     def __init__(self, database_host: str, database_port: int, database_name: str, peer_id: int):
         self.__mongo_client = MongoClient(database_host, database_port)
         self.__database = self.__mongo_client[database_name]
-        self.__main_collection = self.__database['chats']
+        self.__main_collection = self.__database[ChatDatabase.CHAT_DATA_COLLECTION_NAME]
         self.__chat_id = peer_id - 2000000000
         self.__main_filter = ChatDatabase.get_chat_db_filter(self.__chat_id)
 
@@ -39,7 +41,7 @@ class ChatDatabase:
         self.__owner_id = 0
 
         # Выполняем проверку базы данных
-        self.recheck()
+        self.check()
 
     @property
     def is_exists(self):
@@ -53,8 +55,15 @@ class ChatDatabase:
     def chat_id(self):
         return self.__chat_id
 
-    def get_collection(self, name):
-        return self.__database[name]
+    @property
+    def main_filter(self):
+        return self.__main_filter
+
+    def get_collection(self, name = None):
+        if name is None:
+            return self.__database[self.__main_collection]
+        else:
+            return self.__database[name]
 
     def find(self, *args, **kwargs):
         return self.__main_collection.find_one(self.__main_filter, *args, **kwargs)
@@ -62,7 +71,7 @@ class ChatDatabase:
     def update(self, *args, **kwargs):
         return self.__main_collection.update_one(self.__main_filter, *args, **kwargs)
 
-    def recheck(self):
+    def check(self):
         result = self.__main_collection.find_one(self.__main_filter, projection={'_id': 0, 'owner_id': 1})
         if result is not None:
             self.__is_exists = True

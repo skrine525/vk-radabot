@@ -15,7 +15,7 @@ UserPermissions.init_default_states()					# Инициализируем ста�
 ChatModes.init_default_states()							# Инициализируем стандартные состояния Chat
 PHPCommandIntegration.init()							# Инициализация команд php
 FunSeamCarving.start_queue_thread()						# Запускаем поток обработки "жмых" изображений
-initdir()												# Инициализация 
+initdir()												# Инициализация системных директорий
 
 # Базоваые константы
 WORKERS_MAX_COUNT = 1									# Максимальное количество одновременных обработчиков
@@ -27,7 +27,7 @@ event_queue = []										# Очередь событий на обработк�
 active_workers = []										# Массив потоков обработчика
 
 # Функция обработки события из очереди
-def queue_worker(event):
+def event_worker(event):
 	try:
 		handle_event(vk_api, event)
 	except:
@@ -37,16 +37,15 @@ def queue_worker(event):
 # Поток обработки очереди
 def queue_handler():
 	while True:
-		for event_worker in active_workers:
-			if not event_worker.is_alive():
-				active_workers.remove(event_worker)
-				del event_worker
+		for worker in active_workers:
+			if not worker.is_alive():
+				active_workers.remove(worker)
 
 		for event in event_queue:
 			if len(active_workers) < WORKERS_MAX_COUNT:
-				event_worker = threading.Thread(target=queue_worker, daemon=False, args=[event])
-				active_workers.append(event_worker)
-				event_worker.start()
+				worker = threading.Thread(target=event_worker, daemon=False, args=[event])
+				active_workers.append(worker)
+				worker.start()
 				event_queue.remove(event)
 			else:
 				break
@@ -55,7 +54,7 @@ def queue_handler():
 
 # Основной код запуска
 if __name__ == "__main__":
-	write_log(SYSTEM_PATHS.LONGPOLL_LOG_FILE, "Started")
+	write_log(SYSTEM_PATHS.LONGPOLL_LOG_FILE, "Longpoll started")
 	active = False
 
 	lp_server = ''
@@ -71,8 +70,8 @@ if __name__ == "__main__":
 			lp_key = response_data["key"]
 			lp_ts = response_data["ts"]
 			active = True
-			del vk_response_dict
-			del response_data
+			#del vk_response_dict
+			#del response_data
 			write_log(SYSTEM_PATHS.LONGPOLL_LOG_FILE, "Longpoll data: Received")
 			break
 		else:
@@ -105,8 +104,8 @@ if __name__ == "__main__":
 				else:
 					write_log(SYSTEM_PATHS.LONGPOLL_LOG_FILE, "Longpoll data updating failed: key")
 					time.sleep(LONGPOLL_ERROR_COOLDOWN)
-				del vk_response_dict
-				del response_data
+				#del vk_response_dict
+				#del response_data
 			elif failed == 3:
 				vk_response_dict = json.loads(vk_api.call('groups.getLongPollServer', {'group_id': Config.get('VK_GROUP_ID')}))
 				response_data = vk_response_dict.get('response', None)
@@ -117,8 +116,8 @@ if __name__ == "__main__":
 				else:
 					write_log(SYSTEM_PATHS.LONGPOLL_LOG_FILE, "Longpoll data updating failed: ts, key")
 					time.sleep(LONGPOLL_ERROR_COOLDOWN)
-				del vk_response_dict
-				del response_data
+				#del vk_response_dict
+				#del response_data
 			else:
 				for event in data_dict["updates"]:
 					event_queue.append(event)
@@ -132,5 +131,3 @@ if __name__ == "__main__":
 		except BaseException as e:
 			write_log(SYSTEM_PATHS.LONGPOLL_LOG_FILE, f"Unexpected {e=}, {type(e)=}")
 			time.sleep(LONGPOLL_ERROR_COOLDOWN)
-	
-	write_log(SYSTEM_PATHS.LONGPOLL_LOG_FILE, "Stopped")

@@ -331,7 +331,7 @@ class ChatEventManager:
         if self.__db.is_exists:
             self.__chat_stats.commit(user_id)
         else:
-            self.__db.recheck()
+            self.__db.check()
             if self.__db.is_exists:
                 self.__chat_stats.commit(user_id)
 

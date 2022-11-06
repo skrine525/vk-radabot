@@ -532,7 +532,7 @@ class FunQuote:
                 upload_result = requests.post(execute_data[0]["upload_url"], files={'photo': img_file}).text
                 img_file.close()
 
-                aos.messages_send(attachment=VKVariable.Multi("var", "photo"), script=f"var doc=API.photos.saveMessagesPhoto({upload_result})[0]; var photo=\"photo\"+doc.owner_id+\"_\"+doc.id;")
+                aos.messages_send(message=VKVariable.Multi('var', 'appeal'), attachment=VKVariable.Multi("var", "photo"), script=f"var doc=API.photos.saveMessagesPhoto({upload_result})[0]; var photo=\"photo\"+doc.owner_id+\"_\"+doc.id;")
 
                 # TODO Удаление в tmp
             else:

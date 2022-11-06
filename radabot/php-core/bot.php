@@ -1062,13 +1062,10 @@ namespace {
 	// Составные модули бота
 	require_once(__DIR__ . "/vk.php"); 										// Модуль, отвечающий за все взаимодействия с VK API
 	require_once(__DIR__ . "/database.php"); 								// Модуль, отвечающий за взаимодействие основной базы данных бота
-	require_once(__DIR__ . "/government.php");	 							// Модуль, отвечающий за работу гос. устройства беседы
 	require_once(__DIR__ . "/economy.php"); 								// Модуль, отвечающий за систему Экономики
 	require_once(__DIR__ . "/fun.php"); 									// Модуль, отвечающий за развлечения
 	require_once(__DIR__ . "/roleplay.php"); 								// Модуль, отвечающий за Roleplay команды
 	require_once(__DIR__ . "/manager.php"); 								// Модуль, отвечающий за управление беседой
-	require_once(__DIR__ . "/giphy.php"); 									// Модуль, отвечающий за функции взаимодействия с GIPHY API
-	require_once(__DIR__ . "/word_game.php"); 								// Модуль, отвечающий за игры Слова и Words
 	require_once(__DIR__ . "/legacy.php");									// Модуль, отвечающий за Legacy функции
 	require_once(__DIR__ . "/debug.php");									// Модуля, отвечающий за отладочные функции
 
