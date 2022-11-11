@@ -121,10 +121,29 @@ class ValueExtractor:
 class ArgumentParser:
     def __init__(self, line: str):
         try:
-            self.__args = shlex.split(line, posix=False)
+            # Сначала нормализуем строку, потом прогоняем через лексический анализатор
+            self.__args = shlex.split(ArgumentParser.__normalize_line(line))
         except ValueError:
             # Вызывается, когда есть незакрытая ковычка
             self.__args = []
+
+    # Метод нормализации строки
+    @staticmethod
+    def __normalize_line(line: str):
+        normalized_line = ''                    # Нормализованная строка
+
+        for i in range(len(line)):
+            if line[i] == "\\":
+                try:
+                    if line[i + 1] == " ":
+                        normalized_line += "\\"
+                    else:
+                        normalized_line += "\\\\"
+                except IndexError:
+                    normalized_line += "\\\\"
+            else:
+                normalized_line += line[i]
+        return normalized_line
 
     @property
     def count(self):

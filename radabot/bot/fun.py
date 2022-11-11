@@ -74,7 +74,7 @@ class CustomMemes:
         elif subcommand == 'добав':
             user_permissions = UserPermissions(db, event["object"]["message"]["from_id"])
             if user_permissions.get('customize_memes'):
-                meme_name = args.get_words(2)
+                meme_name = args.get_words(2).lower()
                 if meme_name != '':
                     # Ограничение длинны названия 15 символов
                     if len(meme_name) > 15:
@@ -197,7 +197,7 @@ class CustomMemes:
         elif subcommand == 'удал':
             user_permissions = UserPermissions(db, event["object"]["message"]["from_id"])
             if user_permissions.get('customize_memes'):
-                meme_name = args.get_str(2, '').lower()
+                meme_name = args.get_words(2).lower()
                 if meme_name != '':
                     # Подгружаем удаляемый мем
                     db_result = db.find(projection={'_id': 0, f'fun.memes.{meme_name}': 1})
