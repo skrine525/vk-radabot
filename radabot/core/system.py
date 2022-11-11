@@ -22,7 +22,7 @@ class SYSTEM_PATHS:
 
 
 class ChatDatabase:
-    CHAT_DATA_COLLECTION_NAME = "chats"         # Название коллекция с данными чатов
+    CHAT_DATA_COLLECTION_NAME = "chat_main"         # Название коллекция с данными чатов
 
     @staticmethod
     def get_chat_db_filter(_id: int) -> dict:
@@ -78,6 +78,9 @@ class ChatDatabase:
 
             extractor = ValueExtractor(result)
             self.__owner_id = extractor.get('owner_id')
+
+    def disconnect(self):
+        self.__mongo_client.close()
 
 
 class ValueExtractor:

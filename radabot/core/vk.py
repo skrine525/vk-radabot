@@ -12,7 +12,7 @@ class VK_API:
 		params["access_token"] = self.__access_token
 		params["v"] = api_version
 		r = requests.post("https://api.vk.com/method/{}".format(method), data=params, headers=headers)
-		return r.text
+		return r.json()
 
 	def execute(self, code: str, api_version: float = 5.131) -> str:
 		return self.call('execute', {'code': code}, api_version)
@@ -227,4 +227,4 @@ class KeyboardBuilder:
 def longpoll(server: str, key: str, ts: int, wait: int = 25) -> str:
 	data = {'act': 'a_check', 'key': key, 'ts': ts, 'wait': wait}
 	r = requests.post(server, data=data)
-	return r.text
+	return r.json()

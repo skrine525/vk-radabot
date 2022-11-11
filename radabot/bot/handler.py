@@ -18,5 +18,6 @@ def handle_event(vk_api, event):
 		initcmd_php(manager)
 
 		manager.handle()
+		manager.finish()
 	elif event["type"] == "wall_post_new":
 		start_notify(vk_api, event)

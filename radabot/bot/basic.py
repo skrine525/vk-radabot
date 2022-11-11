@@ -16,6 +16,8 @@ def initcmd(manager: ChatEventManager):
 	manager.add_callback_button_command('bot_stats', StatsCommand.callback_button_command)
 	manager.add_callback_button_command('bot_cheat', CheatMenuCommand.callback_button_command)
 
+	manager.add_message_handler(InviteMessageHandler.handler, ignore_db=True)
+
 # Команда !стата
 class StatsCommand:
 	@staticmethod
@@ -367,6 +369,28 @@ class CheatMenuCommand:
 			message_text = '😮К сожалению, код не сработал.'
 			aos.messages_edit(message=VKVariable.Multi('var', 'appeal', 'str', message_text))
 
+# Класс обработчика, отправляющего сообщение, когда бот был добавлен в беседу
+class InviteMessageHandler:
+	@staticmethod
+	def handler(callback_object: dict):
+		event = callback_object["event"]
+		db = callback_object["db"]
+		output = callback_object["output"]
+
+		if "action" in event["object"]["message"] and event["object"]["message"]["action"]["type"] == "chat_invite_user" and event["object"]["message"]["action"]["member_id"] == -event["group_id"]:
+			if db.is_exists:
+				message_text = "😇Привет. 😜Я рад вернуться сюда."
+				output.messages_send(peer_id=event["object"]["message"]["peer_id"], message=message_text)
+				return True
+			else:
+				keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
+				keyboard.callback_button('Зарегистрировать', ['bot_reg'], KeyboardBuilder.POSITIVE_COLOR)
+				keyboard = keyboard.build()
+				message_text = "🙂Привет.\n❗Для начала необходимо выдать мне права администратора в беседе (только так я буду работать).\n👇🏻Затем нажмите кнопку ниже."
+				output.messages_send(peer_id=event["object"]["message"]["peer_id"], message=message_text, keyboard=keyboard)
+				return True
+
+
 # Инициализация PHP команд
 def initcmd_php(manager: ChatEventManager):
 	for cmd in PHPCommandIntegration.message_commands:
@@ -395,3 +419,4 @@ def handle_phpcmd(callback_object: dict):
 def handle_phphndl(callback_object: dict):
 	event = callback_object["event"]
 	subprocess.Popen([Config.get("PHP_COMMAND"), "radabot-php.php", "hndl", json.dumps(event)]).communicate()
+	return True

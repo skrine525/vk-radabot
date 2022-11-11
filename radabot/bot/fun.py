@@ -26,6 +26,7 @@ class CustomMemes:
         db = callback_object["db"]
         output = callback_object["output"]
         manager = callback_object["manager"]
+        vk_api = callback_object["vk_api"]
 
         aos = AdvancedOutputSystem(output, event, db)
 
@@ -116,18 +117,67 @@ class CustomMemes:
                     content = ''
 
                     if attachment["type"] == 'photo':
-                        if 'access_key' in attachment["photo"]:
-                            content = 'photo{}_{}_{}'.format(attachment["photo"]["owner_id"], attachment["photo"]["id"], attachment["photo"]["access_key"])
-                        else:
-                            content = 'photo{}_{}'.format(attachment["photo"]["owner_id"], attachment["photo"]["id"])
+                        # Метод заключается в скачивании картинки, с последующим дропом на сервак, чтобы владельцем вложения стал бот
+                        # Потому что access_token по всей видимости временный ¯\_(ツ)_/¯
+
+                        # Скачиваем картинку
+                        photo = get_high_resolution_attachment_photo(attachment)
+                        img_path = os.path.join(SYSTEM_PATHS.TMP_DIR, "{}.jpg".format(generate_random_string(10, uppercase=False)))
+                        img_req = requests.get(photo["url"])
+                        img_file = open(img_path, "wb")
+                        img_file.write(img_req.content)
+                        img_file.close()
+
+                        # Загружаем картинку назад в ВК
+                        peer_id = event["object"]["message"]["peer_id"]
+                        execute_data = vk_api.execute(f"return API.photos.getMessagesUploadServer({{peer_id:{peer_id}}});")["response"]
+                        img_file = open(img_path, 'rb')
+                        upload_result = requests.post(execute_data["upload_url"], files={'photo': img_file}).text
+                        img_file.close()
+
+                        # Сообщаем, что мем сохранен
+                        doc = aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', '✅Мем сохранен!'), pscript=f"return API.photos.saveMessagesPhoto({upload_result})[0];")["response"]
+
+                        # Формируем объект вложения
+                        content = "photo{}_{}".format(doc["owner_id"], doc["id"])
                     elif attachment["type"] == 'audio':
+                        # Сообщаем, что мем сохранен
+                        aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', '✅Мем сохранен!'))
+
+                        # Формируем объект вложения
                         content = 'audio{}_{}'.format(attachment["audio"]["owner_id"], attachment["audio"]["id"])
                     elif attachment["type"] == 'video':
                         if 'is_private' in attachment["video"]:
                             CustomMemes.__print_error_text(aos, 'Данной видео является приватным и не может быть использовано в меме.')
                             return
                         else:
+                            # Сообщаем, что мем сохранен
+                            aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', '✅Мем сохранен!'))
+
+                            # Формируем объект вложения
                             content = 'video{}_{}'.format(attachment["video"]["owner_id"], attachment["video"]["id"])
+                    elif attachment["type"] == 'doc' and attachment["doc"]["ext"] == "gif":
+                        # Скачиваем гифку
+                        gif_path = os.path.join(SYSTEM_PATHS.TMP_DIR, "{}.gif".format(generate_random_string(10, uppercase=False)))
+                        gif_req = requests.get(attachment["doc"]["url"])
+                        gif_file = open(gif_path, "wb")
+                        gif_file.write(gif_req.content)
+                        gif_file.close()
+
+                        # Загружаем гифку назад в ВК
+                        peer_id = event["object"]["message"]["peer_id"]
+                        execute_data = vk_api.execute(f"return API.docs.getMessagesUploadServer({{peer_id:{peer_id},type:\"doc\"}});")["response"]
+                        gif_file = open(gif_path, 'rb')
+                        upload_result = requests.post(execute_data["upload_url"], files={'file': gif_file}).json()
+                        gif_file.close()
+                        # TODO Удаление в tmp?
+
+                        # Сообщаем, что мем сохранен
+                        save_args = json.dumps({"file": upload_result["file"], "title": attachment["doc"]["title"]}, ensure_ascii=False, separators=(',', ':'))
+                        doc = aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', '✅Мем сохранен!'), pscript=f"return API.docs.save({save_args});")["response"]
+
+                        # Формируем объект вложения
+                        content = "doc{}_{}".format(doc["doc"]["owner_id"], doc["doc"]["id"])
                     else:
                         CustomMemes.__print_error_text(aos, 'Данный тип вложения не поддерживается.')
 
@@ -139,9 +189,6 @@ class CustomMemes:
                     }
                     meme_path = 'fun.memes.{}'.format(meme_name)
                     db.update({'$set': {meme_path: meme}})
-
-                    # Сообщаем, что мем сохранен
-                    aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', '✅Мем сохранен!'))
                 else:
                     CustomMemes.__print_help_message_add(aos, args)
             else:
@@ -435,7 +482,7 @@ class FunSeamCarving:
 
         message_text = 'Жмыхнул😎'
         aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', message_text), attachment=VKVariable.Multi("var", "photo"), script=f"var doc=API.photos.saveMessagesPhoto({upload_result})[0]; var photo=\"photo\"+doc.owner_id+\"_\"+doc.id;")
-        #os.remove(job["path"])  # TODO Удаление в tmp
+        #os.remove(job["path"])  # TODO Удаление в tmp?
 
 
 class FunQuote:
@@ -468,11 +515,17 @@ class FunQuote:
                 peer_id = event["object"]["message"]["peer_id"]
 
                 # Запрашиваем ссылку на выгрузку фотографии и получаем данные пользователя
-                execute_data = json.loads(vk_api.execute(f"var a=API.photos.getMessagesUploadServer({{peer_id:{peer_id}}});var b=API.users.get({{user_ids:{from_id},fields:\"photo_100\"}})[0];return [a, b];"))
-                execute_data = execute_data["response"]
+                execute_data = vk_api.execute(f"var a=API.photos.getMessagesUploadServer({{peer_id:{peer_id}}});var b=API.users.get({{user_ids:{from_id},fields:\"photo_100\"}})[0];return [a, b];")["response"]
+
+                # Получаем основной текст
+                if reply_message["text"] != "":
+                    main_text = reply_message["text"]
+                else:
+                    message_text = f'⛔Необходимо прикрепить сообщение, которое содержит текст.'
+                    aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', message_text))
+                    return
                 
                 # Создаем массив строчек основного текста
-                main_text = reply_message["text"]
                 main_text = f"«{main_text}»."
                 main_text_font = ImageFont.truetype(os.path.join(SYSTEM_PATHS.FONTS_DIR, "Arial-Italic.ttf"), size=16)
                 main_text_list = [[]]
@@ -534,7 +587,7 @@ class FunQuote:
 
                 aos.messages_send(message=VKVariable.Multi('var', 'appeal'), attachment=VKVariable.Multi("var", "photo"), script=f"var doc=API.photos.saveMessagesPhoto({upload_result})[0]; var photo=\"photo\"+doc.owner_id+\"_\"+doc.id;")
 
-                # TODO Удаление в tmp
+                # TODO Удаление в tmp?
             else:
                 message_text = "⛔ Автором цитаты может быть только пользователь."
                 aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', message_text))

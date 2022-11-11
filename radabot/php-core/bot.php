@@ -1093,13 +1093,9 @@ namespace {
 				$GLOBALS['cmd_initime_start'] = microtime(true);								// Время инициализации команд: Начало
 
 				bot_initcmd($event);															// Инициализация команд модуля bot
-				bot_initcustomcmd($event);														// Инициализация команд из БД
-				//government_initcmd($event);													// Инициализация команд Гос. устройства
 				manager_initcmd($event);														// Инициализация команд модуля manager
 				roleplay_initcmd($event);														// RP-команды
 				fun_initcmd($event);															// Fun-команды
-				//giphy_initcmd($event);														// Инициализация команд модуля giphy
-				//wordgame_initcmd($event);														// Игра Слова
 				economy_initcmd($event);														// Economy
 
 				$GLOBALS['cmd_initime_end'] = microtime(true);									// Время инициализации команд: Конец
@@ -1108,9 +1104,7 @@ namespace {
 			if ($hndl) {
 				// Обработчики текстовых сообщений без команд
 				$event->addNonCommandTextMessageHandler('bot_message_action_handler');		// Обработчик событий в сообщениях
-				//$event->addNonCommandTextMessageHandler('government_election_system');		// Обработчик выборов
 				$event->addNonCommandTextMessageHandler('fun_handler');							// Обработчик фанового модуля
-				//$event->addNonCommandTextMessageHandler('wordgame_gameplay');					// Обработчик игры Слова
 			}
 
 			if(!$integration){
@@ -1278,7 +1272,6 @@ namespace {
 		// Основное
 		//$event->addTextMessageCommand("!cmdlist", 'bot_cmdlist');
 		$event->addTextMessageCommand("!reg", 'bot_register', ['ignore_db' => true]);
-		$event->addTextMessageCommand("!помощь", 'bot_help');
 		$event->addTextMessageCommand("!чат", 'bot_chatinfo');
 
 		// Система управления беседой
@@ -1288,12 +1281,7 @@ namespace {
 		$event->addTextMessageCommand("!лайк", 'bot_like_handler');
 		$event->addTextMessageCommand("!убрать", 'bot_remove_handler');
 		$event->addTextMessageCommand("!id", 'bot_getid');
-		$event->addTextMessageCommand("!base64", 'bot_base64');
 		$event->addTextMessageCommand("!крестики-нолики", 'bot_tictactoe');
-		$event->addTextMessageCommand("!сообщение", 'bot_chatmessage');
-		$event->addTextMessageCommand("!addcustom", 'bot_addcustomcmd');
-		$event->addTextMessageCommand("!delcustom", 'bot_delcustomcmd');
-		$event->addTextMessageCommand("!customlist", 'bot_listcustomcmd');
 
 		// Многословные команды
 		$event->addTextMessageCommand("пожать", "bot_shakecmd");
@@ -1304,10 +1292,8 @@ namespace {
 
 		// Callback-кнопки
 		$event->addCallbackButtonCommand("bot_menu", 'bot_menu_cb');
-		$event->addCallbackButtonCommand("bot_cmdlist", 'bot_cmdlist_cb');
 		$event->addCallbackButtonCommand('bot_tictactoe', 'bot_tictactoe_cb');
 		$event->addCallbackButtonCommand('bot_reg', 'bot_register_cb', ['ignore_db' => true]);
-		$event->addCallbackButtonCommand('bot_listcustomcmd', 'bot_listcustomcmd_cb');
 		$event->addCallbackButtonCommand('bot_run', 'bot_run_cb', ['ignore_db' => true]);
 	}
 
@@ -1403,8 +1389,9 @@ namespace {
 					case 'message_event':
 						break;
 				}
-			} else
+			} /*else
 				bot_send_first_invite_message($event);				// Вывод первого сообщение, когда добавляют незарегистрированного бота
+				*/
 		}
 	}
 
@@ -1543,70 +1530,6 @@ namespace {
 		vk_execute($messagesModule->buildVKSciptAppealByID($data->object->from_id) . "var user=API.users.get({user_ids:[{$owner_id}]})[0];var OWNER=\"@id{$owner_id} (\"+user.first_name.substr(0, 2)+\". \"+user.last_name+\")\";var in={$json_insert};API.messages.send({peer_id:{$data->object->peer_id},message:appeal+in.m,disable_mentions:true});");
 	}
 
-	function bot_chatmessage($finput)
-	{
-		// Инициализация базовых переменных
-		$data = $finput->data;
-		$argv = $finput->argv;
-		$db = $finput->db;
-
-		$messagesModule = new Bot\Messages($db);
-		$messagesModule->setAppealID($data->object->from_id);
-
-		$chatModes = $finput->event->getChatModes();
-		if (!$chatModes->getModeValue('chat_messenger')) {
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Чат-мессенджер отключен администратором беседы.");
-			return;
-		}
-
-		$permissionSystem = $finput->event->getPermissionSystem();
-		if (!$permissionSystem->checkUserPermission($data->object->from_id, 'use_chat_messanger')) {
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Вы не имеете права использовать Чат-мессенджер.");
-			return;
-		}
-
-		$reciever_id = intval(bot_get_array_value($argv, 1, 0));
-		if ($reciever_id <= 0) {
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте !сообщение <ID беседы> <сообщение>.");
-			return;
-		}
-
-		$sender_id = $data->object->peer_id - 2000000000;
-		if ($reciever_id == $sender_id) {
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Невозможно отправить сообщение самому себе.");
-			return;
-		}
-
-		$query = new MongoDB\Driver\Query(['_id' => "chat{$reciever_id}"], ['projection' => ['chat_settings.chat_modes.chat_messenger' => 1]]);
-		$extractor = $db->executeQuery($query);
-
-		$reciever_document_id = $extractor->getValue('0._id');
-		if (is_null($reciever_document_id)) {
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Указанной беседы не найдено.");
-			return;
-		}
-
-		$reciever_chat_messanger_state = $extractor->getValue('0.chat_settings.chat_modes.chat_messenger', ChatModes::getDefaultModeList()['chat_messenger']['default_state']);
-		if (!$reciever_chat_messanger_state) {
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔В указанной беседе отключен Чат-мессенджер.");
-			return;
-		}
-
-		$message = bot_get_text_by_argv($argv, 2);
-		if ($message == '') {
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте !сообщение <ID беседы> <сообщение>.");
-			return;
-		} elseif (mb_strlen($message) > 100) {
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Сообщение не может превышать 100 символов.");
-			return;
-		}
-
-		$inserteMessageArgs = json_encode(['peer_id' => $reciever_id + 2000000000, 'message' => "📩Вам пришло сообщение из другой беседы (ID: {$sender_id}).\n\n{$message}\n\nЧтобы ответить, используйте [!сообщение {$sender_id} <сообщение>].", 'disable_mentions' => true], JSON_UNESCAPED_UNICODE);
-
-		vk_execute($messagesModule->buildVKSciptAppealByID($data->object->from_id) . "var result=API.messages.send({$inserteMessageArgs});
-			if(\"1\"+result== \"1\"){API.messages.send({peer_id:{$data->object->peer_id},message:appeal+', ⛔Сообщение не отправлено. Бот не имеет права писать в эту беседу.',disable_mentions:true});return false;}else{API.messages.send({peer_id:{$data->object->peer_id},message:appeal+', ✅Сообщение отправлено.',disable_mentions:true});return true;}");
-	}
-
 	function bot_keyboard_remove($data)
 	{
 		$keyboard = vk_keyboard(false, array());
@@ -1688,193 +1611,6 @@ namespace {
 		}
 
 		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ID: {$member_id}.");
-	}
-
-	function bot_base64($finput)
-	{
-		// Инициализация базовых переменных
-		$data = $finput->data;
-		$argv = $finput->argv;
-		$db = $finput->db;
-
-		$str_data = bot_get_text_by_argv($argv, 1);
-		$messagesModule = new Bot\Messages($db);
-		$messagesModule->setAppealID($data->object->from_id);
-
-		$CHARS_LIMIT = 300; // Переменная ограничения символов
-
-		if ($str_data == "") {
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте !base64 <data>.");
-			return;
-		}
-
-		$decoded_data = base64_decode($str_data);
-
-		if (!$decoded_data) {
-			$encoded_data = base64_encode($str_data);
-			if (strlen($encoded_data) > $CHARS_LIMIT) {
-				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Зашифрованный текст превышает {$CHARS_LIMIT} симоволов.");
-				return;
-			}
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, Зашифрованный текст:\n{$encoded_data}");
-		} else {
-			if (strlen($decoded_data) > $CHARS_LIMIT) {
-				$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, Дешифрованный текст превышает {$CHARS_LIMIT} симоволов.");
-				return;
-			}
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, Дешифрованный текст:\n{$decoded_data}");
-		}
-	}
-
-	function bot_cmdlist($finput)
-	{
-		// Инициализация базовых переменных
-		$data = $finput->data;
-		$argv = $finput->argv;
-		$db = $finput->db;
-		$event = $finput->event;
-
-		$messagesModule = new Bot\Messages($db);
-		$messagesModule->setAppealID($data->object->from_id);
-		if (array_key_exists(1, $argv))
-			$list_number_from_word = intval($argv[1]);
-		else
-			$list_number_from_word = 1;
-
-		/////////////////////////////////////////////////////
-		////////////////////////////////////////////////////
-		$list_in = $event->getTextMessageCommandList(); // Входной список
-		$list_out = array(); // Выходной список
-
-		$list_number = $list_number_from_word; // Номер текущего списка
-		$list_size = 10; // Размер списка
-		////////////////////////////////////////////////////
-		if (count($list_in) % $list_size == 0)
-			$list_max_number = intdiv(count($list_in), $list_size);
-		else
-			$list_max_number = intdiv(count($list_in), $list_size) + 1;
-		$list_min_index = ($list_size * $list_number) - $list_size;
-		if ($list_size * $list_number >= count($list_in))
-			$list_max_index = count($list_in) - 1;
-		else
-			$list_max_index = $list_size * $list_number - 1;
-		if ($list_number <= $list_max_number && $list_number > 0) {
-			// Обработчик списка
-			for ($i = $list_min_index; $i <= $list_max_index; $i++) {
-				$list_out[] = $list_in[$i];
-			}
-		} else {
-			// Сообщение об ошибке
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔указан неверный номер списка!");
-			return;
-		}
-		////////////////////////////////////////////////////
-		////////////////////////////////////////////////////
-
-		$buttons = array();
-		if ($list_max_number > 1) {
-			if ($list_number != 1) {
-				$previous_list = $list_number - 1;
-				$emoji_str = bot_int_to_emoji_str($previous_list);
-				$buttons[] = vk_callback_button("{$emoji_str} ⬅", array('bot_cmdlist', $data->object->from_id, $previous_list), 'secondary');
-			}
-			if ($list_number != $list_max_number) {
-				$next_list = $list_number + 1;
-				$emoji_str = bot_int_to_emoji_str($next_list);
-				$buttons[] = vk_callback_button("➡ {$emoji_str}", array('bot_cmdlist', $data->object->from_id, $next_list), 'secondary');
-			}
-		}
-		$keyboard = vk_keyboard_inline(array(
-			$buttons,
-			array(
-				vk_callback_button("Меню", array('bot_menu', $data->object->from_id), "secondary"),
-				vk_callback_button("Закрыть", array('bot_menu', $data->object->from_id, 0), "negative")
-			)
-		));
-
-		$msg = "%appeal%, Список команд [$list_number/$list_max_number]:";
-		for ($i = 0; $i < count($list_out); $i++) {
-			$msg = $msg . "\n• " . $list_out[$i];
-		}
-
-		$messagesModule->sendSilentMessage($data->object->peer_id, $msg, array('keyboard' => $keyboard));
-	}
-
-	function bot_cmdlist_cb($finput)
-	{
-		// Инициализация базовых переменных
-		$data = $finput->data;
-		$payload = $finput->payload;
-		$db = $finput->db;
-		$event = $finput->event;
-
-		// Функция тестирования пользователя
-		$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
-		if ($testing_user_id !== $data->object->user_id) {
-			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
-			return;
-		}
-
-		$messagesModule = new Bot\Messages($db);
-		$messagesModule->setAppealID($data->object->user_id);
-
-		/////////////////////////////////////////////////////
-		////////////////////////////////////////////////////
-		$list_in = $event->getTextMessageCommandList(); // Входной список
-		$list_out = array(); // Выходной список
-
-		$list_number = intval(bot_get_array_value($payload, 2, 1)); // Номер текущего списка
-		$list_size = 10; // Размер списка
-		////////////////////////////////////////////////////
-		if (count($list_in) % $list_size == 0)
-			$list_max_number = intdiv(count($list_in), $list_size);
-		else
-			$list_max_number = intdiv(count($list_in), $list_size) + 1;
-		$list_min_index = ($list_size * $list_number) - $list_size;
-		if ($list_size * $list_number >= count($list_in))
-			$list_max_index = count($list_in) - 1;
-		else
-			$list_max_index = $list_size * $list_number - 1;
-		if ($list_number <= $list_max_number && $list_number > 0) {
-			// Обработчик списка
-			for ($i = $list_min_index; $i <= $list_max_index; $i++) {
-				$list_out[] = $list_in[$i];
-			}
-		} else {
-			// Сообщение об ошибке
-			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Указан неверный номер списка!');
-			return;
-		}
-		////////////////////////////////////////////////////
-		////////////////////////////////////////////////////
-
-		$buttons = array();
-		if ($list_max_number > 1) {
-			if ($list_number != 1) {
-				$previous_list = $list_number - 1;
-				$emoji_str = bot_int_to_emoji_str($previous_list);
-				$buttons[] = vk_callback_button("{$emoji_str} ⬅", array('bot_cmdlist', $testing_user_id, $previous_list), 'secondary');
-			}
-			if ($list_number != $list_max_number) {
-				$next_list = $list_number + 1;
-				$emoji_str = bot_int_to_emoji_str($next_list);
-				$buttons[] = vk_callback_button("➡ {$emoji_str}", array('bot_cmdlist', $testing_user_id, $next_list), 'secondary');
-			}
-		}
-		$keyboard = vk_keyboard_inline(array(
-			$buttons,
-			array(
-				vk_callback_button("Меню", array('bot_menu', $testing_user_id), "secondary"),
-				vk_callback_button("Закрыть", array('bot_menu', $testing_user_id, 0), "negative")
-			)
-		));
-
-		$msg = "%appeal%, Список команд [$list_number/$list_max_number]:";
-		for ($i = 0; $i < count($list_out); $i++) {
-			$msg = $msg . "\n• " . $list_out[$i];
-		}
-
-		$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $msg, array('keyboard' => $keyboard));
 	}
 
 	function bot_keyboard_rtcc_handler($finput)
@@ -2005,265 +1741,6 @@ namespace {
 		));
 
 		$messagesModule->sendSilentMessage($data->object->peer_id, "Крестик-нолики. Чтобы присоединиться, нажмите кнопку \"Играть.\"\n\nИгрок 1: Отсутствует\nИгрок 2: Отсутствует", array('keyboard' => $keyboard));
-	}
-
-	function bot_initcustomcmd($event)
-	{
-		$chatModes = $event->getChatModes();
-		$db = $event->getDatabase();
-		if (!$chatModes->getModeValue("custom_cmd")) { // Отключаем, если в беседе запрещены кастомные команды
-			return;
-		}
-
-		$query = new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.custom_cmds" => 1]]);
-		$extractor = $db->executeQuery($query);
-		$custom_cmds = $extractor->getValue("0.chat_settings.custom_cmds", []);
-
-		foreach ($custom_cmds as $key => $value) {
-			$event->addTextMessageCommand($key, 'bot_docustomcmd', ['callback_argv' => [$value]]);
-		}
-	}
-
-	function bot_docustomcmd($finput, $cmd_data)
-	{
-		// Инициализация базовых переменных
-		$data = $finput->data;
-		$argv = $finput->argv;
-		$db = $finput->db;
-
-		$messagesModule = new Bot\Messages($db);
-		$messagesModule->setAppealID($data->object->from_id);
-
-		$modified_data = clone $data;
-		$modified_data->object->text = $cmd_data->cmd_line;
-		$result = $finput->event->runTextCommand($modified_data);
-		if ($result->code == Bot\ChatEvent::COMMAND_RESULT_UNKNOWN) {
-			$cmd_line_argv = bot_parse_argv($cmd_data->cmd_line);
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Ошибка. Команда [{$argv[0]}], содержащая в себе [{$cmd_line_argv[0]}] не может быть выполнена!"); // Вывод ошибки
-		}
-	}
-
-	function bot_listcustomcmd($finput)
-	{
-		// Инициализация базовых переменных
-		$data = $finput->data;
-		$argv = $finput->argv;
-		$db = $finput->db;
-
-		$messagesModule = new Bot\Messages($db);
-		$messagesModule->setAppealID($data->object->from_id);
-
-		$chatModes = $finput->event->getChatModes();
-		if (!$chatModes->getModeValue("custom_cmd")) { // Отключаем, если в беседе запрещены кастомные команды
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔В чате отключены кастомные команды!");
-			return;
-		}
-
-		$query = new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.custom_cmds" => 1]]);
-		$extractor = $db->executeQuery($query);
-		$extracted_data = $extractor->getValue("0.chat_settings.custom_cmds", []);
-		$custom_cmds = [];
-		foreach ($extracted_data as $key => $value)
-			$custom_cmds[] = $key;
-
-		$list_number = intval(bot_get_array_value($argv, 1, 1));
-
-		$listBuiler = new Bot\ListBuilder($custom_cmds, 10);
-		$list = $listBuiler->build($list_number);
-		if ($list->result) {
-			$buttons = array();
-			if ($list->list->max_number > 1) {
-				if ($list_number != 1) {
-					$previous_list = $list_number - 1;
-					$emoji_str = bot_int_to_emoji_str($previous_list);
-					$buttons[] = vk_callback_button("{$emoji_str} ⬅", array('bot_listcustomcmd', $data->object->from_id, $previous_list), 'secondary');
-				}
-				if ($list_number != $list->list->max_number) {
-					$next_list = $list_number + 1;
-					$emoji_str = bot_int_to_emoji_str($next_list);
-					$buttons[] = vk_callback_button("➡ {$emoji_str}", array('bot_listcustomcmd', $data->object->from_id, $next_list), 'secondary');
-				}
-			}
-			$control_buttons = [
-				vk_callback_button("Меню", array('bot_menu', $data->object->from_id), "secondary"),
-				vk_callback_button("Закрыть", array('bot_menu', $data->object->from_id, 0), "negative")
-			];
-			if (count($buttons) > 0)
-				$keyboard_buttons = [$buttons, $control_buttons];
-			else
-				$keyboard_buttons = [$control_buttons];
-			$keyboard = vk_keyboard_inline($keyboard_buttons);
-
-			$msg = "%appeal%, Список команд [{$list_number}/{$list->list->max_number}]:";
-			for ($i = 0; $i < count($list->list->out); $i++) {
-				$msg = $msg . "\n• " . $list->list->out[$i];
-			}
-
-			$messagesModule->sendSilentMessage($data->object->peer_id, $msg, array('keyboard' => $keyboard));
-		} else
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔указан неверный номер списка!");
-	}
-
-	function bot_listcustomcmd_cb($finput)
-	{
-		// Инициализация базовых переменных
-		$data = $finput->data;
-		$payload = $finput->payload;
-		$db = $finput->db;
-		$event = $finput->event;
-
-		// Функция тестирования пользователя
-		$testing_user_id = bot_get_array_value($payload, 1, $data->object->user_id);
-		if ($testing_user_id !== $data->object->user_id) {
-			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ У вас нет доступа к этому меню!');
-			return;
-		}
-
-		$messagesModule = new Bot\Messages($db);
-		$messagesModule->setAppealID($data->object->user_id);
-
-		$query = new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.custom_cmds" => 1]]);
-		$extractor = $db->executeQuery($query);
-		$extracted_data = $extractor->getValue("0.chat_settings.custom_cmds", []);
-		$custom_cmds = [];
-		foreach ($extracted_data as $key => $value)
-			$custom_cmds[] = $key;
-
-		$list_number = bot_get_array_value($payload, 2, 1);
-
-		$listBuiler = new Bot\ListBuilder($custom_cmds, 10);
-		$list = $listBuiler->build($list_number);
-		if ($list->result) {
-			$buttons = array();
-			if ($list->list->max_number > 1) {
-				if ($list_number != 1) {
-					$previous_list = $list_number - 1;
-					$emoji_str = bot_int_to_emoji_str($previous_list);
-					$buttons[] = vk_callback_button("{$emoji_str} ⬅", array('bot_listcustomcmd', $data->object->user_id, $previous_list), 'secondary');
-				}
-				if ($list_number != $list->list->max_number) {
-					$next_list = $list_number + 1;
-					$emoji_str = bot_int_to_emoji_str($next_list);
-					$buttons[] = vk_callback_button("➡ {$emoji_str}", array('bot_listcustomcmd', $data->object->user_id, $next_list), 'secondary');
-				}
-			}
-			$control_buttons = [
-				vk_callback_button("Меню", array('bot_menu', $data->object->user_id), "secondary"),
-				vk_callback_button("Закрыть", array('bot_menu', $data->object->user_id, 0), "negative")
-			];
-			if (count($buttons) > 0)
-				$keyboard_buttons = [$buttons, $control_buttons];
-			else
-				$keyboard_buttons = [$control_buttons];
-			$keyboard = vk_keyboard_inline($keyboard_buttons);
-
-			$msg = "%appeal%, Список команд [{$list_number}/{$list->list->max_number}]:";
-			for ($i = 0; $i < count($list->list->out); $i++) {
-				$msg = $msg . "\n• " . $list->list->out[$i];
-			}
-
-			$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $msg, array('keyboard' => $keyboard));
-		} else
-			bot_show_snackbar($data->object->event_id, $data->object->user_id, $data->object->peer_id, '⛔ Указан неверный номер списка!');
-	}
-
-	function bot_addcustomcmd($finput)
-	{
-		// Инициализация базовых переменных
-		$data = $finput->data;
-		$argv = $finput->argv;
-		$db = $finput->db;
-
-		$permissionSystem = $finput->event->getPermissionSystem();
-		$messagesModule = new Bot\Messages($db);
-		$messagesModule->setAppealID($data->object->from_id);
-
-		$chatModes = $finput->event->getChatModes();
-		if (!$chatModes->getModeValue("custom_cmd")) { // Отключаем, если в беседе запрещены кастомные команды
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔В чате отключены кастомные команды!");
-			return;
-		}
-
-		if (!$permissionSystem->checkUserPermission($data->object->from_id, 'manage_cmd')) {
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔У вас нет прав управлять кастомными командами!");
-			return;
-		}
-
-		$cmd = bot_get_array_value($argv, 1, "");
-		$cmd_line = bot_get_text_by_argv($argv, 2);
-
-		if ($cmd == "" || $cmd_line == "") {
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте !addcustom <команда> <строка исполнения>.");
-			return;
-		}
-
-		if ($finput->event->isTextMessageCommand($cmd)) {
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Команда {$cmd} уже зарезевирована!");
-			return;
-		}
-		$cmd_data = (object) [
-			'date' => time(),
-			'user_id' => $data->object->from_id,
-			'cmd_line' => $cmd_line
-		];
-
-		$bulk = new \MongoDB\Driver\BulkWrite;
-		$bulk->update(['_id' => $db->getDocumentID()], ['$set' => ["chat_settings.custom_cmds.{$cmd}" => $cmd_data]]);
-		$db->executeBulkWrite($bulk);
-
-		$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Команда {$cmd} успешно добавлена!");
-	}
-
-	function bot_delcustomcmd($finput)
-	{
-		// Инициализация базовых переменных
-		$data = $finput->data;
-		$argv = $finput->argv;
-		$db = $finput->db;
-
-		$permissionSystem = $finput->event->getPermissionSystem();
-		$messagesModule = new Bot\Messages($db);
-		$messagesModule->setAppealID($data->object->from_id);
-
-		$chatModes = $finput->event->getChatModes();
-		if (!$chatModes->getModeValue("custom_cmd")) { // Отключаем, если в беседе запрещены кастомные команды
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔В чате отключены кастомные команды!");
-			return;
-		}
-
-		$cmd = bot_get_array_value($argv, 1, "");
-
-		if ($cmd == "") {
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Используйте !delcustom <команда>.");
-			return;
-		}
-
-		if (!$finput->event->isTextMessageCommand($cmd)) {
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Команда {$cmd} не существует!");
-			return;
-		}
-
-		$query = new MongoDB\Driver\Query(['_id' => $db->getDocumentID()], ['projection' => ["_id" => 0, "chat_settings.custom_cmds.{$cmd}" => 1]]);
-		$extractor = $db->executeQuery($query);
-		$cmd_data = $extractor->getValue("0.chat_settings.custom_cmds.{$cmd}", false);
-
-		if ($cmd_data === false) {
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Команда {$cmd} не является кастомной!");
-			return;
-		}
-
-		if (!$permissionSystem->checkUserPermission($data->object->from_id, 'manage_cmd')) {
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔У вас нет прав управлять кастомными командами!");
-			return;
-		}
-
-		$bulk = new \MongoDB\Driver\BulkWrite;
-		$bulk->update(['_id' => $db->getDocumentID()], ['$unset' => ["chat_settings.custom_cmds.{$cmd}" => 1]]);
-		$writeResult = $db->executeBulkWrite($bulk);
-		if ($writeResult->getModifiedCount() > 0)
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ✅Команда {$cmd} успешно удалена!");
-		else
-			$messagesModule->sendSilentMessage($data->object->peer_id, "%appeal%, ⛔Команда {$cmd} не удалена!");
 	}
 
 	function bot_tictactoe_cb($finput)
@@ -2651,169 +2128,5 @@ namespace {
 		$messagesModule->setAppealID($data->object->user_id);
 		$keyboard = vk_keyboard_inline($keyboard_buttons);
 		$messagesModule->editMessage($data->object->peer_id, $data->object->conversation_message_id, $message, array('keyboard' => $keyboard));
-	}
-
-	function bot_help($finput)
-	{
-		// Инициализация базовых переменных
-		$data = $finput->data;
-		$argv = $finput->argv;
-		$db = $finput->db;
-
-		if (array_key_exists(1, $argv))
-			$section = mb_strtolower($argv[1]);
-		else
-			$section = "";
-		$messagesModule = new Bot\Messages($db);
-		$messagesModule->setAppealID($data->object->from_id);
-		switch ($section) {
-			case 'основное':
-				$commands = array(
-					'!help <раздел> - Помощь в системе бота',
-					'!reg - Регистрация беседы в системе бота',
-					'!cmdlist <лист> - Список команд в системе бота',
-					'!ник <ник> - Смена ника',
-					'!ники - Показать ники пользователей',
-					'!ранги - Вывод рангов пользователей в беседе',
-					'!Онлайн - Показать online пользователей'
-				);
-
-				$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, '%appeal%, 📰Основные команды:', $commands);
-				break;
-
-			case 'рп':
-				$commands = array(
-					'!me <действие> - выполнение действия от первого лица',
-					'!do <действие> - выполнение действия от третьего лица',
-					'!try <дествие> - выполнение действия с рандомным результатом (Удачно/Неудачно)',
-					'!s <текст> - крик',
-					'Секс <пользователь> - Секс с указанным пользователем',
-					'Обнять <пользователь> - Обнимашки с пользователем',
-					'Уебать <пользователь> - Ударить пользователя',
-					'Обоссать <пользователь> - Обоссать пользователя',
-					'Поцеловать <пользователь> - Поцеловать пользователя',
-					'Харкнуть <пользователь> - Харкнуть в пользователя',
-					'Отсосать <пользователь> - Отсосать пользователю',
-					'Отлизать <пользователь> - Отлизать пользователю',
-					'Послать <пользователь> - Отправить пользователя в далекие края',
-					'Кастрировать <пользователь> - Лишить пользователя способности плодить себе подобных',
-					'Посадить <пользователь> - Садит пользователя на бутылку',
-					'Пожать руку <пользователь> - Жмет руку пользователю',
-					'Лизнуть <пользователь> - Лизнуть пользователя',
-					'Обосрать <пользователь> - Обосрать пользователя',
-					'Облевать <пользователь> - Испачкать в рвоте пользователя',
-					'Отшлёпать <пользователь> - Отшлепать пользователя',
-					'Покашлять <пользователь> - Покашлять на пользователя',
-					'Дать пять <пользователь> - Дать пять пользователю'
-				);
-
-				$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, '%appeal%, 📰Roleplay команды:', $commands);
-				break;
-
-			case 'гос':
-				$commands = array(
-					'!конституция - Показывает основную информацию государства',
-					'!законы - Показывает законы государства',
-					'!закон <дествие> <аргумент> - Управление законами',
-					'!президент <аргумент> - Показывает и назначает президента государства',
-					'!флаг <вложение> - Показывает и назначает гос. флаг',
-					'!гимн <вложение> - Назначает и показывает гос. гимн',
-					'!партия <название> - Устанавливает и показывает название действующей партии',
-					'!столица <название> - Устанавливает и показывает нац. столицу',
-					'!строй <название> - Устанавливает и показывает текущий гос. строй',
-					'!стройлист - Выводит все доступные полит. строи',
-					'!votestart - Запускает выборы президента',
-					//'!votestop - Прерывает выборы президента',
-					'!candidate - Регистрация как кандидат на выборы',
-					'!vote - Меню голосования',
-					'!митинг - Система митингов'
-				);
-
-				$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, '%appeal%, 📰Государственные команды:', $commands);
-				break;
-
-			case 'управление':
-				$commands = array(
-					'!banlist <страница> - Список забаненных пользователей',
-					'!ban <пользователь> - Бан пользователя в беседе',
-					'!unban <пользователь> - Разбан пользователя в беседе',
-					'!kick <пользователь> - Кик пользователя',
-					'!ранг - Управление рангами пользователей',
-					'!ранглист - Список доступных рангов',
-					'!приветствие - Управление приветствием',
-					'!стата - Статистика беседы',
-					'!modes - Управление режимами беседы',
-					'!панель - Управление персональной панелью',
-					'Панель - Отобразить персональную панель'
-				);
-
-				$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, '%appeal%, 📰Команды управления беседой:', $commands);
-				break;
-
-			case 'экономика':
-				$commands = array(
-					'!счёт - Основная информация пользователя',
-					'!профессии - Список профессий',
-					'!профессия <номер> - Информация о профессии',
-					'!работать - Работать',
-					'!работать <номер> - Устроиться на профессию',
-					'!имущество - Список вашего имущества',
-					'!купить - Покупка имущества',
-					'!продать - Продажа имущества',
-					'!банк - Операции с деньгами',
-					'!образование - Управление образованием',
-					'!бизнес - управление бизнесом',
-					'!награды - Список ваших наград',
-					'!forbes - Список самых богатых людей беседы',
-					'Подарить - Дарит имущество пользователю'
-				);
-
-				$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, '%appeal%, 📰Команды управления беседой:', $commands);
-				break;
-
-			case 'другое':
-				$commands = array(
-					'!зов - Упоминает всех участников беседы',
-					'!чулки - Случайная фотография девочек в чулочках',
-					'!амина - Случайная фотография со стены @id363887574 (Амины Мирзоевой)',
-					'!карина - Случайная фотография со стены @id153162173 (Карины Сычевой)',
-					'!бузова - Случайная фотография со стены @olgabuzova (Ольги Бузовой)',
-					'!giphy <текст> - Гифка с сервиса giphy.com',
-					'!id <пользователь> - Получение VK ID пользователя',
-					'!tts <текст> - Озвучивает текст и присылает голос. сообщение',
-					'!base64 <data> - Шифрует и Дешифрует данные в base64',
-					'!shrug - ¯\_(ツ)_/¯',
-					'!tableflip - (╯°□°）╯︵ ┻━┻',
-					'!unflip - ┬─┬ ノ( ゜-゜ノ)',
-					'!say <params> - Отправляет сообщение в текущую беседу с указанными параметрами',
-					'!Выбери <v1> или <v2> или <v3>... - Случайный выбор одного из вариантов',
-					'!Сколько <ед. измерения> <дополнение> - Сколько чего-то там что-то там',
-					'!Кто/!Кого/!Кому <текст> - Выбирает случайного человека беседы',
-					'!Инфа <выражение> - Вероятность выражения',
-					'!Бутылочка - Мини-игра "Бутылочка"',
-					'!Лайк <что-то> - Ставит лайк на что-то',
-					'!Убрать <что-то> - Что-то убирает',
-					'!Слова - Игра "Слова"',
-					//'Words - Игра "Слова" на Английском языке',
-					//'Загадки - Игры "Загадки"',
-					'!Брак помощь - Помощь по системе браков',
-					'!Браки - Список действующих браков беседы',
-					'!Браки история - Список всех браков беседы'
-				);
-
-				$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, '%appeal%, 📰Другие команды:', $commands);
-				break;
-
-			default:
-				$messagesModule->sendSilentMessageWithListFromArray($data->object->peer_id, '%appeal%, ✅Используйте:', array(
-					'!помощь основное - Базовый раздел',
-					'!помощь рп - Roleplay раздел',
-					'!помощь гос - Гос. раздел',
-					'!помощь управление - Раздел управления',
-					'!помощь экономика - Экономика',
-					'!помощь другое - Другое'
-				));
-				break;
-		}
 	}
 }

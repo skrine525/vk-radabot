@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
 	attempts_count = 1
 	while True:
-		vk_response_dict = json.loads(vk_api.call('groups.getLongPollServer', {'group_id': Config.get('VK_GROUP_ID')}))
+		vk_response_dict = vk_api.call('groups.getLongPollServer', {'group_id': Config.get('VK_GROUP_ID')})
 		response_data = vk_response_dict.get('response', None)
 		if response_data is not None:
 			lp_server = response_data["server"]
@@ -88,15 +88,14 @@ if __name__ == "__main__":
 
 	while active:
 		try:
-			data_text = longpoll(lp_server, lp_key, lp_ts)
-			data_dict = json.loads(data_text)
+			data_dict = longpoll(lp_server, lp_key, lp_ts)
 			failed = data_dict.get('failed', None)
 
 			if failed == 1:
 				lp_ts = data_dict["ts"]
 				write_log(SYSTEM_PATHS.LONGPOLL_LOG_FILE, "Longpoll data update: ts")
 			elif failed == 2:
-				vk_response_dict = json.loads(vk_api.call('groups.getLongPollServer', {'group_id': Config.get('VK_GROUP_ID')}))
+				vk_response_dict = vk_api.call('groups.getLongPollServer', {'group_id': Config.get('VK_GROUP_ID')})
 				response_data = vk_response_dict.get('response', None)
 				if response_data is not None:
 					lp_key = response_data['key']
@@ -107,7 +106,7 @@ if __name__ == "__main__":
 				#del vk_response_dict
 				#del response_data
 			elif failed == 3:
-				vk_response_dict = json.loads(vk_api.call('groups.getLongPollServer', {'group_id': Config.get('VK_GROUP_ID')}))
+				vk_response_dict = vk_api.call('groups.getLongPollServer', {'group_id': Config.get('VK_GROUP_ID')})
 				response_data = vk_response_dict.get('response', None)
 				if response_data is not None:
 					lp_key = response_data["key"]

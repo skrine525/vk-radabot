@@ -244,7 +244,7 @@ class ChatEventManager:
 
             callback = self.__message_commands[command]["callback"]
             callback_args = [callback_object] + self.__message_commands[command]["args"]
-            return callback(*callback_args)
+            callback(*callback_args)
         else:
             raise ChatEventManager.UnknownCommandException('Command \'{}\' not found'.format(command), command)
 
@@ -274,7 +274,7 @@ class ChatEventManager:
 
                 callback = self.__text_button_commands[command]["callback"]
                 callback_args = [callback_object] + self.__text_button_commands[command]["args"]
-                return callback(*callback_args)
+                callback(*callback_args)
             else:
                 raise ChatEventManager.UnknownCommandException('Command \'{}\' not found'.format(command), command)
         else:
@@ -304,7 +304,7 @@ class ChatEventManager:
 
             callback = self.__callback_button_commands[command]["callback"]
             callback_args = [callback_object] + self.__callback_button_commands[command]["args"]
-            return callback(*callback_args)
+            callback(*callback_args)
         else:
             raise ChatEventManager.UnknownCommandException('Command \'{}\' not found'.format(command), command)
 
@@ -353,6 +353,12 @@ class ChatEventManager:
         # Обновление статистики пользователя
         self.__chat_stats.update('button_pressed_count', 1)
 
+    def __stats_message_handler(self):
+        # Обновление системной статистики
+        current_date = datetime.utcnow().strftime("%Y-%m-%d")
+        collection = self.__db.get_collection("system_stats")
+        collection.update_one({"date": current_date}, {"$inc": {"message_handler_processed_count": 1}}, upsert=True)
+
     def __stats_message_new(self):
         if self.__event["object"]["message"]["from_id"] > 0:
             self.__chat_stats.update_if_commited_by_last_user('msg_count_in_succession', 1)
@@ -389,10 +395,7 @@ class ChatEventManager:
             for k, v in attachment_update.items():
                 self.__chat_stats.update(k, v)
 
-    #############################
-    #############################
     # Метод обработки события
-
     def handle(self) -> bool:
         output = OutputSystem(self.__vk_api)
 
@@ -404,14 +407,14 @@ class ChatEventManager:
 
             # Попытка обработки события, как кнопку
             try:
-                command_result = self.run_text_button_command(self.__event, output)
+                self.run_text_button_command(self.__event, output)
 
                 # Система отслеживания статистики
                 self.__stats_button()
                 # Делаем коммит статистики, если беседа зарегистрирована
                 self.__stats_commit(self.__event["object"]["message"]["from_id"])
 
-                return command_result
+                return True
             except ChatEventManager.DatabaseException:
                 keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
                 keyboard.callback_button('Зарегистрировать', ['bot_reg'], KeyboardBuilder.POSITIVE_COLOR)
@@ -419,7 +422,7 @@ class ChatEventManager:
                 output.messages_send(peer_id=self.__event["object"]["message"]["peer_id"], message=DEFAULT_MESSAGES.MESSAGE_NOT_REGISTERED, forward=bot.reply_to_message_by_event(self.__event), keyboard=keyboard)
                 return False
             except ChatEventManager.UnknownCommandException:
-                # Игнорируем исключение
+                # Если команда не найдена, то продолжаем выполенение
                 pass
             except:
                 logname = datetime.utcfromtimestamp(time.time() + 10800).strftime("%d%m%Y-{}".format(generate_random_string(5, uppercase=False)))
@@ -435,14 +438,14 @@ class ChatEventManager:
 
             # Попытка обработки события, как текстовую команду
             try:
-                command_result = self.run_message_command(self.__event, output)
+                self.run_message_command(self.__event, output)
 
                 # Система отслеживания статистики
                 self.__stats_command()
                 # Делаем коммит статистики, если беседа зарегистрирована
                 self.__stats_commit(self.__event["object"]["message"]["from_id"])
 
-                return command_result
+                return True
             except ChatEventManager.DatabaseException:
                 keyboard = KeyboardBuilder(KeyboardBuilder.INLINE_TYPE)
                 keyboard.callback_button('Зарегистрировать', ['bot_reg'], KeyboardBuilder.POSITIVE_COLOR)
@@ -450,6 +453,7 @@ class ChatEventManager:
                 output.messages_send(peer_id=self.__event["object"]["message"]["peer_id"], message=DEFAULT_MESSAGES.MESSAGE_NOT_REGISTERED, forward=bot.reply_to_message_by_event(self.__event), keyboard=keyboard)
                 return False
             except ChatEventManager.UnknownCommandException:
+                # Если команда не найдена, то продолжаем выполенение
                 pass
             except:
                 # Логирование непредвиденной ошибки в файл
@@ -486,6 +490,7 @@ class ChatEventManager:
 
                         if handler['callback'](callback_object):
                             handler_result = True
+                            self.__stats_message_handler()      # Система отслеживания статистики
                             break
 
             # Делаем коммит статистики, если беседа зарегистрирована
@@ -495,16 +500,16 @@ class ChatEventManager:
 
         elif self.__event["type"] == 'message_event':
             try:
-                command_result = self.run_callback_button_command(self.__event, output)
+                self.run_callback_button_command(self.__event, output)
 
                 # Система отслеживания статистики
                 self.__stats_button()
                 # Делаем коммит статистики, если беседа зарегистрирована
                 self.__stats_commit(self.__event["object"]["user_id"])
 
-                return command_result
+                return True
             except ChatEventManager.DatabaseException:
-                result = output.show_snackbar(self.__event["object"]["event_id"], self.__event["object"]["user_id"], self.__event["object"]["peer_id"], DEFAULT_MESSAGES.SNACKBAR_NOT_REGISTERED)
+                output.show_snackbar(self.__event["object"]["event_id"], self.__event["object"]["user_id"], self.__event["object"]["peer_id"], DEFAULT_MESSAGES.SNACKBAR_NOT_REGISTERED)
                 return False
             except ChatEventManager.UnknownCommandException:
                 output.show_snackbar(self.__event["object"]["event_id"], self.__event["object"]["user_id"], self.__event["object"]["peer_id"], DEFAULT_MESSAGES.SNACKBAR_UNKNOWN_COMMAND)
@@ -523,20 +528,12 @@ class ChatEventManager:
                                         keyboard=keyboard.build())
                 return False
 
+    # Метод завершения обработки события
+    def finish(self):
+        self.__db.disconnect()      # Отключаемся от базы данных
+
 
 class OutputSystem:
-    # Класс результата выполнения
-    class Result:
-        def __init__(self, vk_result: str):
-            result = json.loads(vk_result)
-            self.response = result.get('response', None)
-            self.error = result.get('error', None)
-            self.execute_errors = result.get('execute_errors', None)
-            self.is_ok = True if((self.error is None) and (self.execute_errors is None)) else False
-
-        def exception(self):
-            pass
-
     #############################
     #############################
     # Конструктор
@@ -561,7 +558,7 @@ class OutputSystem:
         return self.__show_snackbar_request_count
 
     # Метод messages.send
-    def messages_send(self, **kwargs) -> Result:
+    def messages_send(self, **kwargs) -> dict:
         reqm = {}
         vk_vars1 = VKVariable()
         vk_vars2 = VKVariable()
@@ -584,10 +581,10 @@ class OutputSystem:
         vk_vars1.var('var reqm', reqm)
 
         self.__messages_send_request_count += 1  # Увеличиваем счетчик вызовов
-        return OutputSystem.Result(self.__vk_api.execute("{}{}{}API.messages.send(reqm);{}return true;".format(script, vk_vars1(), vk_vars2(), pscript)))
+        return self.__vk_api.execute("{}{}{}API.messages.send(reqm);{}return true;".format(script, vk_vars1(), vk_vars2(), pscript))
 
     # Метод messages.edit
-    def messages_edit(self, **kwargs) -> Result:
+    def messages_edit(self, **kwargs) -> dict:
         reqm = {}
         vk_vars1 = VKVariable()
         vk_vars2 = VKVariable()
@@ -608,14 +605,14 @@ class OutputSystem:
         vk_vars1.var('var reqm', reqm)
 
         self.__messages_edit_request_count += 1     # Увеличиваем счетчик вызовов
-        return OutputSystem.Result(self.__vk_api.execute("{}{}{}API.messages.edit(reqm);{}return true;".format(script, vk_vars1(), vk_vars2(), pscript)))
+        return self.__vk_api.execute("{}{}{}API.messages.edit(reqm);{}return true;".format(script, vk_vars1(), vk_vars2(), pscript))
 
-    def show_snackbar(self, event_id: str, user_id: int, peer_id: int, text: str, script: str = '', pscript: str = '') -> Result:
+    def show_snackbar(self, event_id: str, user_id: int, peer_id: int, text: str, script: str = '', pscript: str = '') -> dict:
         event_data = json.dumps({'type': 'show_snackbar', 'text': text}, ensure_ascii=False, separators=(',', ':'))
         reqm = json.dumps({'event_id': event_id, 'user_id': user_id, 'peer_id': peer_id, 'event_data': event_data},  ensure_ascii=False, separators=(',', ':'))
 
         self.__show_snackbar_request_count += 1     # Увеличиваем счетчик вызовов
-        return OutputSystem.Result(self.__vk_api.execute('{}API.messages.sendMessageEventAnswer({});{}return true;'.format(script, reqm, pscript)))
+        return self.__vk_api.execute('{}API.messages.sendMessageEventAnswer({});{}return true;'.format(script, reqm, pscript))
 
 
 # Класс Продвинутой системы вывода

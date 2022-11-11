@@ -28,7 +28,7 @@ namespace Database {
 			// Проверка на существование
 			$query = new \MongoDB\Driver\Query(['_id' => $this->document_id], ['projection' => ['_id' => 1]]);
 			try {
-				$cursor = $this->mongodb->executeQuery("{$this->db_name}.chats", $query);
+				$cursor = $this->mongodb->executeQuery("{$this->db_name}.chat_main", $query);
 			} catch (Exception $e) {
 				error_log("Database Error: {$e->getMessage()}");
 				exit;
@@ -65,7 +65,7 @@ namespace Database {
 		{
 			if ($collection == '') {
 				if ($this->type == 'chat')
-					$collection = 'chats';
+					$collection = 'chat_main';
 				else
 					$collection = 'users';
 			}
@@ -82,7 +82,7 @@ namespace Database {
 		{
 			if ($collection == '') {
 				if ($this->type == 'chat')
-					$collection = 'chats';
+					$collection = 'chat_main';
 				else
 					$collection = 'users';
 			}
