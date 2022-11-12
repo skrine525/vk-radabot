@@ -435,7 +435,7 @@ class FunSeamCarving:
         job = {
             "aos_output": aos,
             "path": photo_path,
-            "upload_link": aos_res.response["upload_url"]
+            "upload_link": aos_res["response"]["upload_url"]
         }
         FunSeamCarving.__job_queue.append(job)
 

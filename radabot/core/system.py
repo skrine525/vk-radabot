@@ -22,7 +22,7 @@ class SYSTEM_PATHS:
 
 
 class ChatDatabase:
-    CHAT_DATA_COLLECTION_NAME = "chat_main"         # Название коллекция с данными чатов
+    CHAT_MAIN_COLLECTION_NAME = "chat_main"         # Название коллекция с данными чатов
 
     @staticmethod
     def get_chat_db_filter(_id: int) -> dict:
@@ -33,7 +33,7 @@ class ChatDatabase:
     def __init__(self, database_host: str, database_port: int, database_name: str, peer_id: int):
         self.__mongo_client = MongoClient(database_host, database_port)
         self.__database = self.__mongo_client[database_name]
-        self.__main_collection = self.__database[ChatDatabase.CHAT_DATA_COLLECTION_NAME]
+        self.__main_collection = self.__database[ChatDatabase.CHAT_MAIN_COLLECTION_NAME]
         self.__chat_id = peer_id - 2000000000
         self.__main_filter = ChatDatabase.get_chat_db_filter(self.__chat_id)
 
@@ -348,6 +348,7 @@ class Config:
         'PHP_COMMAND': '',
         'VK_GROUP_TOKEN': '',
         'VK_GROUP_ID': 0,
+        'VK_SERVICE_TOKEN': 0,
         'VK_USER_TOKEN': '',
         'VOICERSS_KEY': '',
         'GIPHY_API_TOKEN': '',
@@ -479,6 +480,23 @@ def get_high_resolution_attachment_photo(attach: dict):
     
     # Если ничего не найдено, то возвращает None
     return None
+
+# Возвращаем ID человека/группы с помощь ссылки через @
+def get_id_by_atlink(s: str):
+    if s[:3] == '[id' and s[-1] == ']':
+        try:
+            return int(s[3:s.find('|')])
+        except ValueError:
+            return None
+    elif s[:5] == "[club" and s[-1] == ']':
+        try:
+            return -int(s[5:s.find('|')])
+        except ValueError:
+            return None
+    else:
+        return None
+
+
 
 
 # Метод журналирования

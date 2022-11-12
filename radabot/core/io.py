@@ -46,7 +46,7 @@ class ChatEventManager:
                         'log_name': logname,
                         'chat_id': event["object"]["peer_id"] - 2000000000,
                         'user_id': event["object"]["user_id"],
-                        'date': datetime.now(),
+                        'date': datetime.utcnow(),
                         'is_solved': False
                     }
                     reports_collection.insert_one(report)

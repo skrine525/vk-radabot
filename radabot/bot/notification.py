@@ -28,7 +28,7 @@ def notification_thread(vk_api: VK_API, event: dict):
     # Подключаемся к базе данных
     mongo_client = MongoClient(Config.get('DATABASE_HOST'), Config.get('DATABASE_PORT'))
     database = mongo_client[Config.get('DATABASE_NAME')]
-    collection = database[ChatDatabase.CHAT_DATA_COLLECTION_NAME]
+    collection = database[ChatDatabase.CHAT_MAIN_COLLECTION_NAME]
 
     # Рассылка
     skip_count = 0      # Количество записей, необходимых пропустить

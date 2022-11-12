@@ -1107,18 +1107,7 @@ namespace {
 				$event->addNonCommandTextMessageHandler('fun_handler');							// Обработчик фанового модуля
 			}
 
-			if(!$integration){
-				// Если не интеграция, то выполенение кода
-				bot_pre_handle($event);															// Функция предварительной обработки
-				$event->handle(); 																// Обработка события бота
-			}
-			else{
-				// Если интеграция, то заносим команды в специальный файл
-				$integration_data = implode(';', $event->getTextMessageCommandList());
-				$integration_data .= "\n" . implode(';', $event->getCallbackButtonCommandList());
-				$integration_data .= "\n" . implode(';', $event->getTextButtonCommandList());
-				file_put_contents(BOTPATH_TMP . '/php_integration.txt', $integration_data);
-			}
+			$event->handle(); 																// Обработка события бота
 			$event->exit(); 																	// Очищение памяти
 		}
 	}
@@ -1366,33 +1355,6 @@ namespace {
 		for ($i = $start; $i <= $end; $i++)
 			$text_array[] = $argv[$i];
 		return implode(' ', $text_array);
-	}
-
-	function bot_pre_handle($event)
-	{
-		$db = $event->getDatabase();
-		$data = $event->getData();
-
-		if ($data->object->peer_id > 2000000000) {
-			if ($db->isExists()) {
-				switch ($data->type) {
-					case 'message_new':
-						// Антифлуд
-						if (AntiFlood::handler($data, $db, $event->getChatModes(), $event->getPermissionSystem())) {
-							$event->exit();
-							exit;
-						}
-
-						// Статистика
-						break;
-
-					case 'message_event':
-						break;
-				}
-			} /*else
-				bot_send_first_invite_message($event);				// Вывод первого сообщение, когда добавляют незарегистрированного бота
-				*/
-		}
 	}
 
 	// Функция для отправки Snackbar'а

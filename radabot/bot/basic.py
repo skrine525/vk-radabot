@@ -2,14 +2,16 @@ import subprocess, json, time
 import radabot.core.bot as bot
 from radabot.core.io import AdvancedOutputSystem, ChatEventManager, OutputSystem
 from radabot.core.manager import UserPermissions
-from radabot.core.system import ChatDatabase, PHPCommandIntegration, PageBuilder, ValueExtractor, Config, get_reply_message_from_event, int2emoji
-from radabot.core.vk import KeyboardBuilder, VKVariable
+from radabot.core.system import ChatDatabase, PHPCommandIntegration, PageBuilder, ValueExtractor, Config, get_id_by_atlink, get_reply_message_from_event, int2emoji
+from radabot.core.vk import VK_API, KeyboardBuilder, VKVariable
 from radabot.core.bot import DEFAULT_MESSAGES
 
 def initcmd(manager: ChatEventManager):
 	manager.add_message_command('!cmdlist', ShowCommandListCommand.message_command)
 	manager.add_message_command('!стата', StatsCommand.message_command)
 	manager.add_message_command('!чит', CheatMenuCommand.message_command)
+	manager.add_message_command('!подписка', SubscriptionCommand.subscribe_message_command)
+	manager.add_message_command('!подписки', SubscriptionCommand.showsubscribes_message_command)
 
 	manager.add_callback_button_command('bot_cancel', CancelCallbackButtonCommand.callback_button_command)
 	manager.add_callback_button_command('bot_cmdlist', ShowCommandListCommand.callback_button_command)
@@ -288,6 +290,7 @@ class CancelCallbackButtonCommand:
 		else:
 			aos.show_snackbar(text=DEFAULT_MESSAGES.SNACKBAR_NO_RIGHTS_TO_USE_THIS_BUTTON)
 
+# Команда !чит
 class CheatMenuCommand:
 	@staticmethod
 	def message_command(callback_object: dict):
@@ -389,6 +392,144 @@ class InviteMessageHandler:
 				message_text = "🙂Привет.\n❗Для начала необходимо выдать мне права администратора в беседе (только так я буду работать).\n👇🏻Затем нажмите кнопку ниже."
 				output.messages_send(peer_id=event["object"]["message"]["peer_id"], message=message_text, keyboard=keyboard)
 				return True
+
+# Команды !подписка !подписки !отписка
+class SubscriptionCommand:
+	MAX_SUBSCRIPTION_COUNT = 5			# Максимальное число подписок
+
+	@staticmethod
+	def showsubscribes_message_command(callback_object: dict):
+		event = callback_object["event"]
+		db = callback_object["db"]
+		args = callback_object["args"]
+		output = callback_object["output"]
+
+		aos = AdvancedOutputSystem(output, event, db)
+
+		# Получаем все подписки чата
+		subs_collection = db.get_collection("chat_subs")
+		current_subs = subs_collection.find({"subscribers": db.chat_id}, projection={ "_id": 0, "source_id": 1})
+
+		# Формируем массив пользователей и групп
+		users = []
+		groups = []
+		for i in current_subs:
+			if i["source_id"] > 0:
+				users.append(i["source_id"])
+			else:
+				groups.append(-i["source_id"])
+
+		if len(users) == 0 and len(groups) == 0:
+			message_text = '⛔Беседа не подписана ни на одну страницу.'
+			aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', message_text))
+			return
+
+		# Отправляем список подписок
+		vk_var = VKVariable()
+		script = "var subs=\"\";var num=1;"
+		if len(users) > 0:
+			vk_var.var("var users", users)
+			script += "var u=API.users.get({user_ids:users});"
+			script += "var i=0;while(i<u.length){subs=subs+num+\". [id\"+u[i].id+\"|\"+u[i].first_name+\" \"+u[i].last_name+\"]\\n\";num=num+1;i=i+1;};"
+		if len(groups) > 0:
+			vk_var.var("var groups", groups)
+			script += "var g=API.groups.getById({group_ids:groups});"
+			script += "var i=0;while(i<g.length){subs=subs+num+\". [club\"+g[i].id+\"|\"+g[i].name+\"]\\n\";i=i+1;};"
+		script = vk_var() + script
+		message = VKVariable.Multi('var', 'appeal', 'str', "💡Текущие подписки:\n", 'var', 'subs')
+		aos.messages_send(message=message, script=script)
+
+	@staticmethod
+	def subscribe_message_command(callback_object: dict):
+		event = callback_object["event"]
+		db = callback_object["db"]
+		args = callback_object["args"]
+		output = callback_object["output"]
+
+		aos = AdvancedOutputSystem(output, event, db)
+
+		source_str = args.get_str(1, "")
+		if source_str == "":
+			message_text = '⚠Позволяет подписаться на посты человека/группы.\n\nИспользуйте:\n➡️ {} [источник]\n\n📝В качестве источника нужно указать ID, полную ссылку или ссылку через @.'.format(args.get_str(0).lower())
+			aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', message_text))
+			return
+
+		# Пытаемся получить ID источника из аргумента
+		source_id = None
+		try:
+			source_id = int(source_str)
+		except ValueError:
+			source_id = get_id_by_atlink(source_str)
+
+		last_post_date = 0
+		if source_id is None:
+			# Если не удалось получить ID источника, пытаемся получить его с помощью ссылки, затем получаем информацию о стене источника
+			cut_index = source_str.find("vk.com")
+			if cut_index != -1:
+				domain = source_str[cut_index + 7:]
+			cut_index = domain.find("/")
+			if cut_index != -1:
+				domain = domain[:cut_index]
+
+			service_vk_api = VK_API(Config.get("VK_SERVICE_TOKEN"))
+			call_result = service_vk_api.call("wall.get", {"domain": domain, "count": 2})
+			try:
+				source_id = call_result["response"]["items"][0]["owner_id"]
+				for i in call_result["response"]["items"]:
+					if i["post_type"] == "post" and i["date"] > last_post_date:
+						last_post_date = i["date"]
+			except:
+				pass
+		else:
+			# Получаем информацию о стене источника
+			service_vk_api = VK_API(Config.get("VK_SERVICE_TOKEN"))
+			call_result = service_vk_api.call("wall.get", {"owner_id": source_id, "count": 2})
+			try:
+				source_id = call_result["response"]["items"][0]["owner_id"]
+				for i in call_result["response"]["items"]:
+					if i["post_type"] == "post" and i["date"] > last_post_date:
+						last_post_date = i["date"]
+			except:
+				pass
+
+		# Выводим сообщение об ошибке если не получилось получить ID источника
+		if source_id is None:
+			message_text = '⛔Неверный источник. Убедитесь, что источник указывает на человека/группу ВК, стена указанной страницы доступна для просмотра и на стене страницы есть хотя бы один пост.'
+			aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', message_text))
+			return
+
+		# Получаем все подписки чата
+		subs_collection = db.get_collection("chat_subs")
+		current_subs = subs_collection.find({"subscribers": db.chat_id}, projection={ "_id": 0, "source_id": 1})
+		
+		# Проверка: подписан ли уже на этот источник
+		subs_count = 0
+		for i in current_subs:
+			subs_count += 1
+			if i["source_id"] == source_id:
+				message_text = '⛔Подписка на этот источник уже оформлена.'
+				aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', message_text))
+				return
+
+		# Ограничение на количество подписок
+		if subs_count >= SubscriptionCommand.MAX_SUBSCRIPTION_COUNT:
+			message_text = f'⛔Максимальное число подписок: {SubscriptionCommand.MAX_SUBSCRIPTION_COUNT}.'
+			aos.messages_send(message=VKVariable.Multi('var', 'appeal', 'str', message_text))
+			return
+
+		# Проверка: есть ли источник уже в базе данных
+		if subs_collection.find_one({"source_id": source_id}, projection={ "_id": 1}) is None:
+			subs_collection.insert_one({"source_id": source_id, "last_post_date": last_post_date, "subscribers": [db.chat_id]})
+		else:
+			subs_collection.update_one({"source_id": source_id}, {"$push": {"subscribers": db.chat_id}})
+		
+		# Сообщаем об удачной подписке
+		if source_id < 0:
+			script = f"var g=API.groups.getById({{group_id: {-source_id}}})[0];var pagename=\"[club{-source_id}|\"+g.name+\"]\";"
+		else:
+			script = f"var u=API.users.get({{user_ids: {source_id}}})[0];var pagename=\"[id{source_id}|\"+u.first_name+\" \"+u.last_name+\"]\";"
+		message = VKVariable.Multi('var', 'appeal', 'str', "✅Подписка на страницу ", 'var', 'pagename', 'str', ' оформлена.')
+		aos.messages_send(message=message, script=script)
 
 
 # Инициализация PHP команд
