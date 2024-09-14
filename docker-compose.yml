@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  vk_radabot:
+    build: .
+    image: vk_radabot
+    container_name: vk_radabot
+    command: ["python3", "radabot.py"]
+    restart: unless-stopped
+    volumes:
+      - ./tmp:/bot/tmp
+      - ./log:/bot/log
+      - ./data/:/bot/data
+    depends_on:
+      - vk_radabot_mongodb
+  vk_radabot_mongodb:
+    image: mongo:4.4.18
+    container_name: vk_radabot_mongodb
+    restart: unless-stopped
+    volumes:
+      - ./db:/data/db
